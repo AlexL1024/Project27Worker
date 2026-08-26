@@ -285,13 +285,25 @@ def main():
 
     while True:
         try:
+            # Locks a crashed process (or a sandboxed tool that cannot unlink)
+            # left behind wedge every git command; anything older than five
+            # minutes belongs to no one living.
+            for name in ("HEAD.lock", "index.lock", "maintenance.lock"):
+                lock = os.path.join(REPO, ".git", name)
+                try:
+                    if os.path.exists(lock) and time.time() - os.path.getmtime(lock) > 300:
+                        os.remove(lock)
+                        log(f"cleared stale {name}")
+                except OSError:
+                    pass
+
             # Rebase, not fast-forward: the iPad's requests are commits made
             # directly on GitHub, so this repo routinely diverges from origin —
             # local work replays on top and everything pushes together.
-            code, _ = sh("git", "pull", "--rebase", "-q", "origin", "main")
+            code, output = sh("git", "pull", "--rebase", "-q", "origin", "main")
             if code != 0:
                 sh("git", "rebase", "--abort")
-                log("pull failed — check network/credentials; retrying.")
+                log(f"pull failed: {output.strip()[-160:]}")
             else:
                 sh("git", "push", "-q", "origin", "main")
             for request_id in pending():
