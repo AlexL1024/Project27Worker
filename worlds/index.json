@@ -1,0 +1,6 @@
+{
+  "worlds": [
+    { "slug": "coral-cay",     "name": "Coral Cay",     "scene": "coral-cay.scene.js" },
+    { "slug": "lantern-shore", "name": "Lantern Shore", "scene": "lantern-shore.scene.js" }
+  ]
+}
