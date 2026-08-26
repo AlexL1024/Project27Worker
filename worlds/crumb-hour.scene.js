@@ -11,6 +11,10 @@
 //  a fanned tail, gripping toes, and a small nervous system that bobs,
 //  scans, blinks, ruffles and preens on its own irregular clock.
 //
+//  On the seat below, somebody's coffee: lid off beside it, sleeve on, the
+//  surface holding the sky and turning its crema, and steam still coming off
+//  it — which is presumably why the bird has not gone anywhere.
+//
 
 export default function build(world) {
     const { THREE, scene, camera } = world;
@@ -810,6 +814,23 @@ export default function build(world) {
     const RAIL_Z = -0.235;
     const RAIL_TOP = RAIL_Y + 0.026;
 
+    // The seat slats, said out here because things get set down on them: each
+    // is a cylinder lying along x, elliptical in section, so its top is a crown
+    // rather than a plane and anything resting on it has to follow that curve.
+    const SEAT = [
+        [0.452, 0.320], [0.452, 0.230], [0.450, 0.140], [0.449, 0.050], [0.450, -0.040],
+    ];
+    const SEAT_LIFT = 0.014;    // slats sit this proud of the frame line
+    const SEAT_RY = 0.015;      // half-thickness, vertical
+    const SEAT_RZ = 0.039;      // half-depth, front to back
+
+    /** Height of the seat surface at bench-local z, on whichever slat is nearest. */
+    function seatTop(z) {
+        let best = SEAT[0], bd = Infinity;
+        for (const s of SEAT) { const d = Math.abs(z - s[1]); if (d < bd) { bd = d; best = s; } }
+        return best[0] + SEAT_LIFT + SEAT_RY * Math.sqrt(Math.max(0, 1 - (bd / SEAT_RZ) ** 2));
+    }
+
     const bench = new THREE.Group();
     {
         const ironMat = new THREE.MeshStandardMaterial({
@@ -887,13 +908,10 @@ export default function build(world) {
         }
 
         // Seat slats.
-        const SEAT = [
-            [0.452, 0.320], [0.452, 0.230], [0.450, 0.140], [0.449, 0.050], [0.450, -0.040],
-        ];
         for (let i = 0; i < SEAT.length; i++) {
             const [y, z] = SEAT[i];
-            const s = new THREE.Mesh(slatGeometry(1.62, 0.030, 0.078), woodMat);
-            s.position.set(0, y + 0.014, z);
+            const s = new THREE.Mesh(slatGeometry(1.62, SEAT_RY * 2, SEAT_RZ * 2), woodMat);
+            s.position.set(0, y + SEAT_LIFT, z);
             s.castShadow = s.receiveShadow = true;
             bench.add(s);
         }
@@ -988,6 +1006,420 @@ export default function build(world) {
         paper.position.set(0.42, 0.470, 0.16);
         paper.rotation.y = 0.5 + 0.16;
         scene.add(world.part('newspaper_00', paper));
+    }
+
+    /* ==========================================================
+       5b · The coffee somebody set down
+       ==========================================================
+
+       A takeaway cup, lid off beside it, still warm. The two things worth
+       real work are the ones you lean in to see: the surface of the coffee
+       — sky in it, crema turning on it, ripples that keep the reflection
+       honest — and the steam, which is a camera-facing wisp carved out of
+       scrolling noise rather than a sprite.
+    */
+
+    // Shared by the coffee and the steam. Cheap value noise, four octaves.
+    const NOISE_GLSL = /* glsl */`
+      float hash21(vec2 p) {
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+      float vnoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
+        float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+      }
+      float fbm(vec2 p) {
+        float s = 0.0, a = 0.5;
+        for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 1.7; a *= 0.5; }
+        return s;
+      }
+    `;
+
+    const steamUniforms = {
+        uTime, uOpacity: { value: 0.34 }, uCol: { value: srgb(0xfff2df) },
+    };
+
+    {
+        const BTH = bench.rotation.y;
+        // Bench-local (x, z) → world, since the bench stands at the origin turned by BTH.
+        const onSeat = (x, z) => V3(
+            x * Math.cos(BTH) + z * Math.sin(BTH), 0, -x * Math.sin(BTH) + z * Math.cos(BTH));
+
+        const CUP_X = -0.325, CUP_Z = 0.140;
+        const LID_X = -0.192, LID_Z = 0.238;
+
+        /* --- Paper -------------------------------------------------------- */
+
+        const paperTex = world.canvasTexture(256, 256, (g, cv) => {
+            const S = cv.width;
+            g.fillStyle = '#f4f0e6'; g.fillRect(0, 0, S, S);
+            // Fibre: the flecks that stop a white cup reading as white plastic.
+            g.globalAlpha = 0.30;
+            speckle(g, S, S, 1800, (gg, x, y) => {
+                gg.fillStyle = rnd() > 0.55 ? '#ffffff' : '#cfc7b6';
+                gg.fillRect(x, y, 1.5, rr(1, 3));
+            });
+            g.globalAlpha = 0.16;
+            for (let i = 0; i < 26; i++) {   // faint vertical creases from the stack
+                const x = rr(0, S);
+                g.strokeStyle = rnd() > 0.5 ? '#ffffff' : '#b8b0a0';
+                g.lineWidth = rr(0.6, 2.2);
+                g.beginPath(); g.moveTo(x, 0); g.lineTo(x + rr(-4, 4), S); g.stroke();
+            }
+            g.globalAlpha = 1;
+        });
+        paperTex.wrapS = paperTex.wrapT = THREE.RepeatWrapping;
+        paperTex.repeat.set(2, 1);
+
+        const paperMat = new THREE.MeshStandardMaterial({
+            map: paperTex, color: 0xfbf7ee, roughness: 0.88, metalness: 0.0,
+            side: THREE.DoubleSide, envMapIntensity: 0.45,
+        });
+
+        // The wall, drawn once as a profile and turned: base disc, foot, the
+        // taper, the rolled rim, then back down the inside.
+        const prof = [];
+        const P2 = (x, y) => prof.push(new THREE.Vector2(x, y));
+        P2(0.0000, 0.0000); P2(0.0230, 0.0000); P2(0.0292, 0.0028); P2(0.0303, 0.0062);
+        for (let i = 1; i <= 8; i++) {
+            const t = i / 8;
+            P2(lerp(0.0303, 0.0432, Math.pow(t, 0.94)), lerp(0.0062, 0.1010, t));
+        }
+        P2(0.0444, 0.1058); P2(0.0466, 0.1098); P2(0.0455, 0.1128); P2(0.0421, 0.1109);
+        P2(0.0414, 0.1020); P2(0.0268, 0.0082); P2(0.0000, 0.0082);
+
+        const cup = new THREE.Group();
+        const shell = new THREE.Mesh(new THREE.LatheGeometry(prof, 54), paperMat);
+        cup.add(shell);
+
+        /* --- The corrugated sleeve ---------------------------------------- */
+
+        const sleeveTex = world.canvasTexture(512, 160, (g, cv) => {
+            const W = cv.width, H = cv.height;
+            g.fillStyle = '#b98850'; g.fillRect(0, 0, W, H);
+            g.globalAlpha = 0.5;    // kraft mottle
+            speckle(g, W, H, 2200, (gg, x, y) => {
+                gg.fillStyle = rnd() > 0.5 ? '#d2a674' : '#8e6134';
+                gg.fillRect(x, y, 2, 2);
+            });
+            g.globalAlpha = 1;
+            // Flute shading, doubling what the geometry already does.
+            for (let i = 0; i < W; i++) {
+                const s = Math.sin((i / W) * Math.PI * 2 * 32);
+                g.fillStyle = s > 0
+                    ? `rgba(255,228,190,${s * 0.16})` : `rgba(74,48,24,${-s * 0.20})`;
+                g.fillRect(i, 0, 1, H);
+            }
+            g.fillStyle = 'rgba(60,38,18,0.28)';     // pressed top and bottom edges
+            g.fillRect(0, 0, W, 9); g.fillRect(0, H - 9, W, 9);
+            // The glued overlap seam, painted rather than modelled so it cannot
+            // fight the flutes for the same millimetre.
+            g.fillStyle = 'rgba(58,36,16,0.30)'; g.fillRect(W * 0.485, 0, 10, H);
+            g.fillStyle = 'rgba(255,232,196,0.30)'; g.fillRect(W * 0.485 + 10, 0, 3, H);
+            // The print. Twice around, so it reads from either side.
+            for (const cx of [W * 0.25, W * 0.75]) {
+                g.save(); g.translate(cx, H * 0.5);
+                g.strokeStyle = 'rgba(48,30,14,0.72)'; g.lineWidth = 2.4;
+                g.beginPath(); g.arc(-88, 0, 26, 0, Math.PI * 2); g.stroke();
+                g.fillStyle = 'rgba(48,30,14,0.72)';
+                g.beginPath();                       // a cup glyph inside the roundel
+                g.moveTo(-99, -9); g.lineTo(-77, -9); g.lineTo(-82, 11); g.lineTo(-94, 11);
+                g.closePath(); g.fill();
+                g.beginPath(); g.arc(-88, -14, 7, Math.PI, 0); g.stroke();
+                g.font = 'bold 30px Georgia, serif';
+                g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.fillText('CRUMB HOUR', -48, -8);
+                g.font = '15px Georgia, serif';
+                g.fillStyle = 'rgba(48,30,14,0.55)';
+                g.fillText('· the golden one ·', -46, 16);
+                g.restore();
+            }
+            g.font = '12px Helvetica, sans-serif';
+            g.textAlign = 'center'; g.fillStyle = 'rgba(48,30,14,0.42)';
+            g.fillText('CAUTION — CONTENTS HOT', W * 0.25, H - 20);
+            g.fillText('CAUTION — CONTENTS HOT', W * 0.75, H - 20);
+        });
+        sleeveTex.wrapS = THREE.RepeatWrapping;
+
+        {
+            // Real flutes, not a bump map: at this hour they are what tells the
+            // sleeve from a printed band, one shadow per corrugation.
+            const FLUTES = 32, H0 = 0.028, H1 = 0.079;
+            const geo = new THREE.CylinderGeometry(0.0424, 0.0358, H1 - H0, 192, 3, true);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i), z = pos.getZ(i);
+                const k = 1 + 0.038 * Math.sin(Math.atan2(z, x) * FLUTES);
+                pos.setXYZ(i, x * k, pos.getY(i), z * k);
+            }
+            geo.computeVertexNormals();
+            const sleeve = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+                map: sleeveTex, color: 0xffffff, roughness: 0.94, metalness: 0.0,
+                side: THREE.DoubleSide, envMapIntensity: 0.35,
+            }));
+            sleeve.position.y = (H0 + H1) * 0.5;
+            cup.add(sleeve);
+        }
+
+        /* --- The coffee --------------------------------------------------- */
+
+        const COFFEE_Y = 0.0862;
+        const coffeeUniforms = {
+            uTime, uR: { value: 0.0393 },
+            uSunDir: { value: SUN_DIR.clone() }, uSunCol: { value: C_SUN.clone() },
+            uTop: { value: C_TOP.clone() }, uMid: { value: C_MID.clone() }, uHor: { value: C_HOR.clone() },
+            uDark: { value: srgb(0x24140b) }, uCrema: { value: srgb(0xa9702f) },
+        };
+        const coffee = new THREE.Mesh(
+            new THREE.CircleGeometry(0.0393, 56).rotateX(-Math.PI / 2),
+            new THREE.ShaderMaterial({
+                uniforms: coffeeUniforms,
+                vertexShader: `
+                  varying vec3 vWorld; varying vec2 vUvp;
+                  void main(){
+                    vUvp = uv;
+                    vec4 wp = modelMatrix * vec4(position, 1.0);
+                    vWorld = wp.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * wp;
+                  }`,
+                fragmentShader: SKY_GLSL + NOISE_GLSL + `
+                  varying vec3 vWorld; varying vec2 vUvp;
+                  uniform float uTime, uR;
+                  uniform vec3 uSunDir, uSunCol, uTop, uMid, uHor, uDark, uCrema;
+                  void main(){
+                    vec2 c = vUvp * 2.0 - 1.0;
+                    float r = length(c);
+                    if (r > 1.0) discard;
+                    vec2 q = c * uR;
+
+                    // Two crossed micro-waves and one ring going out from the
+                    // middle, differentiated by hand so the normal is exact.
+                    float dx = 0.0, dz = 0.0;
+                    vec2 k1 = vec2(118.0, 73.0), k2 = vec2(-86.0, 131.0);
+                    float p1 = dot(q, k1) + uTime * 5.1;
+                    float p2 = dot(q, k2) + uTime * 3.7;
+                    dx += 0.00016 * cos(p1) * k1.x + 0.00011 * cos(p2) * k2.x;
+                    dz += 0.00016 * cos(p1) * k1.y + 0.00011 * cos(p2) * k2.y;
+                    float rq = max(length(q), 1e-4);
+                    float dring = cos(rq * 300.0 - uTime * 6.0) * 300.0 * 0.00019 * exp(-rq * 20.0);
+                    dx += dring * q.x / rq;
+                    dz += dring * q.y / rq;
+                    vec3 N = normalize(vec3(-dx, 1.0, -dz));
+
+                    // Crema: a slow turn, tighter toward the middle.
+                    float ang = uTime * 0.10 + (1.0 - r) * 1.9;
+                    mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
+                    float f = fbm(rot * c * 3.2 + 5.0);
+                    vec3 base = mix(uDark, uCrema, smoothstep(0.40, 0.74, f) * 0.72);
+                    base = mix(base, uCrema * 1.25, smoothstep(0.70, 0.96, r) * (0.30 + 0.45 * f));
+                    base = mix(base, uDark * 0.45, smoothstep(0.93, 1.0, r));
+
+                    vec3 V = normalize(cameraPosition - vWorld);
+                    vec3 Rv = reflect(-V, N);
+                    if (Rv.y < 0.0) Rv.y = -Rv.y;
+                    Rv = normalize(Rv);
+                    vec3 refl = skyColor(Rv, uSunDir, uTop, uMid, uHor, uSunCol);
+                    float fres = 0.02 + 0.98 * pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 5.0);
+                    // The paper wall eats most of the sky; only what is steep
+                    // enough to clear the rim gets into the cup at all.
+                    float open = 0.10 + 0.62 * smoothstep(0.05, 0.62, Rv.y);
+                    vec3 col = base * (0.55 + 0.45 * open) + refl * fres * open;
+                    col += uSunCol * pow(max(dot(Rv, uSunDir), 0.0), 300.0) * 2.4 * open;
+                    gl_FragColor = vec4(col, 1.0);
+                  }`,
+            })
+        );
+        coffee.position.y = COFFEE_Y;
+        cup.add(coffee);
+
+        /* --- A stirrer, left leaning on the rim ---------------------------- */
+
+        {
+            const stickTex = world.canvasTexture(32, 128, (g, cv) => {
+                const W = cv.width, H = cv.height;
+                g.fillStyle = '#dcc49b'; g.fillRect(0, 0, W, H);
+                for (let i = 0; i < 22; i++) {
+                    g.strokeStyle = `rgba(150,120,80,${rr(0.10, 0.35)})`;
+                    g.lineWidth = rr(0.5, 1.4);
+                    const x = rr(0, W);
+                    g.beginPath(); g.moveTo(x, 0); g.lineTo(x + rr(-3, 3), H); g.stroke();
+                }
+                const soak = g.createLinearGradient(0, H, 0, H * 0.52);
+                soak.addColorStop(0, 'rgba(74,44,20,0.92)');
+                soak.addColorStop(0.55, 'rgba(112,72,34,0.55)');
+                soak.addColorStop(1, 'rgba(140,96,48,0)');
+                g.fillStyle = soak; g.fillRect(0, H * 0.52, W, H * 0.48);
+            });
+            const stickGeo = new THREE.BoxGeometry(0.0058, 0.132, 0.0016);
+            stickGeo.translate(0, 0.066, 0);
+            const stick = new THREE.Mesh(stickGeo, new THREE.MeshStandardMaterial({
+                map: stickTex, roughness: 0.85, envMapIntensity: 0.3,
+            }));
+            stick.position.set(0.004, 0.044, 0.006);
+            stick.rotation.set(0.10, 0.35, -0.62);
+            cup.add(stick);
+        }
+
+        cup.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        coffee.castShadow = false;
+
+        /* --- Steam: a camera-facing wisp carved out of scrolling noise ----- */
+
+        {
+            const geo = new THREE.PlaneGeometry(0.20, 0.40, 1, 1);
+            geo.translate(0, 0.20, 0);
+            const steam = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+                uniforms: steamUniforms,
+                transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide,
+                vertexShader: `
+                  uniform float uTime;
+                  varying vec2 vUv;
+                  void main(){
+                    vUv = uv;
+                    // Anchored at the cup mouth, stood upright in view space:
+                    // the wisp turns to face the camera without turning over.
+                    vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                    vec3 vd = normalize(mv.xyz);
+                    vec3 up = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+                    vec3 right = normalize(cross(vd, up));
+                    float lean = sin(uTime * 0.62 + uv.y * 2.6) * 0.055 * uv.y * uv.y;
+                    mv.xyz += right * (position.x + lean) + up * position.y;
+                    gl_Position = projectionMatrix * mv;
+                  }`,
+                fragmentShader: NOISE_GLSL + `
+                  uniform float uTime, uOpacity; uniform vec3 uCol;
+                  varying vec2 vUv;
+                  void main(){
+                    float y = vUv.y;
+                    float rise = uTime * 0.40;
+                    vec2 p = vec2(vUv.x * 3.0, y * 2.1 - rise);
+                    float n = fbm(p) * 0.62 + fbm(p * 2.1 + vec2(4.3, -rise * 0.7)) * 0.38;
+                    // A column that starts no wider than the mouth and opens out.
+                    float halfW = 0.11 + y * 0.60;
+                    float body = smoothstep(1.0, 0.05, abs(vUv.x - 0.5) / halfW);
+                    float ends = smoothstep(0.0, 0.13, y) * smoothstep(1.0, 0.42, y);
+                    float a = body * ends * smoothstep(0.40, 0.86, n + 0.16 * (1.0 - y));
+                    a *= uOpacity;
+                    if (a < 0.004) discard;
+                    gl_FragColor = vec4(uCol, a);
+                  }`,
+            }));
+            steam.position.y = 0.113;
+            steam.renderOrder = 3;
+            steam.frustumCulled = false;
+            steam.castShadow = false;
+            world.ghost(steam);
+            cup.add(steam);
+        }
+
+        cup.position.copy(onSeat(CUP_X, CUP_Z));
+        cup.position.y = seatTop(CUP_Z) - 0.003;   // settled onto the crown of the slat
+        cup.rotation.set(0.012, BTH + 1.9, 0.008);
+        scene.add(world.part('cup_00', cup));
+
+        /* --- The lid, off and set down beside it --------------------------- */
+
+        {
+            const lid = new THREE.Group();
+            const plastic = new THREE.MeshStandardMaterial({
+                color: 0x2b2c30, roughness: 0.30, metalness: 0.05, envMapIntensity: 1.0,
+                side: THREE.DoubleSide,
+            });
+            const lp = [];
+            const L2 = (x, y) => lp.push(new THREE.Vector2(x, y));
+            L2(0.0000, 0.0136); L2(0.0130, 0.0133); L2(0.0250, 0.0120); L2(0.0348, 0.0094);
+            L2(0.0416, 0.0058); L2(0.0455, 0.0022); L2(0.0470, -0.0010);   // outside of the skirt
+            L2(0.0472, -0.0052); L2(0.0436, -0.0052); L2(0.0432, 0.0010);  // under-rim groove
+            L2(0.0398, 0.0052); L2(0.0300, 0.0092); L2(0.0140, 0.0112); L2(0.0000, 0.0116);
+            const shellL = new THREE.Mesh(new THREE.LatheGeometry(lp, 48), plastic);
+            lid.add(shellL);
+
+            // The drinking hole and the sip lip raised around it. Both are laid
+            // flat in the geometry so the tilt onto the dome is a single angle.
+            const hole = new THREE.Mesh(
+                new THREE.CircleGeometry(0.0090, 20).rotateX(-Math.PI / 2),
+                new THREE.MeshStandardMaterial({ color: 0x0d0e10, roughness: 0.55 })
+            );
+            hole.position.set(0.0262, 0.0130, 0);
+            hole.rotation.z = -0.16;
+            hole.scale.set(1.0, 1, 1.35);
+            lid.add(hole);
+
+            const boss = new THREE.Mesh(
+                new THREE.TorusGeometry(0.0102, 0.0024, 8, 24).rotateX(Math.PI / 2), plastic);
+            boss.position.copy(hole.position);
+            boss.rotation.z = -0.16;
+            boss.scale.set(1.0, 1, 1.35);
+            lid.add(boss);
+            // What slopped out of the hole when the lid came off — half sunk
+            // into the dome, glossy enough to hold the sun.
+            const wet = new THREE.Mesh(
+                new THREE.TorusGeometry(0.0150, 0.0019, 6, 24).rotateX(Math.PI / 2),
+                new THREE.MeshStandardMaterial({
+                    color: 0x3a2010, roughness: 0.16, metalness: 0.0, envMapIntensity: 1.4,
+                })
+            );
+            wet.position.set(0.0262, 0.0118, 0);
+            wet.rotation.z = -0.16;
+            wet.scale.set(1.0, 1, 1.25);
+            lid.add(wet);
+
+            lid.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+            lid.position.copy(onSeat(LID_X, LID_Z));
+            lid.position.y = seatTop(LID_Z) + 0.0046;
+            lid.rotation.set(0.05, BTH - 0.7, -0.03);
+            scene.add(world.part('lid_00', lid));
+        }
+
+        /* --- The ring it left on the wood earlier -------------------------- */
+
+        {
+            const ringTex = world.canvasTexture(128, 128, (g, cv) => {
+                const S = cv.width, c = S / 2;
+                g.clearRect(0, 0, S, S);
+                for (let k = 0; k < 3; k++) {     // a couple of overlapping rings
+                    const rad = S * (0.34 + k * 0.040), off = k * 3;
+                    g.strokeStyle = `rgba(74,42,18,${0.30 - k * 0.07})`;
+                    g.lineWidth = 5 - k;
+                    g.beginPath();
+                    for (let i = 0; i <= 40; i++) {
+                        const a = (i / 40) * Math.PI * 2;
+                        const rr2 = rad * (1 + Math.sin(a * 3.1 + k) * 0.035);
+                        const x = c + off + Math.cos(a) * rr2, y = c + Math.sin(a) * rr2;
+                        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+                    }
+                    g.closePath(); g.stroke();
+                }
+                g.globalAlpha = 0.5;
+                speckle(g, S, S, 26, (gg, x, y) => {
+                    gg.fillStyle = 'rgba(74,42,18,0.35)';
+                    gg.beginPath(); gg.arc(x, y, rr(0.8, 2.6), 0, Math.PI * 2); gg.fill();
+                });
+                g.globalAlpha = 1;
+            });
+            // Kept inside one slat: the crown is only 78mm wide and a patch
+            // wider than that would sag into the gap between boards.
+            const RX = -0.245, RZ = 0.052, RS = 0.036;
+            const geo = new THREE.PlaneGeometry(RS * 2, RS * 2, 10, 10).rotateX(-Math.PI / 2);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                // Follow the crown of the slat, or the stain floats off its edges.
+                pos.setY(i, seatTop(RZ + pos.getZ(i)) + 0.0009);
+            }
+            geo.computeVertexNormals();
+            const stain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+                map: ringTex, transparent: true, depthWrite: false,
+                roughness: 0.45, metalness: 0.0, envMapIntensity: 0.6,
+            }));
+            stain.position.set(RX, 0, RZ);
+            stain.renderOrder = 2;
+            bench.add(stain);
+        }
     }
 
     /* ==========================================================
@@ -1964,6 +2396,11 @@ export default function build(world) {
             );
             f.mesh.rotation.set(t * f.spin * 0.7, t * f.spin, Math.sin(t * f.sway) * 0.9);
         }
+
+        // The coffee is cooling. The steam thickens and thins on its own slow
+        // clock and never quite goes out while anyone is watching.
+        steamUniforms.uOpacity.value = 0.34 *
+            (0.34 + 0.66 * (0.5 + 0.5 * Math.cos(t * 0.028)) + 0.06 * Math.sin(t * 0.53));
 
         // The lamp is on borrowed time: it flickers and slowly gives up as the
         // sun takes over.
