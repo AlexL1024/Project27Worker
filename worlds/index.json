@@ -1,6 +1,14 @@
 {
   "worlds": [
     {
+      "slug": "berth-mark",
+      "name": "Berth Mark",
+      "scene": "berth-mark.scene.js",
+      "files": [
+        "hcmt.scene.js"
+      ]
+    },
+    {
       "slug": "coral-cay",
       "name": "Coral Cay",
       "scene": "coral-cay.scene.js"

@@ -1,5 +1,8 @@
 {
   "id": "20260826-123333-92b4",
-  "state": "building",
-  "at": "2026-08-26T12:33:45Z"
+  "state": "done",
+  "at": "2026-08-26T12:58:41Z",
+  "slug": "berth-mark",
+  "name": "Berth Mark",
+  "scene": "berth-mark.scene.js"
 }
