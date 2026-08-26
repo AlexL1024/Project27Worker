@@ -1,5 +1,6 @@
 {
   "id": "20260826-104722-9ac3",
-  "state": "building",
-  "at": "2026-08-26T10:47:57Z"
+  "state": "failed",
+  "at": "2026-08-26T10:48:04Z",
+  "reason": "Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue."
 }
