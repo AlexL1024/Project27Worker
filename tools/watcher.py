@@ -285,9 +285,15 @@ def main():
 
     while True:
         try:
-            code, _ = sh("git", "pull", "--ff-only", "-q", "origin", "main")
+            # Rebase, not fast-forward: the iPad's requests are commits made
+            # directly on GitHub, so this repo routinely diverges from origin —
+            # local work replays on top and everything pushes together.
+            code, _ = sh("git", "pull", "--rebase", "-q", "origin", "main")
             if code != 0:
+                sh("git", "rebase", "--abort")
                 log("pull failed — check network/credentials; retrying.")
+            else:
+                sh("git", "push", "-q", "origin", "main")
             for request_id in pending():
                 serve(request_id)
         except KeyboardInterrupt:
