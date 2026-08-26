@@ -86,48 +86,6 @@ export const HCMT_DOORS = (() => {
     return { doorWidth: DOOR_W, all };
 })();
 
-// interior datum
-const FLOOR_Y = 1.0, CEIL_Y = 2.93;   // ceiling sits below the roof-shell soffit (y=2.95)
-const DOOR_W = 1.7, LEAF_W = 0.85, LEAF_H = 2.1, LEAF_TRAVEL = 0.8;
-const DOOR_TOP = 2.80;          // top of the real opening
-
-// side layouts (module scope: used by the texture, the geometry AND HCMT_DOORS)
-const cabBodyL = CAR_L - NOSE_L; // 18.6 m
-const midLayout = {
-    L: CAR_L, doorW: DOOR_W,
-    blue: [[0, 2.0], [20.4, 22]],
-    doors: [2.3, 10.0, 16.9],
-    windows: [[5.0, 6.4], [7.1, 8.5], [12.2, 13.6], [14.3, 15.7], [19.0, 20.0]]
-};
-const cabLayout = {
-    L: cabBodyL, doorW: DOOR_W,
-    blue: [[0, 1.9], [17.4, 18.6]],
-    doors: [2.1, 8.7, 14.4],
-    windows: [[4.6, 5.9], [6.6, 7.9], [10.8, 12.1], [12.7, 14.0], [16.4, 17.2]]
-};
-const CAB_BODY_CZ = (-CAR_L / 2 + (CAR_L / 2 - NOSE_L)) / 2; // -1.7/... = -1.5
-
-// door centres in body-plane-local z (u=0 of the side texture sits at +bodyL/2)
-function doorCentresLocal(layout) {
-    return layout.doors.map(d => layout.L / 2 - (d + layout.doorW / 2));
-}
-
-// door-centre z list, train-local, one side, sorted (21 doors)
-export const HCMT_DOORS = (() => {
-    const pitch = CAR_L + GAP;
-    const midC = doorCentresLocal(midLayout);              // car-local (mid body centred at 0)
-    const cabC = doorCentresLocal(cabLayout).map(z => z + CAB_BODY_CZ); // car-local
-    const all = [];
-    for (let i = 0; i <= 6; i++) {
-        const off = (3 - i) * pitch;
-        if (i === 0) { for (const z of cabC) all.push(off + z); }        // front cab, nose +z
-        else if (i === 6) { for (const z of cabC) all.push(off - z); }   // rear cab, rotated pi
-        else { for (const z of midC) all.push(off + z); }
-    }
-    all.sort((a, b) => a - b);
-    return { doorWidth: DOOR_W, all };
-})();
-
 // ---------------------------------------------------------------------------
 // small helpers
 function mulberry(seed) {
