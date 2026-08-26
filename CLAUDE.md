@@ -105,3 +105,22 @@ is not the product; a world someone wants to stand in is.
 Slug is kebab-case (`coral-cay`), file is `<slug>.scene.js`, display name is
 Title Case. Parts are named `thing_NN` (`hut_00`, `palm_03`) — the app uses
 those names to talk about pieces.
+
+## Requests from the bridge
+
+Some sessions here are started headlessly by `tools/bridge.py` — the iPad app's
+prompt bar. Those prompts arrive with no person watching the terminal, so:
+
+- Work autonomously start to finish: never ask a question, never pause for
+  approval, never leave the work half-done.
+- Attached photos, when there are any, are at `.refs/ref-*.jpg` — look at them
+  before building; they are the visual brief. Never commit `.refs/`.
+- When told to edit `worlds/<slug>.scene.js`, change that world in place —
+  do not fork it into a new slug.
+- Always finish with the checked-and-committed loop (check.sh, manifest,
+  commit — the hook pushes), and end your final message with exactly one line:
+
+      WORLD: <slug>
+
+  That line is how the bridge tells the app which world to pull. No slug line,
+  no world on the iPad.
