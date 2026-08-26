@@ -17,6 +17,8 @@
 //      z -55 ─ end wall · lifts ─ open concourse ─ end wall z +55
 //
 
+import { buildHCMT } from './hcmt.scene.js';
+
 export default function build(world) {
     const { THREE, scene } = world;
 
@@ -165,7 +167,7 @@ export default function build(world) {
     const glassMat = new THREE.MeshStandardMaterial({
         color: 0xBFC8CC, roughness: 0.08, metalness: 0.25, transparent: true, opacity: 0.45 });
     const psdGlassMat = new THREE.MeshStandardMaterial({
-        color: 0x33383C, roughness: 0.08, metalness: 0.55, transparent: true, opacity: 0.62 });
+        color: 0x5A6266, roughness: 0.08, metalness: 0.4, transparent: true, opacity: 0.35 });
     const lensMat = new THREE.MeshStandardMaterial({ color: 0x777777, emissive: 0xFFF4DC, emissiveIntensity: 1.1 });
     const ledMat = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0xEDF3F2, emissiveIntensity: 2.2 });
     const coneGlowMat = new THREE.MeshStandardMaterial({ color: 0x442200, emissive: 0xF08A28, emissiveIntensity: 1.6 });
@@ -178,7 +180,7 @@ export default function build(world) {
     /* ============================================================
        3 · vault, floor, ceiling bands
        ============================================================ */
-    const vaultGeo = new THREE.CylinderGeometry(R, R, LEN, 64, 1, true);
+    const vaultGeo = new THREE.CylinderGeometry(R, R, LEN, 64, 1, true, 1.745, 2.793);
     vaultGeo.rotateX(Math.PI / 2);
     const vault = new THREE.Mesh(vaultGeo, new THREE.MeshStandardMaterial({
         map: concreteTex, roughness: 0.94, side: THREE.BackSide }));
@@ -380,9 +382,6 @@ export default function build(world) {
         const glass = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.9), psdGlassMat);
         glass.rotation.y = rotY; glass.position.set(x, 1.45, 0);
         scene.add(glass);
-        const back = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 5), blackMat);
-        back.rotation.y = rotY; back.position.set(s * 8.65, 2.5, 0);
-        scene.add(back);
         // cladding band above the doors up to the dark vault
         const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.0),
             new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.4, metalness: 0.5 }));
@@ -774,10 +773,55 @@ export default function build(world) {
     bench(0, -42); bench(0, -33); bench(-2.2, 24); bench(2.2, 33);
 
     /* ============================================================
+       10b · track cavities + HCMTs passing through
+       ============================================================ */
+    const TL = 300;                      // tunnel length either side of centre
+    for (const s2 of [-1, 1]) {
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.3, TL),
+            new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.95 }));
+        slab.position.set(s2 * 9.6, -1.3, 0);
+        scene.add(slab);
+        const railMat = new THREE.MeshStandardMaterial({ color: 0x8A8D8F, roughness: 0.35, metalness: 0.7 });
+        for (const rr of [-0.72, 0.72]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.17, TL), railMat);
+            rail.position.set(s2 * 9.6 + rr, -1.06, 0);
+            scene.add(rail);
+        }
+        const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, TL),
+            new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.95 }));
+        wallT.position.set(s2 * 11.95, 2.2, 0);
+        scene.add(wallT);
+        const soffit = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.2, TL),
+            new THREE.MeshStandardMaterial({ color: 0x0C0D0E, roughness: 0.95 }));
+        soffit.position.set(s2 * 10.1, 5.15, 0);
+        scene.add(soffit);
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, LEN),
+            new THREE.MeshStandardMaterial({ color: 0x3A3A3C, roughness: 0.85 }));
+        edge.position.set(s2 * 7.74, -0.68, 0);
+        scene.add(edge);
+        for (const lz of [-38, -22, -8, 8, 22, 38]) {   // cavity lighting so trains read
+            const cl = new THREE.PointLight(0xEDE9DF, 58, 13, 2);
+            cl.position.set(s2 * 8.9, 2.95, lz);
+            scene.add(cl);
+        }
+    }
+    const trains = [];
+    {
+        const t1 = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
+        t1.position.set(9.6, -1.15, -200);
+        scene.add(world.ghost(t1));
+        const t2 = t1.clone(true);           // shares geometry + materials
+        t2.rotation.y = Math.PI;             // nose toward -z on platform 2
+        t2.position.set(-9.6, -1.15, 200);
+        scene.add(world.ghost(t2));
+        trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
+    }
+
+    /* ============================================================
        11 · end walls
        ============================================================ */
     for (const s of [-1, 1]) {
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(18, 13.5, 0.6), concreteMat);
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(15.2, 13.5, 0.6), concreteMat);
         wall.position.set(0, 6, s * (HALF + 0.3));
         scene.add(wall);
     }
@@ -854,12 +898,24 @@ export default function build(world) {
        13 · what moves
        ============================================================ */
     let pidClock = 0, pidLast = -1;
+    const CYCLE = 92, APP = 14, DWELL = 22, DEP = 14, FAR = 200;
+    function trainRun(u) {                    // position along its own direction
+        if (u < APP) { const k = u / APP; return [-FAR + (1 - Math.pow(1 - k, 3)) * FAR, true]; }
+        if (u < APP + DWELL) return [0, true];
+        if (u < APP + DWELL + DEP) { const k = (u - APP - DWELL) / DEP; return [Math.pow(k, 3) * FAR, true]; }
+        return [FAR, false];
+    }
     world.frame((dt) => {
         pidClock += dt;
         const step = Math.floor(pidClock / 45);
         if (step !== pidLast) {
             pidLast = step;
             pids.forEach(p => drawPIDNow(p, pidClock));
+        }
+        for (const tr of trains) {
+            const [z, vis] = trainRun((pidClock + tr.phase) % CYCLE);
+            tr.g.position.z = tr.dir * z;
+            tr.g.visible = vis;
         }
     });
 }

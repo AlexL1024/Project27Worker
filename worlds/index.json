@@ -18,7 +18,10 @@
     {
       "slug": "state-library-station",
       "name": "State Library Station",
-      "scene": "station.scene.js"
+      "scene": "station.scene.js",
+      "files": [
+        "hcmt.scene.js"
+      ]
     }
   ]
 }
