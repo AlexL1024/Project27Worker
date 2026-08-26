@@ -107,6 +107,21 @@ Title Case. Parts are named `thing_NN` (`hut_00`, `palm_03`) — the app uses
 those names to talk about pieces.
 
 
+## Hand placements (`worlds/*.edits.json`)
+
+The app writes `worlds/<slug>.edits.json` when a person drags a world's parts
+around by hand on the iPad. Those files are the person's own placements, laid
+over the scene each time it loads — the scene's code stays pristine underneath
+them.
+
+- **Never** delete, regenerate, or edit these files, and never fold their
+  values back into the scene code. They are not yours to write.
+- Keep part names stable when editing a world — placements are keyed by name
+  (`hut_00`), and renaming a part silently discards where its owner put it.
+- When building or editing a world, don't create an `.edits.json` yourself.
+  A world ships with no placements; the person adds them by hand or not at all.
+
+
 ## Headless requests (the mailbox)
 
 Most sessions here are started headlessly by `tools/watcher.py`: the iPad app
