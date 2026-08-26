@@ -17,7 +17,7 @@
 //      z -55 ─ end wall · lifts ─ open concourse ─ end wall z +55
 //
 
-import { buildHCMT } from './hcmt.scene.js';
+import { buildHCMT, HCMT_DOORS } from './hcmt.scene.js';
 
 export default function build(world) {
     const { THREE, scene } = world;
@@ -376,40 +376,89 @@ export default function build(world) {
     /* ============================================================
        6 · full-height platform screen doors
        ============================================================ */
-    for (const s of [-1, 1]) {
-        const x = s * PSD_X;
-        const rotY = s > 0 ? -Math.PI / 2 : Math.PI / 2;
-        const glass = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.9), psdGlassMat);
-        glass.rotation.y = rotY; glass.position.set(x, 1.45, 0);
-        scene.add(glass);
-        // cladding band above the doors up to the dark vault
-        const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.0),
-            new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.4, metalness: 0.5 }));
-        band.rotation.y = rotY; band.position.set(s * (PSD_X + 0.05), 3.95, 0);
-        scene.add(band);
-        // steel mullions + top rail + LED strip
-        const items = [];
-        const mG = new THREE.BoxGeometry(0.09, 2.9, 0.09);
-        for (let z = -HALF + 0.9; z < HALF; z += 1.72) items.push({ geo: mG, m: M(x, 1.45, z) });
-        items.push({ geo: new THREE.BoxGeometry(0.14, 0.22, LEN), m: M(x, 2.98, 0) });
-        scene.add(new THREE.Mesh(mergeGeos(items), darkMetal));
-        const led = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, LEN), ledMat);
-        led.position.set(s * (PSD_X - 0.25), 4.72, 0);
-        scene.add(led);
-        // "Board trains this way" decals
-        const decalTex = tex(512, 128, (ctx, w, h) => {
+    const psdLeaves = { '1': [], '-1': [] };
+    {
+        const psSteel = new THREE.MeshStandardMaterial({ color: 0xC9CCCE, roughness: 0.3, metalness: 0.6 });
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x22262A, roughness: 0.08, metalness: 0.5,
+            transparent: true, opacity: 0.72 });
+        const louvreTex = tex(256, 256, (ctx, w, h) => {
+            ctx.fillStyle = '#101112'; ctx.fillRect(0, 0, w, h);
+            for (let x = 0; x < w; x += 10) {
+                ctx.fillStyle = '#1E2022'; ctx.fillRect(x, 0, 5, h);
+                ctx.fillStyle = '#07,0808'.length ? '#070808' : '#070808'; ctx.fillRect(x + 5, 0, 5, h);
+            }
+        }, 55, 1);
+        const arrowTex = tex(96, 64, (ctx, w, h) => {
             ctx.clearRect(0, 0, w, h);
-            ctx.fillStyle = '#2C7BC4'; ctx.beginPath(); ctx.arc(56, h / 2, 34, 0, 7); ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.font = '600 30px Arial'; ctx.textBaseline = 'middle';
-            
-            ctx.font = '500 40px Arial';
-            ctx.fillText('Board trains this way', 110, h / 2);
+            ctx.fillStyle = '#2C7BC4'; ctx.fillRect(8, 12, 80, 40);
+            ctx.fillStyle = '#fff'; ctx.font = '700 34px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+            ctx.fillText('→', w / 2, h / 2 + 2);
         });
-        const decalMat = new THREE.MeshBasicMaterial({ map: decalTex, transparent: true });
-        for (let z = -36; z <= 44; z += 26) {
-            const d = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.48), decalMat);
-            d.rotation.y = rotY; d.position.set(s * (PSD_X - 0.06), 2.1, z);
-            scene.add(d);
+        const doorZBase = (typeof HCMT_DOORS !== 'undefined' && HCMT_DOORS.all ? HCMT_DOORS.all : [])
+            .filter(z => Math.abs(z) < 53.4);
+        const numTexs = { '1': tex(128, 128, (ctx, w, h) => {
+                ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+                ctx.fillText('1', w / 2, h / 2 + 4); }),
+            '-1': tex(128, 128, (ctx, w, h) => {
+                ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+                ctx.fillText('2', w / 2, h / 2 + 4); }) };
+        for (const sd of [-1, 1]) {
+            const x = sd * PSD_X;
+            const rotY = sd > 0 ? -Math.PI / 2 : Math.PI / 2;
+            const doorZ = sd > 0 ? doorZBase : doorZBase.map(z => -z);   // platform 2 train is reversed
+            const frames = [], posts = [];
+            // base rail + transom
+            frames.push({ geo: new THREE.BoxGeometry(0.14, 0.1, LEN), m: M(x, 0.05, 0) });
+            frames.push({ geo: new THREE.BoxGeometry(0.2, 0.35, LEN), m: M(x, 2.75, 0) });
+            // black louvre band above, with platform number tiles over each doorway
+            const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.0),
+                new THREE.MeshStandardMaterial({ map: louvreTex, roughness: 0.7, metalness: 0.3 }));
+            band.rotation.y = rotY; band.position.set(sd * (PSD_X + 0.06), 3.95, 0);
+            scene.add(band);
+            const led = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, LEN), ledMat);
+            led.position.set(sd * (PSD_X - 0.25), 4.72, 0);
+            scene.add(led);
+            const numMat = new THREE.MeshBasicMaterial({ map: numTexs[String(sd)] });
+            // doorways with sliding leaves
+            const sorted = [...doorZ].sort((a, b) => a - b);
+            for (const dz of sorted) {
+                for (const pz of [dz - 1.05, dz + 1.05]) {
+                    posts.push({ geo: new THREE.BoxGeometry(0.15, 2.72, 0.15), m: M(x, 1.36, pz) });
+                }
+                for (const lr of [-1, 1]) {
+                    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.52, 0.96), leafMat);
+                    leaf.position.set(x, 1.31, dz + lr * 0.48);
+                    scene.add(leaf);
+                    const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.22),
+                        new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true }));
+                    arrow.rotation.y = rotY;
+                    arrow.rotation.z = lr * (sd > 0 ? 0 : Math.PI);
+                    arrow.position.set(sd * (PSD_X - 0.055), 1.5, dz + lr * 0.48);
+                    leaf.userData.arrow = arrow;
+                    scene.add(arrow);
+                    psdLeaves[String(sd)].push({ leaf, arrow, z0: dz + lr * 0.48, dir: lr });
+                }
+                const tile = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), numMat);
+                tile.rotation.y = rotY;
+                tile.position.set(sd * (PSD_X + 0.02), 3.5, dz);
+                scene.add(tile);
+            }
+            // fixed glazed bays between doorways
+            let edges = [-HALF + 0.4, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 0.4];
+            for (let i = 0; i < edges.length; i += 2) {
+                const a = edges[i], b = edges[i + 1];
+                if (b - a < 0.35) continue;
+                const glass = new THREE.Mesh(new THREE.PlaneGeometry(b - a - 0.06, 2.55), psdGlassMat);
+                glass.rotation.y = rotY;
+                glass.position.set(x, 1.325, (a + b) / 2);
+                scene.add(glass);
+                frames.push({ geo: new THREE.BoxGeometry(0.1, 0.08, b - a), m: M(x, 1.32, (a + b) / 2) });
+                if (b - a > 3.4) frames.push({ geo: new THREE.BoxGeometry(0.09, 2.55, 0.08), m: M(x, 1.325, (a + b) / 2) });
+            }
+            scene.add(new THREE.Mesh(mergeGeos(frames), darkMetal));
+            scene.add(new THREE.Mesh(mergeGeos(posts), psSteel));
         }
     }
 
@@ -779,40 +828,40 @@ export default function build(world) {
     for (const s2 of [-1, 1]) {
         const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.3, TL),
             new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.95 }));
-        slab.position.set(s2 * 9.6, -1.3, 0);
+        slab.position.set(s2 * 10.05, -1.2, 0);
         scene.add(slab);
         const railMat = new THREE.MeshStandardMaterial({ color: 0x8A8D8F, roughness: 0.35, metalness: 0.7 });
         for (const rr of [-0.72, 0.72]) {
             const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.17, TL), railMat);
-            rail.position.set(s2 * 9.6 + rr, -1.06, 0);
+            rail.position.set(s2 * 10.05 + rr, -0.915, 0);
             scene.add(rail);
         }
         const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.95 }));
-        wallT.position.set(s2 * 11.95, 2.2, 0);
+        wallT.position.set(s2 * 12.35, 2.2, 0);
         scene.add(wallT);
-        const soffit = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.2, TL),
+        const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x0C0D0E, roughness: 0.95 }));
-        soffit.position.set(s2 * 10.1, 5.15, 0);
+        soffit.position.set(s2 * 10.35, 5.15, 0);
         scene.add(soffit);
         const edge = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, LEN),
             new THREE.MeshStandardMaterial({ color: 0x3A3A3C, roughness: 0.85 }));
-        edge.position.set(s2 * 7.74, -0.68, 0);
+        edge.position.set(s2 * 8.42, -0.62, 0);
         scene.add(edge);
         for (const lz of [-38, -22, -8, 8, 22, 38]) {   // cavity lighting so trains read
             const cl = new THREE.PointLight(0xEDE9DF, 58, 13, 2);
-            cl.position.set(s2 * 8.9, 2.95, lz);
+            cl.position.set(s2 * 9.35, 3.1, lz);
             scene.add(cl);
         }
     }
     const trains = [];
     {
         const t1 = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
-        t1.position.set(9.6, -1.15, -200);
+        t1.position.set(10.05, -0.83, -200);
         scene.add(world.ghost(t1));
         const t2 = t1.clone(true);           // shares geometry + materials
         t2.rotation.y = Math.PI;             // nose toward -z on platform 2
-        t2.position.set(-9.6, -1.15, 200);
+        t2.position.set(-10.05, -0.83, 200);
         scene.add(world.ghost(t2));
         trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
     }
@@ -913,9 +962,26 @@ export default function build(world) {
             pids.forEach(p => drawPIDNow(p, pidClock));
         }
         for (const tr of trains) {
-            const [z, vis] = trainRun((pidClock + tr.phase) % CYCLE);
+            const u = (pidClock + tr.phase) % CYCLE;
+            const [z, vis] = trainRun(u);
             tr.g.position.z = tr.dir * z;
             tr.g.visible = vis;
+            // door opening fraction: open shortly after stopping, close before departing
+            const od = u - APP;
+            let k = 0;
+            if (od > 0 && od < DWELL) {
+                const open = Math.min(1, Math.max(0, (od - 0.7) / 1.5));
+                const close = Math.min(1, Math.max(0, (DWELL - 0.9 - od) / 1.7));
+                k = Math.min(open, close);
+                k = k * k * (3 - 2 * k);
+            }
+            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, -1);
+            const side = tr.dir > 0 ? '1' : '-1';
+            for (const d of psdLeaves[side]) {
+                const zz = d.z0 + d.dir * k * 0.94;
+                d.leaf.position.z = zz;
+                d.arrow.position.z = zz;
+            }
         }
     });
 }
