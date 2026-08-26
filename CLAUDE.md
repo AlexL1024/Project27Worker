@@ -67,8 +67,8 @@ The API, in full — this is everything a world may reach:
 | Call | Meaning |
 |---|---|
 | `world.part(name, object3D)` | Declare one pick-up-able thing. The builder decides what counts as an object. |
-| `world.ground(object3D)` | Scenery you stand on, never pick up — terrain, water, roads. |
-| `world.ghost(object3D)` | The walk passes through it — clouds, birds, spray. |
+| `world.ground(object3D)` | The large base terrain — the island, the water, the plain. Still required for terrain and water: it is what the walk's grid is sized and anchored to. |
+| `world.ghost(object3D)` | Opts something out of collision — the walk passes through it. Clouds, birds, spray, glow sprites, particle swarms. |
 | `world.ownsSky(bool)` | The world brings its own sky; the app's gradient and grid step aside. |
 | `world.groundLevel(y)` | Where the ground sits, metres, y-up — for stepping inside. |
 | `world.frame(fn)` | Per-frame callback `(dt, t)`. |
@@ -88,7 +88,16 @@ Hard rules, because breaking them breaks the app around the world:
 - Custom `ShaderMaterial`s are encouraged (that's where real water and skies
   live) — see `worlds/coral-cay.scene.js` for shaders done right.
 - Scale is metres, y-up. People walk in these worlds: groundLevel matters,
-  and everything walkable should be registered with `world.ground()`.
+  and terrain and water must be registered with `world.ground()`.
+- Collision is otherwise automatic: every visible mesh collides. People stand
+  on decks, jetties and rooftops and are stopped by walls and trunks without
+  the world saying anything. The opt-out is `world.ghost()` — ghost anything
+  a person should pass through (spray, birds, drifting cloud, glow) and ghost
+  decorative swarms even when passing through them would be fine, because
+  every un-ghosted mesh is rasterised into the collision grid and a thousand
+  petals are collision work for no collision anyone feels. Hidden objects and
+  depth-write-less materials never collide; leave doorways and archways at
+  least a couple of metres wide, or the walk will read them as wall.
 
 ## Quality bar
 
