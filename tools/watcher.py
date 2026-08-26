@@ -28,7 +28,10 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REQUESTS = os.path.join(REPO, "requests")
 STATUS = os.path.join(REPO, "status")
 LOGS = os.path.join(REPO, "logs")          # gitignored; one file per build
+FEED = os.path.join(REPO, ".feed")         # worktree on the `feed` branch
 CLAUDE = shutil.which("claude")
+
+FEED_OK = False
 
 
 def sh(*args, timeout=300, check=False):
@@ -43,6 +46,62 @@ def sh(*args, timeout=300, check=False):
 
 def log(text):
     print(f"[{time.strftime('%H:%M:%S')}] {text}", flush=True)
+
+
+def sh_feed(*args, timeout=120):
+    """A git command inside the feed worktree, with hooks switched off — the
+    feed must never trigger the main branch's auto-push."""
+    done = subprocess.run(
+        ["git", "-c", "core.hooksPath=/dev/null", *args], cwd=FEED, timeout=timeout,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    return done.returncode, done.stdout.strip()
+
+
+def feed_setup():
+    """Stands up the live-progress channel: a one-commit `feed` branch, amended
+    and force-pushed, so the play-by-play never lands in the worlds' history."""
+    global FEED_OK
+    sh("git", "worktree", "prune")
+    code, _ = sh("git", "rev-parse", "--verify", "feed")
+    if code != 0:
+        sh("git", "branch", "feed")
+    if not os.path.isdir(FEED):
+        code, out = sh("git", "worktree", "add", FEED, "feed")
+        if code != 0:
+            log(f"live feed disabled: {out[-140:]}")
+            return
+    FEED_OK = True
+
+
+class Feed:
+    """The lines the iPad shows while a build runs. Pushed at most every 15s."""
+
+    def __init__(self, request_id):
+        self.id = request_id
+        self.lines = []
+        self.pushed = 0.0
+
+    def say(self, text):
+        log(text)
+        self.lines.append(text)
+        self.push()
+
+    def push(self, force=False):
+        if not FEED_OK:
+            return
+        now = time.time()
+        if not force and now - self.pushed < 15:
+            return
+        self.pushed = now
+        try:
+            with open(os.path.join(FEED, "feed.json"), "w") as f:
+                json.dump({"id": self.id, "lines": self.lines[-200:]}, f)
+            sh_feed("add", "feed.json")
+            sh_feed("commit", "-q", "--amend", "--no-edit", "-m", "feed")
+            sh_feed("push", "-q", "-f", "origin", "feed")
+        except Exception:
+            pass    # the feed is a nicety; a build must never fail over it
 
 
 def manifest():
@@ -123,8 +182,10 @@ def serve(request_id):
                      {"reason": f"Unreadable request: {error}"}, also_remove_request=True)
         return
 
+    feed = Feed(request_id)
     log(f"building {request_id}: {ask.get('prompt', '')[:80]}")
     write_status(request_id, "building")
+    feed.push(force=True)      # a fresh, empty feed, so old lines never bleed in
 
     before = manifest()
     process = subprocess.Popen(
@@ -158,11 +219,12 @@ def serve(request_id):
         elif event.get("type") == "assistant":
             for block in event.get("message", {}).get("content", []):
                 if block.get("type") == "text" and block.get("text", "").strip():
-                    log("  claude: " + block["text"].strip().splitlines()[0][:110])
+                    feed.say(block["text"].strip().splitlines()[0][:140])
                 elif block.get("type") == "tool_use":
                     spot = block.get("input", {}).get("file_path") \
                         or block.get("input", {}).get("command") or ""
-                    log(f"  {block.get('name', '?')} {str(spot)[:80]}")
+                    spot = os.path.basename(str(spot).split()[0]) if spot else ""
+                    feed.say(f"{block.get('name', '?')} {spot}".strip()[:120])
     process.wait()
     if error_lines:
         transcript.write("\n--- stderr ---\n" + "".join(error_lines))
@@ -194,6 +256,7 @@ def serve(request_id):
         return
 
     world = after[slug]
+    feed.push(force=True)
     log(f"done {request_id}: {world.get('name', slug)}")
     write_status(request_id, "done",
                  {"slug": slug, "name": world.get("name"), "scene": world.get("scene")},
@@ -217,6 +280,7 @@ def main():
         sys.exit("The `claude` command isn't installed. npm install -g @anthropic-ai/claude-code")
 
     log(f"Project27 watcher · repo {REPO}")
+    feed_setup()
     log(f"Watching GitHub for requests every {POLL}s. Ctrl-C to stop.")
 
     while True:
