@@ -23,10 +23,11 @@ import sys
 import time
 
 POLL = 10                      # seconds between looks at the repo
-MODEL = "opus"
+MODEL = os.environ.get("P27_MODEL", "opus")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REQUESTS = os.path.join(REPO, "requests")
 STATUS = os.path.join(REPO, "status")
+LOGS = os.path.join(REPO, "logs")          # gitignored; one file per build
 CLAUDE = shutil.which("claude")
 
 
@@ -140,8 +141,14 @@ def serve(request_id):
             error_lines.append(line)
     threading.Thread(target=drain, daemon=True).start()
 
+    # Everything Claude says is kept on disk, so a failed build is a file to
+    # read rather than a mystery to reproduce.
+    os.makedirs(LOGS, exist_ok=True)
+    transcript = open(os.path.join(LOGS, f"{request_id}.log"), "w")
+
     result_text = ""
     for line in process.stdout:
+        transcript.write(line)
         try:
             event = json.loads(line)
         except ValueError:
@@ -157,11 +164,18 @@ def serve(request_id):
                         or block.get("input", {}).get("command") or ""
                     log(f"  {block.get('name', '?')} {str(spot)[:80]}")
     process.wait()
+    if error_lines:
+        transcript.write("\n--- stderr ---\n" + "".join(error_lines))
+    transcript.close()
 
     if process.returncode != 0:
-        write_status(request_id, "failed",
-                     {"reason": "".join(error_lines).strip()[-300:] or "Claude Code exited with an error."},
-                     also_remove_request=True)
+        # The most useful line available: stderr, else Claude's last words, else
+        # at least say where the full transcript is.
+        reason = "".join(error_lines).strip()[-300:] \
+            or result_text.strip()[-300:] \
+            or f"Claude Code exited with code {process.returncode} — see logs/{request_id}.log on the Mac."
+        log(f"failed {request_id}: {reason[:160]}")
+        write_status(request_id, "failed", {"reason": reason}, also_remove_request=True)
         return
 
     after = manifest()
