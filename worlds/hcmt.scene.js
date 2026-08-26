@@ -1600,8 +1600,19 @@ export function buildHCMT(THREE, canvasTexture) {
         train.add(gw);
     }
 
-    // ---- door control ------------------------------------------------------
-    // collect leaf mover meshes, classified by their TRAIN-local side
+    return attachDoorControl(THREE, train);
+}
+
+/**
+ * Gives a train its `setDoors(k, worldSide)`.
+ *
+ * Separate from buildHCMT because a second train is usually a clone of the
+ * first — and three serialises userData through JSON when it copies an object,
+ * so a cloned train arrives with the function silently missing. Call this on
+ * any clone, AFTER setting its rotation: the side each leaf ends up on is read
+ * from the world matrix, so a train turned to face the other way sorts itself.
+ */
+export function attachDoorControl(THREE, train) {
     train.updateMatrixWorld(true);
     const moversP = [], moversN = [];
     const q = new THREE.Quaternion(), ax = new THREE.Vector3();
@@ -1610,17 +1621,16 @@ export function buildHCMT(THREE, canvasTexture) {
         const { s, dir } = o.userData.leaf;
         o.getWorldQuaternion(q);
         ax.set(1, 0, 0).applyQuaternion(q);
-        const worldSide = s * Math.sign(ax.x || 1);
+        const worldSide = s * (ax.x < 0 ? -1 : 1);
         (worldSide > 0 ? moversP : moversN).push({ mesh: o, dir });
     });
-    train.userData.setDoors = (k, localSide) => {
+    train.userData.setDoors = (k, worldSide) => {
         k = Math.max(0, Math.min(1, k || 0));
-        const arr = localSide < 0 ? moversN : moversP;
+        const arr = worldSide < 0 ? moversN : moversP;
         for (let i = 0; i < arr.length; i++) {
             arr[i].mesh.position.z = arr[i].dir * LEAF_TRAVEL * k;
         }
     };
-
     return train;
 }
 

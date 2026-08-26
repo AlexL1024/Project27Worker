@@ -17,7 +17,7 @@
 //      z -55 ─ end wall · lifts ─ open concourse ─ end wall z +55
 //
 
-import { buildHCMT, HCMT_DOORS, HCMT_GEOM } from './hcmt.scene.js';
+import { buildHCMT, attachDoorControl, HCMT_DOORS, HCMT_GEOM } from './hcmt.scene.js';
 
 export default function build(world) {
     const { THREE, scene } = world;
@@ -1042,8 +1042,14 @@ export default function build(world) {
         const t2 = t1.clone(true);           // shares geometry + materials
         t2.rotation.y = Math.PI;             // nose toward -z on platform 2
         t2.position.set(-TRACK_X, RAILHEAD, 200);
+        // a clone loses setDoors — three copies userData through JSON, and a
+        // function does not survive that. Re-attach it, after the rotation, so
+        // the reversed train works out which of its sides now faces a platform.
+        attachDoorControl(THREE, t2);
         scene.add(world.ghost(t2));
-        trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
+        // `side` is the world x direction the platform lies in from that train
+        trains.push({ g: t1, dir: 1, phase: 0, side: -1 },
+                    { g: t2, dir: -1, phase: 48, side: 1 });
     }
 
     /* ============================================================
@@ -1155,7 +1161,7 @@ export default function build(world) {
                 k = Math.min(open, close);
                 k = k * k * (3 - 2 * k);
             }
-            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, -1);
+            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, tr.side);
             // the screen doors run with the train doors, a beat behind them —
             // the platform side always trails the car side by a hair in reality
             const kp = Math.min(1, Math.max(0, (k - 0.06) / 0.94));
