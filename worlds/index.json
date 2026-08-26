@@ -1,7 +1,24 @@
 {
   "worlds": [
-    { "slug": "coral-cay",     "name": "Coral Cay",     "scene": "coral-cay.scene.js" },
-    { "slug": "crumb-hour",    "name": "Crumb Hour",    "scene": "crumb-hour.scene.js" },
-    { "slug": "lantern-shore", "name": "Lantern Shore", "scene": "lantern-shore.scene.js" }
+    {
+      "slug": "coral-cay",
+      "name": "Coral Cay",
+      "scene": "coral-cay.scene.js"
+    },
+    {
+      "slug": "crumb-hour",
+      "name": "Crumb Hour",
+      "scene": "crumb-hour.scene.js"
+    },
+    {
+      "slug": "lantern-shore",
+      "name": "Lantern Shore",
+      "scene": "lantern-shore.scene.js"
+    },
+    {
+      "slug": "state-library-station",
+      "name": "State Library Station",
+      "scene": "station.scene.js"
+    }
   ]
 }
