@@ -17,7 +17,7 @@
 //      z -55 ─ end wall · lifts ─ open concourse ─ end wall z +55
 //
 
-import { buildHCMT, attachDoorControl, HCMT_DOORS, HCMT_GEOM } from './hcmt.scene.js';
+import { buildHCMT, HCMT_DOORS } from './hcmt.scene.js';
 
 export default function build(world) {
     const { THREE, scene } = world;
@@ -37,17 +37,6 @@ export default function build(world) {
     const ARCH_X = 4.8, ARCH_Y0 = 5.45, ARCH_H = 4.4;   // arch span/spring/rise (crown ~9.85)
     const PSD_X = 8.3;                    // platform screen door wall
     const MEZZ = { z0: -8, z1: 8, y: 4.0 };             // Exit 1 mezzanine
-
-    // ---- where the train sits, derived from the train itself ----------------
-    // The platform is the datum: y = 0. The train's floor is placed exactly on
-    // it (level boarding), which fixes the railhead 1.13 m below, and the train
-    // centreline is set so the body clears the platform coping by 130 mm — the
-    // real "mind the gap", rather than the body cutting through the screen doors.
-    const PLAT_EDGE_X = 8.50;                              // outer face of the coping
-    const GAP_X = 0.13;                                    // platform edge -> train side
-    const TRACK_X = PLAT_EDGE_X + GAP_X + HCMT_GEOM.halfWidth;   // 10.16
-    const RAILHEAD = -HCMT_GEOM.floorY;                    // -1.13
-    const TRAIN_DOOR_H = HCMT_GEOM.doorTop - HCMT_GEOM.floorY;  // 1.95 clear
 
     const tex = (w, h, draw, rx, ry) => {
         const t = world.canvasTexture(w, h, (ctx, cv) => draw(ctx, cv.width, cv.height));
@@ -387,245 +376,89 @@ export default function build(world) {
     /* ============================================================
        6 · full-height platform screen doors
        ============================================================ */
-    //
-    //  Built around the train's own numbers so the two door systems agree: the
-    //  clear opening is 1.74 x 2.02, which is the train's 1.70 x 1.95 opening
-    //  plus the small margin the real screen doors carry, and the doorway
-    //  centres come straight out of HCMT_DOORS. Leaves are dark tinted glass in
-    //  slim frames between full-height brushed-steel posts, as at State Library.
-    //
     const psdLeaves = { '1': [], '-1': [] };
-    const PSD_TRAVEL = 0.90;
-    const mkLampMat = () => new THREE.MeshStandardMaterial({
-        color: 0xE8EAEA, emissive: 0xFFFFFF, emissiveIntensity: 0.35, roughness: 0.5 });
-    const psdLampMats = { '1': mkLampMat(), '-1': mkLampMat() };   // each platform lights on its own train
     {
-        const PSD_H = 2.62;                       // top of the glazed screen
-        const HEAD_Y1 = 2.98;                     // top of the dark head beam
-        const OPEN_W = HCMT_GEOM.doorW + 0.04;    // 1.74 clear
-        const OPEN_H = TRAIN_DOOR_H + 0.07;       // 2.02 clear
-        const LW = 0.90, LT = 0.05;               // leaf width / thickness
-        const LEAF_DX = 0.10;                     // leaves ride OUTBOARD of the fixed
-                                                  // glazing and clear of the posts, so an
-                                                  // opening leaf pockets behind the panel
-                                                  // rather than sliding through it
-        const SILL_T = 0.03;                      // guide track on the floor
-        const LEAF_Y0 = SILL_T + 0.015;           // leaf bottom, just over the track
-        const POST_W = 0.22, POST_T = 0.11;       // steel post: along z / across
-        const JAMB = OPEN_W / 2 + POST_W / 2;     // post centre offset from doorway
-
-        const psSteel = new THREE.MeshStandardMaterial({
-            color: 0xC5C9CC, roughness: 0.26, metalness: 0.72 });
-
+        const psSteel = new THREE.MeshStandardMaterial({ color: 0xC9CCCE, roughness: 0.3, metalness: 0.6 });
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x22262A, roughness: 0.08, metalness: 0.5,
+            transparent: true, opacity: 0.72 });
         const louvreTex = tex(256, 256, (ctx, w, h) => {
             ctx.fillStyle = '#101112'; ctx.fillRect(0, 0, w, h);
             for (let x = 0; x < w; x += 10) {
                 ctx.fillStyle = '#1E2022'; ctx.fillRect(x, 0, 5, h);
-                ctx.fillStyle = '#070808'; ctx.fillRect(x + 5, 0, 5, h);
+                ctx.fillStyle = '#07,0808'.length ? '#070808' : '#070808'; ctx.fillRect(x + 5, 0, 5, h);
             }
         }, 55, 1);
-
-        // A whole leaf on one texture: frame, tinted glazing, the black band that
-        // crosses the fixed panels at the same height, and the blue arrow pointing
-        // the way this leaf travels. One mesh per leaf instead of three, and the
-        // decals land exactly where they do in the photograph.
-        const LEAF_H_M = OPEN_H - LEAF_Y0;
-        const leafTex = (meetLeft) => tex(128, Math.round(128 * LEAF_H_M / LW), (ctx, w, h) => {
-            const fr = Math.round(w * 0.075);            // frame width in px
+        const arrowTex = tex(96, 64, (ctx, w, h) => {
             ctx.clearRect(0, 0, w, h);
-            // tinted glazing, seen through
-            const gg = ctx.createLinearGradient(0, 0, 0, h);
-            gg.addColorStop(0, 'rgba(52,60,68,0.60)');
-            gg.addColorStop(0.45, 'rgba(26,32,38,0.52)');
-            gg.addColorStop(1, 'rgba(18,22,27,0.58)');
-            ctx.fillStyle = gg; ctx.fillRect(0, 0, w, h);
-            // a soft raking reflection across the glass
-            ctx.fillStyle = 'rgba(196,214,232,0.10)';
-            ctx.beginPath();
-            ctx.moveTo(w * 0.08, 0); ctx.lineTo(w * 0.46, 0); ctx.lineTo(w * 0.16, h); ctx.lineTo(0, h);
-            ctx.closePath(); ctx.fill();
-            // black band at hand height, continuing the line of the fixed panels
-            const bandY = Math.round(h * 0.30);
-            ctx.fillStyle = '#14181B'; ctx.fillRect(0, bandY, w, Math.round(h * 0.075));
-            // blue arrow sitting on the band, pointing away from the meeting edge
-            const ax0 = meetLeft ? w * 0.34 : w * 0.16, aw = w * 0.5;
-            const ay = bandY + h * 0.008, ah = h * 0.058;
-            ctx.fillStyle = '#1B5FAF'; ctx.fillRect(ax0, ay, aw, ah);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(2, h * 0.010); ctx.lineCap = 'round';
-            const y0 = ay + ah / 2, tip = meetLeft ? ax0 + aw - 6 : ax0 + 6, tail = meetLeft ? ax0 + 7 : ax0 + aw - 7;
-            const d = meetLeft ? -1 : 1;
-            ctx.beginPath();
-            ctx.moveTo(tail, y0); ctx.lineTo(tip, y0);
-            ctx.moveTo(tip + d * 9, y0 - 7); ctx.lineTo(tip, y0); ctx.lineTo(tip + d * 9, y0 + 7);
-            ctx.stroke();
-            // frame: head, foot, outer stile, and the darker meeting stile
-            ctx.fillStyle = '#3A4046';
-            ctx.fillRect(0, 0, w, fr); ctx.fillRect(0, h - fr, w, fr);
-            ctx.fillRect(meetLeft ? w - fr : 0, 0, fr, h);
-            ctx.fillStyle = '#15181A';
-            ctx.fillRect(meetLeft ? 0 : w - fr * 0.7, 0, fr * 0.7, h);
+            ctx.fillStyle = '#2C7BC4'; ctx.fillRect(8, 12, 80, 40);
+            ctx.fillStyle = '#fff'; ctx.font = '700 34px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+            ctx.fillText('→', w / 2, h / 2 + 2);
         });
-        const leafMat = (meetLeft) => new THREE.MeshStandardMaterial({
-            map: leafTex(meetLeft), transparent: true, roughness: 0.16, metalness: 0.35,
-            side: THREE.DoubleSide });
-        // the meeting edge lands on u=0 when the platform side and the leaf's
-        // direction of travel agree; two materials cover all four cases
-        const leafMats = { meetLeft: leafMat(true), meetRight: leafMat(false) };
-
-        // the sticker stack the real posts carry, baked into one texture
-        const postTex = (plat) => tex(96, 1146, (ctx, w, h) => {
-            const g = ctx.createLinearGradient(0, 0, w, 0);
-            g.addColorStop(0, '#9DA2A6'); g.addColorStop(0.35, '#D6DADD');
-            g.addColorStop(0.62, '#B4B9BC'); g.addColorStop(1, '#8E9397');
-            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-            for (let y = 0; y < h; y += 3) {           // brushed grain
-                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
-                ctx.fillRect(0, y, w, 1);
-            }
-            // yellow "stand clear of closing doors"
-            ctx.fillStyle = '#F5C400'; ctx.fillRect(12, 318, w - 24, 64);
-            ctx.fillStyle = '#1A1A1A'; ctx.font = '700 9px Arial'; ctx.textAlign = 'center';
-            ctx.fillText('STAND CLEAR OF', w / 2, 334);
-            ctx.fillText('CLOSING DOORS', w / 2, 346);
-            ctx.fillStyle = '#1A1A1A'; ctx.beginPath(); ctx.arc(w / 2, 366, 11, 0, 7); ctx.fill();
-            // white instruction card
-            ctx.fillStyle = '#F3F4F2'; ctx.fillRect(12, 392, w - 24, 96);
-            ctx.fillStyle = '#4A4E52'; ctx.font = '8px Arial';
-            for (let i = 0; i < 7; i++) ctx.fillText('— — — — — —', w / 2, 408 + i * 12);
-            // no-bicycles roundel
-            ctx.fillStyle = '#F3F4F2'; ctx.fillRect(12, 498, w - 24, 62);
-            ctx.strokeStyle = '#C42121'; ctx.lineWidth = 5;
-            ctx.beginPath(); ctx.arc(w / 2, 529, 21, 0, 7); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(w / 2 - 15, 544); ctx.lineTo(w / 2 + 15, 514); ctx.stroke();
-            // platform / door label
-            ctx.fillStyle = '#F3F4F2'; ctx.fillRect(20, 572, w - 40, 34);
-            ctx.fillStyle = '#222'; ctx.font = '700 11px Arial';
-            ctx.fillText(`Platform ${plat}`, w / 2, 586);
-            ctx.fillText('Door', w / 2, 600);
-        });
-
-        const numTex = (n) => tex(128, 128, (ctx, w, h) => {
-            ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = '#222'; ctx.font = '600 84px Arial';
-            ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-            ctx.fillText(n, w / 2, h / 2 + 4);
-        });
-
-        // the paving in front of a doorway: dark inlay lines funnelling to a
-        // boarding arrow, exactly the marking in the reference photo
-        const floorMarkTex = tex(256, 320, (ctx, w, h) => {
-            ctx.clearRect(0, 0, w, h);
-            ctx.fillStyle = 'rgba(38,38,40,0.85)';
-            // two inlay lines splaying away from the door (door is at v=1, top)
-            for (const s of [-1, 1]) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(w / 2 + s * 40, 0);
-                ctx.lineTo(w / 2 + s * 112, h);
-                ctx.lineTo(w / 2 + s * 96, h);
-                ctx.lineTo(w / 2 + s * 30, 0);
-                ctx.closePath(); ctx.fill();
-                ctx.restore();
-            }
-            // boarding arrow pointing at the doorway
-            ctx.beginPath();
-            ctx.moveTo(w / 2, 48); ctx.lineTo(w / 2 - 46, 118); ctx.lineTo(w / 2 - 17, 118);
-            ctx.lineTo(w / 2 - 17, 168); ctx.lineTo(w / 2 + 17, 168); ctx.lineTo(w / 2 + 17, 118);
-            ctx.lineTo(w / 2 + 46, 118);
-            ctx.closePath(); ctx.fill();
-        });
-        const floorMarkMat = new THREE.MeshStandardMaterial({
-            map: floorMarkTex, transparent: true, roughness: 0.7, depthWrite: false });
-
-        const doorZBase = (HCMT_DOORS && HCMT_DOORS.all ? HCMT_DOORS.all : [])
-            .filter(z => Math.abs(z) < HALF - 1.6);
-
+        const doorZBase = (typeof HCMT_DOORS !== 'undefined' && HCMT_DOORS.all ? HCMT_DOORS.all : [])
+            .filter(z => Math.abs(z) < 53.4);
+        const numTexs = { '1': tex(128, 128, (ctx, w, h) => {
+                ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+                ctx.fillText('1', w / 2, h / 2 + 4); }),
+            '-1': tex(128, 128, (ctx, w, h) => {
+                ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+                ctx.fillText('2', w / 2, h / 2 + 4); }) };
         for (const sd of [-1, 1]) {
             const x = sd * PSD_X;
             const rotY = sd > 0 ? -Math.PI / 2 : Math.PI / 2;
-            const inX = sd * (PSD_X - POST_T / 2 - 0.004);      // platform-facing face
-            // platform 2's train arrives nose-first the other way, so its doors mirror
-            const doorZ = (sd > 0 ? doorZBase : doorZBase.map(z => -z)).sort((a, b) => a - b);
-
-            const frames = [], posts = [], stickers = [], marks = [], lamps = [], glazing = [], tiles = [];
-
-            // continuous base sill (carrying the leaf track) and head beam
-            frames.push({ geo: new THREE.BoxGeometry(0.30, SILL_T, LEN), m: M(sd * (PSD_X + 0.035), SILL_T / 2, 0) });
-            frames.push({ geo: new THREE.BoxGeometry(0.30, HEAD_Y1 - PSD_H, LEN), m: M(sd * (PSD_X + 0.035), (PSD_H + HEAD_Y1) / 2, 0) });
-
-            // black louvred cladding above, stopping where the vault curves in
-            // the vault curves in at x = 8.34 by y = 4.66, so the cladding stops there
-            const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 1.66),
+            const doorZ = sd > 0 ? doorZBase : doorZBase.map(z => -z);   // platform 2 train is reversed
+            const frames = [], posts = [];
+            // base rail + transom
+            frames.push({ geo: new THREE.BoxGeometry(0.14, 0.1, LEN), m: M(x, 0.05, 0) });
+            frames.push({ geo: new THREE.BoxGeometry(0.2, 0.35, LEN), m: M(x, 2.75, 0) });
+            // black louvre band above, with platform number tiles over each doorway
+            const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.0),
                 new THREE.MeshStandardMaterial({ map: louvreTex, roughness: 0.7, metalness: 0.3 }));
-            band.rotation.y = rotY;
-            band.position.set(sd * (PSD_X + 0.05), HEAD_Y1 + 0.83, 0);
+            band.rotation.y = rotY; band.position.set(sd * (PSD_X + 0.06), 3.95, 0);
             scene.add(band);
             const led = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, LEN), ledMat);
-            led.position.set(sd * (PSD_X - 0.22), HEAD_Y1 + 0.14, 0);
+            led.position.set(sd * (PSD_X - 0.25), 4.72, 0);
             scene.add(led);
-
-            const numMat = new THREE.MeshBasicMaterial({ map: numTex(sd > 0 ? '1' : '2') });
-            const stickMat = new THREE.MeshStandardMaterial({ map: postTex(sd > 0 ? 1 : 2), roughness: 0.4 });
-
-            for (const dz of doorZ) {
-                // full-height brushed-steel posts either side of the opening
-                for (const e of [-1, 1]) {
-                    posts.push({ geo: new THREE.BoxGeometry(POST_T, PSD_H, POST_W), m: M(x, PSD_H / 2, dz + e * JAMB) });
-                    stickers.push({ geo: new THREE.PlaneGeometry(POST_W - 0.02, PSD_H),
-                        m: M(inX, PSD_H / 2, dz + e * JAMB, 0, rotY, 0) });
+            const numMat = new THREE.MeshBasicMaterial({ map: numTexs[String(sd)] });
+            // doorways with sliding leaves
+            const sorted = [...doorZ].sort((a, b) => a - b);
+            for (const dz of sorted) {
+                for (const pz of [dz - 1.05, dz + 1.05]) {
+                    posts.push({ geo: new THREE.BoxGeometry(0.15, 2.72, 0.15), m: M(x, 1.36, pz) });
                 }
-                // ribbed steel threshold plate in the doorway
-                posts.push({ geo: new THREE.BoxGeometry(0.30, 0.012, OPEN_W + 0.06), m: M(sd * (PSD_X + 0.035), SILL_T + 0.006, dz) });
-                // fixed transom glass over the opening
-                const trH = PSD_H - (OPEN_H + 0.11);
-                glazing.push({ geo: new THREE.PlaneGeometry(OPEN_W + 2 * POST_W, trH), m: M(x, PSD_H - trH / 2, dz, 0, rotY, 0) });
-                frames.push({ geo: new THREE.BoxGeometry(0.13, 0.09, OPEN_W + 2 * POST_W), m: M(x, OPEN_H + 0.065, dz) });
-
-                // the two sliding leaves — one textured box each
-                const lh = OPEN_H - LEAF_Y0;
                 for (const lr of [-1, 1]) {
-                    const leaf = new THREE.Mesh(new THREE.BoxGeometry(LT, lh, LW),
-                        leafMats[lr * sd > 0 ? 'meetLeft' : 'meetRight']);
-                    leaf.position.set(sd * (PSD_X + LEAF_DX), LEAF_Y0 + lh / 2, dz + lr * (LW / 2));
-                    scene.add(world.ghost(leaf));
-                    psdLeaves[String(sd)].push({ leaf, z0: dz + lr * (LW / 2), dir: lr });
+                    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.52, 0.96), leafMat);
+                    leaf.position.set(x, 1.31, dz + lr * 0.48);
+                    scene.add(leaf);
+                    const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.22),
+                        new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true }));
+                    arrow.rotation.y = rotY;
+                    arrow.rotation.z = lr * (sd > 0 ? 0 : Math.PI);
+                    arrow.position.set(sd * (PSD_X - 0.055), 1.5, dz + lr * 0.48);
+                    leaf.userData.arrow = arrow;
+                    scene.add(arrow);
+                    psdLeaves[String(sd)].push({ leaf, arrow, z0: dz + lr * 0.48, dir: lr });
                 }
-
-                // platform number tile + door-open lamp on the head beam
-                tiles.push({ geo: new THREE.PlaneGeometry(0.34, 0.34), m: M(sd * (PSD_X - 0.13), HEAD_Y1 + 0.34, dz, 0, rotY, 0) });
-                lamps.push({ geo: new THREE.BoxGeometry(0.05, 0.12, 0.4), m: M(sd * (PSD_X - 0.14), PSD_H + 0.18, dz) });
-
-                // paving markings in front of the doorway — the arrow has to point
-                // AT the door, so the plane's +v must face outboard
-                marks.push({ geo: new THREE.PlaneGeometry(2.0, 2.5),
-                    m: M(sd * (PSD_X - 1.05), 0.016, dz, -Math.PI / 2, 0, sd > 0 ? -Math.PI / 2 : Math.PI / 2) });
+                const tile = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), numMat);
+                tile.rotation.y = rotY;
+                tile.position.set(sd * (PSD_X + 0.02), 3.5, dz);
+                scene.add(tile);
             }
-
-            // fixed glazed bays filling everything between the doorways
-            const edges = [-HALF + 0.4, ...doorZ.flatMap(z => [z - JAMB - POST_W / 2, z + JAMB + POST_W / 2]), HALF - 0.4];
+            // fixed glazed bays between doorways
+            let edges = [-HALF + 0.4, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 0.4];
             for (let i = 0; i < edges.length; i += 2) {
                 const a = edges[i], b = edges[i + 1];
                 if (b - a < 0.35) continue;
-                glazing.push({ geo: new THREE.PlaneGeometry(b - a - 0.05, PSD_H - SILL_T),
-                    m: M(x, (PSD_H + SILL_T) / 2, (a + b) / 2, 0, rotY, 0) });
-                // dark rail across the glass at hand height, as in the reference
-                frames.push({ geo: new THREE.BoxGeometry(0.11, 0.13, b - a), m: M(x, 1.36, (a + b) / 2) });
-                frames.push({ geo: new THREE.BoxGeometry(0.11, 0.14, b - a), m: M(x, SILL_T + 0.07, (a + b) / 2) });
-                // mullions roughly every 1.6 m
-                const n = Math.max(1, Math.round((b - a) / 1.6));
-                for (let k = 1; k < n; k++) {
-                    frames.push({ geo: new THREE.BoxGeometry(0.1, PSD_H - SILL_T, 0.07), m: M(x, (PSD_H + SILL_T) / 2, a + (b - a) * k / n) });
-                }
+                const glass = new THREE.Mesh(new THREE.PlaneGeometry(b - a - 0.06, 2.55), psdGlassMat);
+                glass.rotation.y = rotY;
+                glass.position.set(x, 1.325, (a + b) / 2);
+                scene.add(glass);
+                frames.push({ geo: new THREE.BoxGeometry(0.1, 0.08, b - a), m: M(x, 1.32, (a + b) / 2) });
+                if (b - a > 3.4) frames.push({ geo: new THREE.BoxGeometry(0.09, 2.55, 0.08), m: M(x, 1.325, (a + b) / 2) });
             }
-
-            // one draw call per material, the whole 110 m of screen
             scene.add(new THREE.Mesh(mergeGeos(frames), darkMetal));
             scene.add(new THREE.Mesh(mergeGeos(posts), psSteel));
-            scene.add(new THREE.Mesh(mergeGeos(stickers), stickMat));
-            scene.add(new THREE.Mesh(mergeGeos(lamps), psdLampMats[String(sd)]));
-            scene.add(new THREE.Mesh(mergeGeos(glazing), psdGlassMat));
-            scene.add(new THREE.Mesh(mergeGeos(tiles), numMat));
-            scene.add(world.ghost(new THREE.Mesh(mergeGeos(marks), floorMarkMat)));
         }
     }
 
@@ -993,63 +826,44 @@ export default function build(world) {
        ============================================================ */
     const TL = 300;                      // tunnel length either side of centre
     for (const s2 of [-1, 1]) {
-        // track slab, its top exactly under the railfoot
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.34, TL),
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.3, TL),
             new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.95 }));
-        slab.position.set(s2 * TRACK_X, RAILHEAD - 0.34, 0);
+        slab.position.set(s2 * 10.05, -1.2, 0);
         scene.add(slab);
         const railMat = new THREE.MeshStandardMaterial({ color: 0x8A8D8F, roughness: 0.35, metalness: 0.7 });
         for (const rr of [-0.72, 0.72]) {
             const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.17, TL), railMat);
-            rail.position.set(s2 * TRACK_X + rr, RAILHEAD - 0.085, 0);
+            rail.position.set(s2 * 10.05 + rr, -0.915, 0);
             scene.add(rail);
         }
         const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.95 }));
-        wallT.position.set(s2 * (TRACK_X + 2.3), 2.2, 0);
+        wallT.position.set(s2 * 12.35, 2.2, 0);
         scene.add(wallT);
         const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x0C0D0E, roughness: 0.95 }));
-        soffit.position.set(s2 * (TRACK_X + 0.3), 5.15, 0);
+        soffit.position.set(s2 * 10.35, 5.15, 0);
         scene.add(soffit);
-        // platform edge structure: a coping face down to the trackbed, stopping
-        // outboard of the screen doors and inboard of the train
-        // the coping face stops flush with the paving — the screen-door sill is
-        // what stands proud of it, so nothing here can foul a sliding leaf
-        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.66, LEN),
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, LEN),
             new THREE.MeshStandardMaterial({ color: 0x3A3A3C, roughness: 0.85 }));
-        edge.position.set(s2 * (PLAT_EDGE_X - 0.08), -0.83, 0);
+        edge.position.set(s2 * 8.42, -0.62, 0);
         scene.add(edge);
         for (const lz of [-38, -22, -8, 8, 22, 38]) {   // cavity lighting so trains read
             const cl = new THREE.PointLight(0xEDE9DF, 58, 13, 2);
-            cl.position.set(s2 * (TRACK_X - 0.7), 3.1, lz);
+            cl.position.set(s2 * 9.35, 3.1, lz);
             scene.add(cl);
-        }
-        // saloon lamps: they sit where the standing train's interior is, so the
-        // cabin glows through the open doors and the windows. With no train
-        // there they simply light the empty cavity, which wants light anyway.
-        for (const lz of [-46, -30, -14, 2, 18, 34, 50]) {
-            const sl = new THREE.PointLight(0xF6F4EE, 13, 7.5, 2);
-            sl.position.set(s2 * TRACK_X, 1.55, lz);
-            scene.add(sl);
         }
     }
     const trains = [];
     {
         const t1 = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
-        t1.position.set(TRACK_X, RAILHEAD, -200);
+        t1.position.set(10.05, -0.83, -200);
         scene.add(world.ghost(t1));
         const t2 = t1.clone(true);           // shares geometry + materials
         t2.rotation.y = Math.PI;             // nose toward -z on platform 2
-        t2.position.set(-TRACK_X, RAILHEAD, 200);
-        // a clone loses setDoors — three copies userData through JSON, and a
-        // function does not survive that. Re-attach it, after the rotation, so
-        // the reversed train works out which of its sides now faces a platform.
-        attachDoorControl(THREE, t2);
+        t2.position.set(-10.05, -0.83, 200);
         scene.add(world.ghost(t2));
-        // `side` is the world x direction the platform lies in from that train
-        trains.push({ g: t1, dir: 1, phase: 0, side: -1 },
-                    { g: t2, dir: -1, phase: 48, side: 1 });
+        trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
     }
 
     /* ============================================================
@@ -1161,15 +975,13 @@ export default function build(world) {
                 k = Math.min(open, close);
                 k = k * k * (3 - 2 * k);
             }
-            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, tr.side);
-            // the screen doors run with the train doors, a beat behind them —
-            // the platform side always trails the car side by a hair in reality
-            const kp = Math.min(1, Math.max(0, (k - 0.06) / 0.94));
+            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, -1);
             const side = tr.dir > 0 ? '1' : '-1';
             for (const d of psdLeaves[side]) {
-                d.leaf.position.z = d.z0 + d.dir * kp * PSD_TRAVEL;
+                const zz = d.z0 + d.dir * k * 0.94;
+                d.leaf.position.z = zz;
+                d.arrow.position.z = zz;
             }
-            psdLampMats[side].emissiveIntensity = 0.35 + 2.1 * kp;
         }
     });
 }

@@ -9,6 +9,10 @@ const C = {
     cyan:     '#47A8D8',
     yellow:   '#F7B500',
     silver:   '#C9CCCE',
+    body:     '#B9B6AF',    // warm metallic silver / champagne (daylight)
+    bodyHi:   '#CFCCC4',
+    bodyLo:   '#A29F98',
+    doorBlue: '#79BEE4',    // light sky blue passenger doors
     win:      '#131415',
     skirt:    '#2b2d2f',
     dark:     '#232527'
@@ -16,38 +20,13 @@ const C = {
 
 const CAR_L = 22, CAR_W = 3.05, GAP = 0.6, NOSE_L = 3.4;
 const SIDE_X = 1.528;          // side plane offset
-const SIDE_Y0 = 0.83, SIDE_Y1 = 3.44;   // side plane vertical extent
-const ROOF_Y0 = 3.32, ROOF_Y1 = 3.99;   // 3.99 m over railhead — the real car height
-const SHOULDER_Y = ROOF_Y1 - 0.26;      // where the roof cap folds down to the side
+const SIDE_Y0 = 0.83, SIDE_Y1 = 3.08;   // side plane vertical extent
+const ROOF_Y0 = 2.95, ROOF_Y1 = 3.68;
 
-// Interior datum, metres over railhead. The saloon floor sits at 1.13 so the
-// train boards level with a Metro Tunnel platform, and the clear door opening
-// is 1.95 m — both taken from the real HCMT rather than eyeballed, because the
-// platform screen doors on the other side of the gap have to line up with them.
-const FLOOR_Y = 1.13, CEIL_Y = 3.30;    // ceiling sits below the roof-shell soffit
-const SILL_Y = FLOOR_Y + 0.72;          // window sill  (1.85)
-const WIN_TOP = FLOOR_Y + 1.85;         // window head  (2.98)
-const DOOR_TOP = FLOOR_Y + 1.95;        // top of the real opening (3.08)
-const DOOR_SILL = FLOOR_Y - 0.07;       // leaf bottom, below the opening (1.06)
-const RAIL_Y = FLOOR_Y + 1.83;          // overhead grab rail (2.96)
-const GANG_TOP = FLOOR_Y + 1.90;        // gangway aperture head (3.03)
-const DOOR_W = 1.7, LEAF_W = 0.86, LEAF_TRAVEL = 0.88;
-const LEAF_H = (DOOR_TOP + 0.04) - DOOR_SILL;
-const LEAF_TOP = DOOR_SILL + LEAF_H;
-
-// The nose is drawn in its own 0.35..3.05 m frame; the geometry remaps that
-// frame onto the taller body, so raising the car raises the whole mask, screen
-// and bib together without redrawing a pixel of it.
-const NOSE_M0 = 0.35, NOSE_M1 = 3.05;
-const NY0 = 0.30, NY1 = SIDE_Y1 - 0.02;
-const NM = m => NY0 + (m - NOSE_M0) * (NY1 - NY0) / (NOSE_M1 - NOSE_M0);
-
-// what the station needs to know to put its platform edge and screen doors in
-// the right place relative to this train
-export const HCMT_GEOM = {
-    floorY: FLOOR_Y, sideX: SIDE_X, halfWidth: 1.528,
-    doorW: DOOR_W, doorTop: DOOR_TOP, roofTop: ROOF_Y1, bodyBottom: SIDE_Y0
-};
+// interior datum
+const FLOOR_Y = 1.0, CEIL_Y = 2.93;   // ceiling sits below the roof-shell soffit (y=2.95)
+const DOOR_W = 1.7, LEAF_W = 0.85, LEAF_H = 2.1, LEAF_TRAVEL = 0.8;
+const DOOR_TOP = 2.80;          // top of the real opening
 
 // side layouts (module scope: used by the texture, the geometry AND HCMT_DOORS)
 const cabBodyL = CAR_L - NOSE_L; // 18.6 m
@@ -199,235 +178,304 @@ function makeSideTex(canvasTexture, layout, mirror, seed) {
         ctx.save();
         if (mirror) { ctx.translate(W, 0); ctx.scale(-1, 1); }
 
-        // base charcoal with a faint vertical sheen
+        // base: warm metallic silver / champagne with a vertical sheen
         const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#55585b'); g.addColorStop(0.35, '#46484b');
-        g.addColorStop(0.8, C.charcoal); g.addColorStop(1, '#333537');
+        g.addColorStop(0, C.bodyHi); g.addColorStop(0.3, C.body);
+        g.addColorStop(0.72, '#AEABA4'); g.addColorStop(1, C.bodyLo);
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-        // darker skirt strip
-        ctx.fillStyle = C.skirt; ctx.fillRect(0, Y(FLOOR_Y - 0.13), W, H - Y(FLOOR_Y - 0.13));
-
-        // blue faceted end wraps (over charcoal, under roof band)
+        // blue faceted end wraps (cab ends keep the full wrap; mid ends modest)
         let si = 0;
         for (const z of layout.blue) {
-            drawFacets(ctx, X(z[0]), Y(WIN_TOP + 0.10), X(z[1]) - X(z[0]), Y(SIDE_Y0) - Y(WIN_TOP + 0.10), seed + 17 * (si++));
+            drawFacets(ctx, X(z[0]), Y(2.95), X(z[1]) - X(z[0]), Y(0.83) - Y(2.95), seed + 17 * (si++));
         }
 
         // pale roof band along the top
-        const bandY = Y(SIDE_Y1 - 0.34);
-        const rg = ctx.createLinearGradient(0, 0, 0, bandY);
+        const rg = ctx.createLinearGradient(0, 0, 0, Y(2.88));
         rg.addColorStop(0, C.paleBlue); rg.addColorStop(0.85, C.paleBlue); rg.addColorStop(1, '#8fb4d4');
-        ctx.fillStyle = rg; ctx.fillRect(0, 0, W, bandY);
+        ctx.fillStyle = rg; ctx.fillRect(0, 0, W, Y(2.88));
 
-        // windows — dark frame kept opaque, glazing painted SEMI-TRANSPARENT so the
-        // interior reads dimly through it (material uses transparent:true)
-        const wTop = Y(WIN_TOP), wBot = Y(SILL_Y);
+        // windows — INDIVIDUAL rounded black bezels on the silver body,
+        // glazing fully cut out (alpha 0); a separate tinted glass plane sits behind
         for (const wz of layout.windows) {
             const x0 = X(wz[0]), x1 = X(wz[1]);
-            roundRect(ctx, x0 - 6, Y(WIN_TOP + 0.04), (x1 - x0) + 12, Y(SILL_Y - 0.04) - Y(WIN_TOP + 0.04), 12);
-            ctx.fillStyle = '#08090a'; ctx.fill();
+            roundRect(ctx, x0 - 8, Y(2.86), (x1 - x0) + 16, Y(1.66) - Y(2.86), 14);
+            ctx.fillStyle = '#131516'; ctx.fill();
             ctx.save();
-            roundRect(ctx, x0, wTop, x1 - x0, wBot - wTop, 8);
+            roundRect(ctx, x0, Y(2.80), x1 - x0, Y(1.72) - Y(2.80), 9);
             ctx.clip();
-            ctx.clearRect(x0, wTop, x1 - x0, wBot - wTop);
-            // tinted glazing (~60% see-through)
-            const wg = ctx.createLinearGradient(0, wTop, 0, wBot);
-            wg.addColorStop(0, 'rgba(40,50,62,0.56)'); wg.addColorStop(0.4, 'rgba(16,21,26,0.48)');
-            wg.addColorStop(1, 'rgba(10,13,17,0.52)');
-            ctx.fillStyle = wg;
-            ctx.fillRect(x0, wTop, x1 - x0, wBot - wTop);
-            // diagonal sky reflection streak
-            ctx.fillStyle = 'rgba(190,215,235,0.16)';
-            ctx.beginPath();
-            ctx.moveTo(x0 + (x1 - x0) * 0.1, wTop);
-            ctx.lineTo(x0 + (x1 - x0) * 0.42, wTop);
-            ctx.lineTo(x0 + (x1 - x0) * 0.2, wBot);
-            ctx.lineTo(x0, wBot);
-            ctx.closePath(); ctx.fill();
+            ctx.clearRect(x0 - 2, Y(2.80) - 2, (x1 - x0) + 4, Y(1.72) - Y(2.80) + 4);
             ctx.restore();
         }
 
-        // doorways — yellow frame surround stays painted on the body; the leaf
-        // area is CUT OUT of the wall (alpha 0) and real sliding meshes sit behind
-        const dw = layout.doorW, pad = 0.085 * S;
+        // doorways — yellow painted surround on the body; the leaf area is CUT
+        // OUT of the wall (alpha 0) and real light-blue sliding meshes sit behind
+        const dw = layout.doorW;
         for (const dx of layout.doors) {
             const x0 = X(dx), x1 = X(dx + dw);
-            // yellow frame, standing proud of the opening on all four sides
+            // yellow frame surround
             ctx.fillStyle = C.yellow;
-            ctx.fillRect(x0 - pad, Y(DOOR_TOP + 0.10), (x1 - x0) + 2 * pad,
-                Y(FLOOR_Y - 0.17) - Y(DOOR_TOP + 0.10));
-            // the opening itself is the full DOOR_W, so the leaves behind it and
-            // the screen doors across the gap read as one aperture
-            ctx.clearRect(x0, Y(DOOR_TOP), x1 - x0, Y(FLOOR_Y - 0.02) - Y(DOOR_TOP));
+            ctx.fillRect(x0 - 3, Y(2.92), (x1 - x0) + 6, Y(0.86) - Y(2.92));
+            // thin darker-gold sill strip under the doorway
+            ctx.fillStyle = '#b0954e';
+            ctx.fillRect(x0 - 3, Y(0.95), (x1 - x0) + 6, Y(0.86) - Y(0.95));
+            // real opening (slight frame reveal kept at both jambs + head)
+            const hx0 = x0 + (X(0.07) - X(0)), hx1 = x1 - (X(0.07) - X(0));
+            ctx.clearRect(hx0, Y(DOOR_TOP), hx1 - hx0, Y(0.98) - Y(DOOR_TOP));
         }
 
-        // subtle panel seams between elements
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, Y(FLOOR_Y - 0.13)); ctx.lineTo(W, Y(FLOOR_Y - 0.13)); ctx.stroke();
+        // subtle horizontal panel seams on the silver body
+        ctx.strokeStyle = 'rgba(60,58,52,0.28)'; ctx.lineWidth = 1;
+        for (const sy of [1.55, 2.9]) {
+            ctx.beginPath(); ctx.moveTo(0, Y(sy)); ctx.lineTo(W, Y(sy)); ctx.stroke();
+        }
 
         ctx.restore();
         // car number (drawn unmirrored so text reads correctly)
         if (layout.number) {
             let nx = X(layout.numberX);
             if (mirror) nx = W - nx;
-            ctx.fillStyle = '#f2f4f6';
-            ctx.font = 'bold ' + Math.round(S * 0.26) + 'px Arial';
+            ctx.fillStyle = '#4a4c4e';
+            ctx.font = 'bold ' + Math.round(S * 0.22) + 'px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(layout.number, nx, Y(FLOOR_Y + 1.45));
+            ctx.fillText(layout.number, nx, Y(2.45));
         }
     });
 }
 
 // ---------------------------------------------------------------------------
-// nose front texture: silver mask, black windscreen band w/ Westall, yellow bib
-function makeFrontTex(canvasTexture) {
-    // covers x -1.35..1.35 (2.7 m) and the nose frame 0.35..3.05, which the
-    // geometry stretches onto NY0..NY1 — so the canvas is made taller by the
-    // same ratio and the pixels stay square on the car.
-    const S = 200, W = 540;
-    const SY = S * (NY1 - NY0) / (NOSE_M1 - NOSE_M0);
-    const H = Math.round((NOSE_M1 - NOSE_M0) * SY);
-    const X = m => (m + 1.35) * S;
-    const Y = m => (3.05 - m) * SY;
-    return canvasTexture(W, H, (ctx) => {
-        // silver mask base
-        const sg = ctx.createLinearGradient(0, 0, 0, H);
-        sg.addColorStop(0, '#d4d7d9'); sg.addColorStop(0.4, C.silver); sg.addColorStop(1, '#b0b3b6');
-        ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
-
-        // charcoal lower nose below the mask
-        ctx.fillStyle = C.charcoal;
-        ctx.beginPath();
-        ctx.moveTo(X(-1.35), Y(1.3));
-        ctx.lineTo(X(-1.12), Y(1.42));
-        ctx.lineTo(X(1.12), Y(1.42));
-        ctx.lineTo(X(1.35), Y(1.3));
-        ctx.lineTo(X(1.35), H); ctx.lineTo(X(-1.35), H);
-        ctx.closePath(); ctx.fill();
-
-        // black windscreen band (large, wraps toward the corner folds)
-        roundRect(ctx, X(-1.18), Y(2.95), X(1.18) - X(-1.18), Y(1.98) - Y(2.95), 26);
-        ctx.fillStyle = '#0b0c0d'; ctx.fill();
-        // destination display strip
-        ctx.fillStyle = '#101010';
-        ctx.fillRect(X(-0.9), Y(2.9), X(0.9) - X(-0.9), Y(2.65) - Y(2.9));
-        ctx.fillStyle = '#f5d33f';
-        ctx.font = 'bold 46px Arial'; ctx.textAlign = 'center';
-        ctx.fillText('Westall', X(0), Y(2.705));
-        // windscreen glass with faint reflection
-        const wg = ctx.createLinearGradient(0, Y(2.62), 0, Y(2.02));
-        wg.addColorStop(0, '#2a3138'); wg.addColorStop(0.45, '#181c20'); wg.addColorStop(1, '#0e0f11');
-        ctx.fillStyle = wg;
-        ctx.fillRect(X(-1.0), Y(2.62), X(1.0) - X(-1.0), Y(2.02) - Y(2.62));
-        // centre pillar + wipers
-        ctx.strokeStyle = '#1f2224'; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.moveTo(X(0), Y(2.62)); ctx.lineTo(X(0), Y(2.02)); ctx.stroke();
-        ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.moveTo(X(-0.5), Y(2.06)); ctx.lineTo(X(-0.05), Y(2.55)); ctx.stroke();
-
-        // LED headlight / marker strips at mask edges
-        for (const s of [-1, 1]) {
-            const lx = s * 1.22;
-            roundRect(ctx, X(lx - 0.055), Y(2.8), S * 0.11, Y(1.75) - Y(2.8), 12);
-            ctx.fillStyle = '#0d0e0f'; ctx.fill();
-            ctx.fillStyle = '#eef6fc';
-            const step = (Y(1.8) - Y(2.75)) / 10;
-            for (let k = 0; k < 10; k++) {
-                ctx.fillRect(X(lx - 0.022), Y(2.75) + k * step, S * 0.044, step * 0.45);
+// SMOOTH LOFTED NOSE — one continuous bullet slope from roofline to chin.
+// Cross-section rings along z share their profile maths with the per-pixel
+// texture painter, so livery regions land exactly on the 3D surface.
+const NOSE = {
+    zb: CAR_L / 2 - NOSE_L,   // 7.6  (bulkhead, matches body cross-section)
+    len: NOSE_L + 0.1,        // ring run 7.6 -> 11.1
+    rings: 22, around: 40
+};
+function smoothstep(a, b, x) {
+    x = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return x * x * (3 - 2 * x);
+}
+// ring parameters at t in [0,1] (t=0 bulkhead, t=1 tip)
+function noseProf(t) {
+    const cv = smoothstep(0.92, 1, t);   // tip convergence
+    const w = 1.522 * (1 - 0.55 * Math.pow(smoothstep(0.16, 1, t), 1.5) - 0.28 * cv);
+    const y1 = 3.68 - 2.35 * Math.pow(smoothstep(0.08, 1, t), 1.35) - 0.15 * cv;
+    const y0 = 0.83 - 0.38 * smoothstep(0.0, 0.45, t) + 0.42 * smoothstep(0.72, 1, t) + 0.15 * cv;
+    const r = Math.min(0.55 + 0.9 * t, w * 0.92, (y1 - y0) * 0.55);
+    const z = NOSE.zb + NOSE.len * t;
+    const crown = 0.05 * (w / 1.522) * smoothstep(0.18, 1, t);
+    return { w, y0, y1, r, z, crown };
+}
+// M equal-arc-length points around the ring (left-bottom over the top to right-bottom)
+function noseRing(t, M) {
+    const p = noseProf(t);
+    const seg = [];
+    seg.push([-p.w, p.y0]);
+    seg.push([-p.w, p.y1 - p.r]);
+    for (let i = 1; i <= 12; i++) {
+        const a = Math.PI - (Math.PI / 2) * (i / 12);
+        seg.push([-p.w + p.r + Math.cos(a) * p.r, p.y1 - p.r + Math.sin(a) * p.r]);
+    }
+    const flat = p.w - p.r;
+    for (let i = 1; i <= 10; i++) {
+        const x = -flat + (2 * flat) * (i / 10);
+        seg.push([x, p.y1 + p.crown * Math.cos((x / (p.w || 1)) * 1.2)]);
+    }
+    for (let i = 1; i <= 12; i++) {
+        const a = Math.PI / 2 - (Math.PI / 2) * (i / 12);
+        seg.push([p.w - p.r + Math.cos(a) * p.r, p.y1 - p.r + Math.sin(a) * p.r]);
+    }
+    seg.push([p.w, p.y0]);
+    // cumulative arc length, resample to M points
+    const cum = [0];
+    for (let i = 1; i < seg.length; i++) {
+        cum.push(cum[i - 1] + Math.hypot(seg[i][0] - seg[i - 1][0], seg[i][1] - seg[i - 1][1]));
+    }
+    const L = cum[cum.length - 1];
+    const out = [];
+    let si = 0;
+    for (let j = 0; j < M; j++) {
+        const d = (j / (M - 1)) * L;
+        while (si < cum.length - 2 && cum[si + 1] < d) si++;
+        const f = (d - cum[si]) / ((cum[si + 1] - cum[si]) || 1);
+        out.push([seg[si][0] + (seg[si + 1][0] - seg[si][0]) * f,
+                  seg[si][1] + (seg[si + 1][1] - seg[si][1]) * f]);
+    }
+    return out;
+}
+function noseGeometry(THREE) {
+    const N = NOSE.rings, M = NOSE.around;
+    const pos = [], uv = [], idx = [];
+    for (let k = 0; k <= N; k++) {
+        const t = k / N;
+        const ring = noseRing(t, M);
+        const z = noseProf(t).z;
+        for (let j = 0; j < M; j++) {
+            pos.push(ring[j][0], ring[j][1], z);
+            uv.push(j / (M - 1), t);
+        }
+    }
+    for (let k = 0; k < N; k++) {
+        for (let j = 0; j < M - 1; j++) {
+            const a = k * M + j, b = a + 1, c = a + M, d = c + 1;
+            idx.push(a, c, b, b, c, d);
+        }
+    }
+    // front cap fan (tiny closing face)
+    const pTip = noseProf(1);
+    const ci = pos.length / 3;
+    pos.push(0, (pTip.y0 + pTip.y1) / 2, pTip.z + 0.10);
+    uv.push(0.5, 1);
+    const base = N * M;
+    for (let j = 0; j < M - 1; j++) idx.push(base + j, ci, base + j + 1);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+}
+// per-pixel painted nose livery in the loft's (u,v) space
+function makeNoseTexPair(canvasTexture) {
+    const W = 1024, H = 512;
+    const pal = [[46, 109, 180], [27, 63, 122], [71, 168, 216], [61, 132, 196], [37, 90, 156], [99, 182, 221]];
+    const anchors = {};   // canvas-px anchors recorded during the pixel pass
+    function hash2(a, b, c) {
+        let h = (a * 374761393 + b * 668265263 + c * 1274126177) | 0;
+        h = ((h ^ (h >> 13)) * 1103515245) | 0;
+        return ((h >>> 16) & 255) / 255;
+    }
+    const map = canvasTexture(W, H, (ctx) => {
+        const img = ctx.createImageData(W, H);
+        const d = img.data;
+        for (let j = 0; j < H; j++) {
+            const t = 1 - j / (H - 1);
+            const p = noseProf(t);
+            const ring = noseRing(t, W);
+            for (let i = 0; i < W; i++) {
+                const x = ring[i][0], y = ring[i][1], z = p.z;
+                const ax = Math.abs(x);
+                const u = i / (W - 1);
+                const glassHalf = 0.70 * p.w;
+                // base warm silver, slight vertical shade
+                let r = 197, gg = 194, b = 186;
+                const sh = 0.88 + 0.12 * Math.min(1, (y - 0.4) / 2.6);
+                r *= sh; gg *= sh; b *= sh;
+                const isGlassCol = ax < glassHalf && y > 2.02 && y < 3.22 && t > 0.12;
+                const rimCol = ax < glassHalf + 0.07 && y > 1.95 && y < 3.30 && t > 0.12 && !isGlassCol;
+                // flank facets (blue vinyl) with cab door
+                const flank = ax > 0.80 * p.w && y > p.y0 + 0.14 && y < 2.92 && z < 9.4 + (2.6 - y) * 0.5;
+                if (flank) {
+                    const fu = u * 9 + t * 2.0, fv = t * 5 - u * 3.0;
+                    const iu = Math.floor(fu), iv = Math.floor(fv);
+                    const dg = (fu - iu) + (fv - iv) > 1 ? 1 : 0;
+                    const c = pal[Math.floor(hash2(iu, iv, dg) * pal.length)];
+                    r = c[0]; gg = c[1]; b = c[2];
+                    // cab access door (recessed, slightly darker + edge lines)
+                    if (z > 8.55 && z < 9.4 && y > 0.98 && y < 2.85) {
+                        r *= 0.82; gg *= 0.82; b *= 0.82;
+                        if (z < 8.61 || z > 9.34 || y > 2.80) { r = 34; gg = 38; b = 44; }
+                        // door window (small, rounded-ish)
+                        if (z > 8.88 && z < 9.16 && y > 1.95 && y < 2.5) { r = 14; gg = 16; b = 18; }
+                    }
+                    // slim silver grab rail at the door's leading edge
+                    if (z > 8.46 && z < 8.50 && y > 1.25 && y < 2.45) {
+                        r = 185; gg = 187; b = 189;
+                    }
+                }
+                // pale blue roof band flowing from the body onto the rear nose roof
+                if (y > 3.24 && t < 0.5) {
+                    const f = 1 - smoothstep(0.32, 0.5, t);
+                    r = r + (168 - r) * f; gg = gg + (203 - gg) * f; b = b + (232 - b) * f;
+                }
+                // dark chin / lower nose
+                const chin = (y < 2.0 && z + 0.45 * (y - 1.2) > 10.05) || y < p.y0 + 0.04;
+                if (chin) { r = 58; gg = 61; b = 64; }
+                // yellow bib patch (rounded) centred below the windscreen
+                if (chin && z > 10.0) {
+                    const dx = Math.max(ax - 0.50, 0), dy = Math.max(Math.abs(y - 1.48) - 0.24, 0);
+                    if (Math.hypot(dx, dy) < 0.28) { r = 247; gg = 181; b = 0; }
+                }
+                // headlamp slivers inset in the mask beside the windscreen
+                if (!flank && y > 2.02 && y < 2.38 && t > 0.42 && ax > glassHalf + 0.09 && ax < glassHalf + 0.15 && y < p.y1 - 0.15) {
+                    r = 28; gg = 30; b = 33;
+                }
+                if (rimCol) { r = 16; gg = 17; b = 18; }
+                if (isGlassCol) {
+                    // raked windscreen glass with vertical gradient
+                    const f = (y - 2.02) / 1.2;
+                    r = 14 + 26 * f; gg = 17 + 32 * f; b = 20 + 38 * f;
+                    if (y > 2.92) {  // destination display zone (dark backing)
+                        r = 8; gg = 9; b = 10;
+                        const dd = Math.hypot(x, y - 3.05);
+                        if (!anchors['disp'] || dd < anchors['disp'][2]) anchors['disp'] = [i, j, dd];
+                    }
+                }
+                // small blue arrow decals near the bottom front edge
+                if (chin && z > 10.55) {
+                    for (const s of [-1, 1]) {
+                        if (Math.abs(x - s * 0.45) < 0.02 && Math.abs(y - (p.y0 + 0.16)) < 0.02) {
+                            if (!anchors[s < 0 ? 'arrL' : 'arrR']) anchors[s < 0 ? 'arrL' : 'arrR'] = [i, j];
+                        }
+                    }
+                }
+                // 9065 number anchor on each flank (facet zone behind the cab door)
+                if (flank && Math.abs(z - 8.22) < 0.05 && Math.abs(y - 2.6) < 0.05) {
+                    if (x < 0 && !anchors['numL']) anchors['numL'] = [i, j];
+                    if (x > 0 && !anchors['numR']) anchors['numR'] = [i, j];
+                }
+                const o = (j * W + i) * 4;
+                d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = 255;
             }
         }
-
-        // yellow bib (two-tone chevron shape)
-        ctx.fillStyle = C.yellow;
-        ctx.beginPath();
-        ctx.moveTo(X(-0.95), Y(1.96));
-        ctx.lineTo(X(0.95), Y(1.96));
-        ctx.lineTo(X(0.75), Y(1.12));
-        ctx.quadraticCurveTo(X(0.6), Y(0.98), X(0.4), Y(0.98));
-        ctx.lineTo(X(-0.4), Y(0.98));
-        ctx.quadraticCurveTo(X(-0.6), Y(0.98), X(-0.75), Y(1.12));
-        ctx.closePath(); ctx.fill();
-        // bib two-tone seam + hatch line
-        ctx.strokeStyle = 'rgba(150,105,0,0.55)'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(X(-0.86), Y(1.56)); ctx.lineTo(X(0.86), Y(1.56)); ctx.stroke();
-        ctx.strokeStyle = 'rgba(90,70,10,0.5)'; ctx.lineWidth = 3;
-        roundRect(ctx, X(-0.26), Y(1.9), X(0.26) - X(-0.26), Y(1.72) - Y(1.9), 6);
-        ctx.stroke();
-
-        // skirt slot grille
-        ctx.fillStyle = '#141516';
-        roundRect(ctx, X(-0.65), Y(0.72), X(0.65) - X(-0.65), Y(0.52) - Y(0.72), 8);
-        ctx.fill();
-        ctx.fillStyle = '#000';
-        for (let k = 0; k < 16; k++) {
-            ctx.fillRect(X(-0.61) + k * 16, Y(0.7), 6, Y(0.54) - Y(0.7));
+        ctx.putImageData(img, 0, 0);
+        // ---- overdraw: display text, arrows, numbers (anchor-positioned)
+        if (anchors['disp']) {
+            const [ax2, ay2] = anchors['disp'];
+            ctx.save();
+            ctx.translate(ax2, ay2);
+            ctx.scale(1, -1);   // v axis runs opposite to canvas rows on the rake
+            ctx.fillStyle = '#f5d33f'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('Westall', 0, 10);
+            ctx.restore();
         }
-
-        // blue arrow decals
-        for (const s of [-1, 1]) {
-            const ax = s * 0.44;
+        for (const key of ['arrL', 'arrR']) {
+            if (!anchors[key]) continue;
+            const [ax2, ay2] = anchors[key];
             ctx.fillStyle = C.mid;
-            roundRect(ctx, X(ax - 0.06), Y(0.47), S * 0.12, S * 0.12, 5); ctx.fill();
+            roundRect(ctx, ax2 - 11, ay2 - 11, 22, 22, 4); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.beginPath();
-            ctx.moveTo(X(ax), Y(0.445));
-            ctx.lineTo(X(ax - 0.034), Y(0.405));
-            ctx.lineTo(X(ax + 0.034), Y(0.405));
+            ctx.moveTo(ax2, ay2 - 6); ctx.lineTo(ax2 - 6, ay2 + 1); ctx.lineTo(ax2 + 6, ay2 + 1);
             ctx.closePath(); ctx.fill();
-            ctx.fillRect(X(ax - 0.012), Y(0.407), S * 0.024, S * 0.034);
+            ctx.fillRect(ax2 - 2, ay2 + 1, 4, 6);
+        }
+        for (const key of ['numL', 'numR']) {
+            if (!anchors[key]) continue;
+            const [ax2, ay2] = anchors[key];
+            ctx.save();
+            ctx.translate(ax2, ay2);
+            ctx.rotate(key === 'numL' ? -Math.PI / 2 : Math.PI / 2);
+            ctx.scale(1, -1);
+            ctx.fillStyle = '#f2f4f6'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('9065', 0, 9);
+            ctx.restore();
         }
     });
-}
-
-// nose side texture (u=0 front, u=1 at bulkhead), covers roughly 3 m x 2.7 m
-function makeNoseSideTex(canvasTexture, flip) {
-    const W = 560, H = Math.round(500 * (NY1 - NY0) / (NOSE_M1 - NOSE_M0));
-    return canvasTexture(W, H, (ctx) => {
-        ctx.save();
-        if (flip) { ctx.translate(W, 0); ctx.scale(-1, 1); }
-        // charcoal base with sheen (matches body sides)
-        const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#4a4d50'); g.addColorStop(0.4, '#404245');
-        g.addColorStop(0.8, C.charcoal); g.addColorStop(1, '#2f3133');
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        // silver mask wedge at the front (left), upper-front only
-        ctx.fillStyle = C.silver;
-        ctx.beginPath();
-        ctx.moveTo(0, H * 0.04);
-        ctx.lineTo(W * 0.22, H * 0.03);
-        ctx.lineTo(W * 0.13, H * 0.5);
-        ctx.lineTo(0, H * 0.66);
-        ctx.closePath(); ctx.fill();
-        // black cab side glazing sliver behind mask edge
-        ctx.fillStyle = '#0d0e0f';
-        ctx.beginPath();
-        ctx.moveTo(W * 0.13, H * 0.1);
-        ctx.lineTo(W * 0.26, H * 0.09);
-        ctx.lineTo(W * 0.22, H * 0.4);
-        ctx.lineTo(W * 0.1, H * 0.44);
-        ctx.closePath(); ctx.fill();
-        // pale blue roof band along the top, dipping toward the front
-        ctx.fillStyle = C.paleBlue;
-        ctx.beginPath();
-        ctx.moveTo(W * 0.22, H * 0.03); ctx.lineTo(W, 0); ctx.lineTo(W, H * 0.1);
-        ctx.lineTo(W * 0.28, H * 0.08); ctx.closePath(); ctx.fill();
-        // cab access door
-        ctx.fillStyle = '#2e3032';
-        ctx.fillRect(W * 0.33, H * 0.12, W * 0.1, H * 0.76);
-        ctx.strokeStyle = '#1a1b1c'; ctx.lineWidth = 2;
-        ctx.strokeRect(W * 0.33, H * 0.12, W * 0.1, H * 0.76);
-        ctx.fillStyle = '#0d0e0f';
-        ctx.fillRect(W * 0.35, H * 0.16, W * 0.065, H * 0.26);
-        // facets at the rear of the nose section (join with bodyside wrap)
-        drawFacets(ctx, W * 0.62, H * 0.1, W * 0.38, H * 0.8, 991);
-        ctx.restore();
-        // 9002 number on the facet zone
-        ctx.fillStyle = '#f2f4f6';
-        ctx.font = 'bold 58px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('9002', flip ? W * 0.47 : W * 0.53, H * 0.28);
+    const emissiveMap = canvasTexture(W, H, (ctx) => {
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        if (anchors['disp']) {
+            const [ax2, ay2] = anchors['disp'];
+            ctx.save();
+            ctx.translate(ax2, ay2);
+            ctx.scale(1, -1);
+            ctx.fillStyle = '#e8c433'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('Westall', 0, 10);
+            ctx.restore();
+        }
     });
+    return { map, emissiveMap };
 }
 
 // gangway bellows texture
@@ -660,75 +708,6 @@ function makeDecalTex(canvasTexture) {
         ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Arial';
         ctx.fillText('PRIORITY', 280, 560); ctx.fillText('SPACE', 280, 580);
         ctx.beginPath(); ctx.arc(280, 512, 16, 0, Math.PI * 2); ctx.stroke();
-
-        // --- pictogram band that runs over every doorway (0,700 - 664,790)
-        ctx.fillStyle = '#f2f3f4'; ctx.fillRect(0, 700, 664, 90);
-        // green running-man emergency exit
-        ctx.fillStyle = '#12874a'; ctx.fillRect(12, 710, 96, 70);
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(44, 732, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(36, 745); ctx.lineTo(50, 752); ctx.lineTo(44, 768);
-        ctx.moveTo(50, 752); ctx.lineTo(64, 762);
-        ctx.moveTo(36, 745); ctx.lineTo(26, 758);
-        ctx.stroke();
-        ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(76, 742); ctx.lineTo(98, 742);
-        ctx.moveTo(90, 734); ctx.lineTo(98, 742); ctx.lineTo(90, 750); ctx.stroke();
-        // blue accessibility square
-        ctx.fillStyle = '#2456a8'; ctx.fillRect(120, 710, 70, 70);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.arc(149, 752, 13, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(152, 726); ctx.lineTo(152, 746); ctx.lineTo(170, 746); ctx.lineTo(174, 762);
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(152, 720, 5, 0, Math.PI * 2); ctx.fill();
-        // row of small prohibition roundels — no smoking, no food, no skating…
-        for (let i = 0; i < 6; i++) {
-            const cx = 240 + i * 68;
-            ctx.strokeStyle = '#c92222'; ctx.lineWidth = 5;
-            ctx.beginPath(); ctx.arc(cx, 745, 24, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx - 17, 762); ctx.lineTo(cx + 17, 728); ctx.stroke();
-            ctx.fillStyle = '#3a3d40';
-            ctx.beginPath(); ctx.arc(cx, 745, 11, 0, Math.PI * 2); ctx.fill();
-        }
-
-        // --- black/white hazard stripe for the door pillar (700,700 - 744,1024)
-        ctx.fillStyle = '#f4f4f4'; ctx.fillRect(700, 700, 44, 324);
-        ctx.fillStyle = '#141414';
-        for (let y = 700; y < 1030; y += 34) {
-            ctx.beginPath();
-            ctx.moveTo(700, y); ctx.lineTo(744, y - 20); ctx.lineTo(744, y - 2); ctx.lineTo(700, y + 18);
-            ctx.closePath(); ctx.fill();
-        }
-        ctx.fillStyle = '#141414'; ctx.fillRect(718, 700, 6, 324);
-
-        // --- navy line-diagram display strip, wall mounted (0,820 - 1024,900)
-        ctx.fillStyle = '#0e1c33'; ctx.fillRect(0, 820, 1024, 80);
-        ctx.strokeStyle = '#3f8ede'; ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.moveTo(40, 862); ctx.lineTo(980, 862); ctx.stroke();
-        const line = ['Arden', 'Parkville', 'State Library', 'Town Hall', 'Anzac', 'Caulfield',
-            'Carnegie', 'Hughesdale', 'Oakleigh', 'Clayton', 'Westall'];
-        ctx.textAlign = 'center'; ctx.font = '13px Arial';
-        for (let i = 0; i < line.length; i++) {
-            const x = 60 + i * 86;
-            ctx.fillStyle = i < 2 ? '#5fa8e8' : '#e9eef4';
-            ctx.beginPath(); ctx.arc(x, 862, 8, 0, Math.PI * 2); ctx.fill();
-            ctx.save(); ctx.translate(x + 3, 846); ctx.rotate(-0.55);
-            ctx.fillStyle = '#b9c6d4'; ctx.textAlign = 'left'; ctx.fillText(line[i], 0, 0); ctx.restore();
-        }
-        ctx.fillStyle = '#e9eef4'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left';
-        ctx.fillText('To Westall', 20, 892);
-        ctx.fillStyle = '#8fa2b4'; ctx.font = '14px Arial';
-        ctx.fillText('Limited express  via Metro Tunnel', 130, 892);
-
-        // --- ceiling air-conditioning grille (760,700 - 900,840)
-        ctx.fillStyle = '#c6cacd'; ctx.fillRect(760, 700, 140, 116);
-        ctx.strokeStyle = '#9da1a4'; ctx.lineWidth = 3; ctx.strokeRect(766, 706, 128, 104);
-        ctx.fillStyle = '#a8acaf';
-        for (let y = 714; y < 806; y += 9) ctx.fillRect(772, y, 116, 5);
     });
 }
 // atlas px rect -> uv corners for quadGeo
@@ -744,8 +723,8 @@ function makeLeafTex(canvasTexture) {
     return canvasTexture(W, H, (ctx) => {
         function extBase(cx0) {
             const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#55585b'); g.addColorStop(0.35, '#46484b');
-            g.addColorStop(0.8, C.charcoal); g.addColorStop(1, '#333537');
+            g.addColorStop(0, '#8ecdee'); g.addColorStop(0.35, C.doorBlue);
+            g.addColorStop(0.8, '#69b2da'); g.addColorStop(1, '#5da5cd');
             ctx.fillStyle = g; ctx.fillRect(cx0, 0, 128, H);
         }
         function intBase(cx0) {
@@ -755,51 +734,39 @@ function makeLeafTex(canvasTexture) {
             ctx.strokeStyle = '#a7abae'; ctx.lineWidth = 2;
             ctx.strokeRect(cx0 + 6, 6, 116, H - 12);
         }
-        // y mapping: leaf spans DOOR_SILL..LEAF_TOP -> canvas 512..0
-        const ly = m => (LEAF_TOP - m) / LEAF_H * H;
+        // y mapping: leaf spans y 0.88..2.98 -> canvas 512..0
+        const ly = m => (2.98 - m) / LEAF_H * H;
         const lx = (cx0, m) => cx0 + m / LEAF_W * 128; // m from leaf left edge
-        const WT = FLOOR_Y + 1.78, WB = FLOOR_Y + 0.50;   // door window head / sill
         function leafWindow(cx0, nearRight) {
-            // tall narrow window, 0.36 wide, 0.07 in from the centre-meeting edge
+            // window 0.36 wide, 0.07 from the centre-meeting edge, y 1.45..2.72
             const wx0 = nearRight ? lx(cx0, LEAF_W - 0.07 - 0.36) : lx(cx0, 0.07);
             const wx1 = nearRight ? lx(cx0, LEAF_W - 0.07) : lx(cx0, 0.07 + 0.36);
-            roundRect(ctx, wx0 - 3, ly(WT + 0.03) - 3, (wx1 - wx0) + 6, ly(WB - 0.03) - ly(WT + 0.03) + 6, 8);
+            roundRect(ctx, wx0 - 3, ly(2.75) - 3, (wx1 - wx0) + 6, ly(1.42) - ly(2.75) + 6, 8);
             ctx.fillStyle = '#1a1c1e'; ctx.fill();
-            const dg = ctx.createLinearGradient(0, ly(WT), 0, ly(WB));
+            const dg = ctx.createLinearGradient(0, ly(2.72), 0, ly(1.45));
             dg.addColorStop(0, '#39434c'); dg.addColorStop(0.4, '#15191d'); dg.addColorStop(1, '#0c0e10');
             ctx.fillStyle = dg;
-            roundRect(ctx, wx0, ly(WT), wx1 - wx0, ly(WB) - ly(WT), 6); ctx.fill();
+            roundRect(ctx, wx0, ly(2.72), wx1 - wx0, ly(1.45) - ly(2.72), 6); ctx.fill();
             ctx.fillStyle = 'rgba(180,205,225,0.13)';
-            ctx.fillRect(wx0 + 2, ly(WT), (wx1 - wx0) * 0.3, ly(WB) - ly(WT));
+            ctx.fillRect(wx0 + 2, ly(2.72), (wx1 - wx0) * 0.3, ly(1.45) - ly(2.72));
         }
         function extLeaf(cx0, nearRight) {
             extBase(cx0);
             leafWindow(cx0, nearRight);
-            // pale-blue vertical stripe pair, outboard of window
-            const sxm = nearRight ? 0.18 : LEAF_W - 0.18 - 0.15;
-            ctx.fillStyle = 'rgba(178,205,228,0.68)';
-            ctx.fillRect(lx(cx0, sxm), ly(FLOOR_Y + 1.55), 0.045 / LEAF_W * 128, ly(FLOOR_Y - 0.05) - ly(FLOOR_Y + 1.55));
-            ctx.fillRect(lx(cx0, sxm + 0.1), ly(FLOOR_Y + 1.55), 0.045 / LEAF_W * 128, ly(FLOOR_Y - 0.05) - ly(FLOOR_Y + 1.55));
+            // small green press-to-open sticker under the window
+            const stx = nearRight ? lx(cx0, LEAF_W - 0.32) : lx(cx0, 0.18);
+            ctx.fillStyle = '#1f7a3c';
+            ctx.fillRect(stx, ly(1.32), 18, 10);
             // meeting-edge dark rubber
             const ex = nearRight ? cx0 + 124 : cx0;
-            ctx.fillStyle = '#141516'; ctx.fillRect(ex, 0, 4, H);
+            ctx.fillStyle = '#2a4c60'; ctx.fillRect(ex, 0, 4, H);
         }
         function intLeaf(cx0, nearRight) {
             intBase(cx0);
             leafWindow(cx0, nearRight);
             // yellow edge highlight at meeting edge (interior)
             const ex = nearRight ? cx0 + 120 : cx0 + 2;
-            ctx.fillStyle = '#f0b421'; ctx.fillRect(ex, ly(FLOOR_Y + 1.40), 6, ly(FLOOR_Y + 0.10) - ly(FLOOR_Y + 1.40));
-            // green "press to open" button and its plate, outboard of the window
-            const bx = nearRight ? lx(cx0, 0.16) : lx(cx0, LEAF_W - 0.24);
-            ctx.fillStyle = '#c8cbce';
-            roundRect(ctx, bx, ly(FLOOR_Y + 1.20), 0.14 / LEAF_W * 128, ly(FLOOR_Y + 0.98) - ly(FLOOR_Y + 1.20), 6);
-            ctx.fill();
-            ctx.fillStyle = '#3fae4a';
-            ctx.beginPath();
-            ctx.arc(bx + 0.07 / LEAF_W * 128, (ly(FLOOR_Y + 1.20) + ly(FLOOR_Y + 0.98)) / 2,
-                0.045 / LEAF_W * 128, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = '#f0b421'; ctx.fillRect(ex, ly(2.4), 6, ly(1.1) - ly(2.4));
         }
         extLeaf(0, true);      // extN: leaf left of centre, meeting edge on its right
         extLeaf(128, false);   // extP
@@ -851,11 +818,11 @@ function buildInterior(THREE, mats, P) {
         const x = s * wallX, face = -s;
         // low band: floor..window sill, minus doorways
         for (const sp of solidSpans(zMin, zMax, doorHoles)) {
-            wall.push({ geo: xRect(THREE, x, FLOOR_Y, SILL_Y, sp[0], sp[1], face), m: M() });
+            wall.push({ geo: xRect(THREE, x, FLOOR_Y, 1.72, sp[0], sp[1], face), m: M() });
         }
         // window band, minus doors and windows
         for (const sp of solidSpans(zMin, zMax, doorHoles.concat(winZ))) {
-            wall.push({ geo: xRect(THREE, x, SILL_Y, DOOR_TOP, sp[0], sp[1], face), m: M() });
+            wall.push({ geo: xRect(THREE, x, 1.72, DOOR_TOP, sp[0], sp[1], face), m: M() });
         }
         // top band solid
         wall.push({ geo: xRect(THREE, x, DOOR_TOP, CEIL_Y, zMin, zMax, face), m: M() });
@@ -866,15 +833,10 @@ function buildInterior(THREE, mats, P) {
                 wall.push({ geo: zRect(THREE, dz + e * DOOR_W / 2, jx0, jx1, FLOOR_Y, DOOR_TOP, -e), m: M() });
             }
             wall.push({ geo: yRect(THREE, DOOR_TOP, jx0, jx1, dz - DOOR_W / 2, dz + DOOR_W / 2, -1), m: M() });
-            // diamond-plate threshold in the doorway, as in the reference photos
-            decal.push({
-                geo: yRect(THREE, FLOOR_Y + 0.004, jx0, jx1, dz - DOOR_W / 2, dz + DOOR_W / 2, 1,
-                    uvR(0, 470, 200, 670)), m: M()
-            });
         }
         // window reveals (top/bottom sills)
         for (const wz of winZ) {
-            wall.push({ geo: yRect(THREE, SILL_Y, Math.min(s * wallX, s * SIDE_X), Math.max(s * wallX, s * SIDE_X), wz[0], wz[1], 1), m: M() });
+            wall.push({ geo: yRect(THREE, 1.72, Math.min(s * wallX, s * SIDE_X), Math.max(s * wallX, s * SIDE_X), wz[0], wz[1], 1), m: M() });
         }
     }
 
@@ -886,66 +848,54 @@ function buildInterior(THREE, mats, P) {
         if (e.type === 'gangway') {
             wall.push({ geo: zRect(THREE, e.z, -1.42, -0.65, FLOOR_Y, CEIL_Y, e.face), m: M() });
             wall.push({ geo: zRect(THREE, e.z, 0.65, 1.42, FLOOR_Y, CEIL_Y, e.face), m: M() });
-            wall.push({ geo: zRect(THREE, e.z, -0.65, 0.65, GANG_TOP, CEIL_Y, e.face), m: M() });
+            wall.push({ geo: zRect(THREE, e.z, -0.65, 0.65, 2.72, CEIL_Y, e.face), m: M() });
         } else {
             // white bulkhead with door decal + KEEP CLEAR
             wall.push({ geo: zRect(THREE, e.z, -1.42, 1.42, FLOOR_Y, CEIL_Y, e.face), m: M() });
-            decal.push({ geo: zRect(THREE, e.z + e.face * 0.01, -0.05, 0.8, FLOOR_Y, CEIL_Y - 0.05, e.face, uvR(860, 0, 1024, 470)), m: M() });
+            decal.push({ geo: zRect(THREE, e.z + e.face * 0.01, -0.05, 0.8, FLOOR_Y, 2.88, e.face, uvR(860, 0, 1024, 470)), m: M() });
         }
     }
 
     // ---- seats -------------------------------------------------------------
-    // Every seat records the length of wall it occupies, so the vestibule
-    // pilasters placed later can simply refuse to stand where a seat already is
-    // rather than relying on me to have done the arithmetic right six times.
-    const occupied = { '-1': [], '1': [] };
-    const occupy = (s, z0, z1) => occupied[String(s)].push([Math.min(z0, z1), Math.max(z0, z1)]);
-    const isFree = (s, z0, z1, pad = 0.05) =>
-        !occupied[String(s)].some(o => o[1] + pad > z0 && o[0] - pad < z1);
-
     // longitudinal flip-up row: n seats from z0, on side s. variant: 0 blue, 1 orange
     function seatRow(s, z0, n, variant, folded) {
         const u0 = variant ? 0.52 : 0.02, u1 = variant ? 0.98 : 0.48;
-        occupy(s, z0 - 0.06, z0 + n * 0.48 + 0.06);   // seats plus the backboard behind them
         for (let i = 0; i < n; i++) {
             const zc = z0 + 0.235 + i * 0.48;
             if (folded) {
                 // folded-up grey pad against the wall
-                seatGrey.push({ geo: new THREE.BoxGeometry(0.09, 0.62, 0.44), m: mat4(THREE, s * (wallX - 0.075), FLOOR_Y + 0.62, zc) });
-                seatGrey.push({ geo: new THREE.BoxGeometry(0.05, 0.1, 0.4), m: mat4(THREE, s * (wallX - 0.045), FLOOR_Y + 0.27, zc) });
+                seatGrey.push({ geo: new THREE.BoxGeometry(0.09, 0.62, 0.44), m: mat4(THREE, s * (wallX - 0.075), 1.62, zc) });
+                seatGrey.push({ geo: new THREE.BoxGeometry(0.05, 0.1, 0.4), m: mat4(THREE, s * (wallX - 0.045), 1.27, zc) });
             } else {
                 // back cushion
                 const bk = new THREE.BoxGeometry(0.07, 0.52, 0.44);
                 uvRegion(bk, u0, u1, 0, 1);
-                cushion.push({ geo: bk, m: mat4(THREE, s * (wallX - 0.065), FLOOR_Y + 0.76, zc, 0, 0, s * 0.08) });
+                cushion.push({ geo: bk, m: mat4(THREE, s * (wallX - 0.065), 1.76, zc, 0, 0, s * 0.08) });
                 // seat pad
                 const pd = new THREE.BoxGeometry(0.42, 0.07, 0.44);
                 uvRegion(pd, u0, u1, 0, 1);
-                cushion.push({ geo: pd, m: mat4(THREE, s * (wallX - 0.26), FLOOR_Y + 0.45, zc) });
+                cushion.push({ geo: pd, m: mat4(THREE, s * (wallX - 0.26), 1.45, zc) });
                 // grey base
-                seatGrey.push({ geo: new THREE.BoxGeometry(0.36, 0.34, 0.4), m: mat4(THREE, s * (wallX - 0.24), FLOOR_Y + 0.24, zc) });
-                // moulded grey side shell with the wave relief the real seats have
-                seatGrey.push({ geo: new THREE.BoxGeometry(0.30, 0.50, 0.035), m: mat4(THREE, s * (wallX - 0.23), FLOOR_Y + 0.72, zc - 0.225) });
+                seatGrey.push({ geo: new THREE.BoxGeometry(0.36, 0.34, 0.4), m: mat4(THREE, s * (wallX - 0.24), 1.24, zc) });
             }
         }
         // shared grey backrest board behind the row
         if (!folded) {
-            seatGrey.push({ geo: new THREE.BoxGeometry(0.04, 0.75, n * 0.48 + 0.06), m: mat4(THREE, s * (wallX - 0.025), FLOOR_Y + 0.72, z0 + n * 0.24), });
+            seatGrey.push({ geo: new THREE.BoxGeometry(0.04, 0.75, n * 0.48 + 0.06), m: mat4(THREE, s * (wallX - 0.025), 1.72, z0 + n * 0.24), });
         }
     }
     // facing fixed bay: two benches (2-seat) facing each other, orange variant
     function facingBay(s, zc) {
-        occupy(s, zc - 1.0, zc + 1.0);
         for (const d of [-1, 1]) {
             const zb = zc + d * 0.62;
             const u0 = 0.52, u1 = 0.98;
             const pd = new THREE.BoxGeometry(0.9, 0.08, 0.44); uvRegion(pd, u0, u1, 0, 1);
-            cushion.push({ geo: pd, m: mat4(THREE, s * 0.93, FLOOR_Y + 0.46, zb) });
+            cushion.push({ geo: pd, m: mat4(THREE, s * 0.93, 1.46, zb) });
             const bk = new THREE.BoxGeometry(0.9, 0.55, 0.08); uvRegion(bk, u0, u1, 0, 1);
-            cushion.push({ geo: bk, m: mat4(THREE, s * 0.93, FLOOR_Y + 0.74, zb + d * 0.22, d * -0.12, 0, 0) });
-            seatGrey.push({ geo: new THREE.BoxGeometry(0.86, 0.34, 0.38), m: mat4(THREE, s * 0.93, FLOOR_Y + 0.25, zb) });
+            cushion.push({ geo: bk, m: mat4(THREE, s * 0.93, 1.74, zb + d * 0.22, d * -0.12, 0, 0) });
+            seatGrey.push({ geo: new THREE.BoxGeometry(0.86, 0.34, 0.38), m: mat4(THREE, s * 0.93, 1.25, zb) });
             // grey back shell
-            seatGrey.push({ geo: new THREE.BoxGeometry(0.9, 0.64, 0.05), m: mat4(THREE, s * 0.93, FLOOR_Y + 0.73, zb + d * 0.3) });
+            seatGrey.push({ geo: new THREE.BoxGeometry(0.9, 0.64, 0.05), m: mat4(THREE, s * 0.93, 1.73, zb + d * 0.3) });
         }
     }
 
@@ -964,42 +914,18 @@ function buildInterior(THREE, mats, P) {
         seatRow(-1, -2.2, 2, 0, false); seatRow(1, -2.2, 2, 0, false);
     }
 
-    // ---- vestibule pilasters ------------------------------------------------
-    // The moulded pillar that stands between a doorway and the seating bay: it
-    // is what you actually see framing the door from the platform, and it gives
-    // the grab pole and the hazard stripe something to sit on.
-    const PIL_D = 0.10, PIL_L = 0.28;                 // depth into the saloon / length along z
-    const pilasters = [];
+    // ---- poles, overhead rails, straps ------------------------------------
+    // yellow grab rails beside every doorway
     for (const s of [-1, 1]) {
         for (const dz of doorZ) {
             for (const e of [-1, 1]) {
-                const z0 = dz + e * (DOOR_W / 2 + 0.02), z1 = dz + e * (DOOR_W / 2 + 0.02 + PIL_L);
-                if (!isFree(s, z0, z1)) continue;      // a seat is already there
-                occupy(s, z0, z1);
-                pilasters.push({ s, e, dz, zc: (z0 + z1) / 2 });
-                wall.push({
-                    geo: new THREE.BoxGeometry(PIL_D, CEIL_Y - FLOOR_Y, PIL_L),
-                    m: mat4(THREE, s * (wallX - PIL_D / 2), (FLOOR_Y + CEIL_Y) / 2, (z0 + z1) / 2)
-                });
-                // hazard stripe up the face of it, as on the real door pillar
-                decal.push({
-                    geo: xRect(THREE, s * (wallX - PIL_D - 0.006), FLOOR_Y + 0.12, DOOR_TOP - 0.06,
-                        Math.min(z0, z1) + 0.03, Math.min(z0, z1) + 0.10, -s, uvR(700, 700, 744, 1024)), m: M()
-                });
+                yellow.push({ geo: new THREE.CylinderGeometry(0.019, 0.019, 1.25, 8), m: mat4(THREE, s * 1.36, 1.78, dz + e * (DOOR_W / 2 + 0.09)) });
             }
         }
     }
-
-    // yellow grab poles, standing proud of the pilaster face
-    for (const p of pilasters) {
-        yellow.push({
-            geo: new THREE.CylinderGeometry(0.019, 0.019, CEIL_Y - FLOOR_Y - 0.06, 8),
-            m: mat4(THREE, p.s * (wallX - PIL_D - 0.05), (FLOOR_Y + CEIL_Y) / 2, p.zc)
-        });
-        steel.push({ geo: new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), m: mat4(THREE, p.s * (wallX - PIL_D - 0.05), CEIL_Y - 0.03, p.zc) });
-    }
     // overhead longitudinal rails
     const railLen = zMax - zMin - 1.4;
+    const RAIL_Y = 2.72;
     for (const sx of [-0.55, 0.55]) {
         yellow.push({ geo: new THREE.CylinderGeometry(0.021, 0.021, railLen, 8), m: mat4(THREE, sx, RAIL_Y, (zMin + zMax) / 2, Math.PI / 2, 0, 0) });
         // steel drop clamps
@@ -1010,9 +936,8 @@ function buildInterior(THREE, mats, P) {
         for (let z = zMin + 1.1; z < zMax - 0.9; z += 0.95) {
             if (doorZ.some(dz => Math.abs(z - dz) < 1.05)) continue;
             if (P.rmZ && P.rmZ.some(rz => Math.abs(z - rz) < 0.9)) continue;
-            // the strap is a long yellow loop, not a ring — stretch the torus
-            yellow.push({ geo: new THREE.TorusGeometry(0.062, 0.011, 6, 14), m: mat4(THREE, sx, RAIL_Y - 0.155, z, 0, 0, 0, 1, 2.1, 1) });
-            yellow.push({ geo: new THREE.BoxGeometry(0.03, 0.09, 0.018), m: mat4(THREE, sx, RAIL_Y - 0.04, z) });
+            yellow.push({ geo: new THREE.TorusGeometry(0.062, 0.011, 6, 12), m: mat4(THREE, sx, RAIL_Y - 0.105, z) });
+            yellow.push({ geo: new THREE.BoxGeometry(0.03, 0.08, 0.018), m: mat4(THREE, sx, RAIL_Y - 0.035, z) });
         }
     }
     // vertical poles: straight ones near doorway/seat boundaries + centre tripods
@@ -1020,65 +945,47 @@ function buildInterior(THREE, mats, P) {
         : [[-0.85, 1.35], [0.85, 1.35], [-0.85, 6.65], [0.85, 6.65], [-0.85, -1.05], [0.85, -1.05], [-0.85, -5.6], [0.85, -5.6]];
     for (const [px2, pz2] of poleZ) {
         yellow.push({ geo: new THREE.CylinderGeometry(0.023, 0.023, CEIL_Y - FLOOR_Y, 10), m: mat4(THREE, px2, (FLOOR_Y + CEIL_Y) / 2, pz2) });
-        steel.push({ geo: new THREE.CylinderGeometry(0.035, 0.035, 0.05, 8), m: mat4(THREE, px2, CEIL_Y - 0.04, pz2) });
+        steel.push({ geo: new THREE.CylinderGeometry(0.035, 0.035, 0.05, 8), m: mat4(THREE, px2, 2.9, pz2) });
     }
     // centre tripod poles
-    const TRI_Y = FLOOR_Y + 0.90;
     const triZ = cab ? [4.2] : [3.85, -3.35];
     for (const tz of triZ) {
-        yellow.push({ geo: new THREE.CylinderGeometry(0.024, 0.024, CEIL_Y - TRI_Y, 10), m: mat4(THREE, 0, (CEIL_Y + TRI_Y) / 2, tz) });
+        yellow.push({ geo: new THREE.CylinderGeometry(0.024, 0.024, CEIL_Y - 1.9, 10), m: mat4(THREE, 0, (CEIL_Y + 1.9) / 2, tz) });
         for (const a of [-1, 0, 1]) {
             const dx = a * 0.28;
-            const len = Math.sqrt((TRI_Y - FLOOR_Y) ** 2 + dx * dx);
-            yellow.push({ geo: new THREE.CylinderGeometry(0.02, 0.02, len, 8), m: mat4(THREE, dx / 2, (TRI_Y + FLOOR_Y) / 2, tz, 0, 0, Math.atan2(dx, TRI_Y - FLOOR_Y)) });
+            const len = Math.sqrt((1.9 - FLOOR_Y) ** 2 + dx * dx);
+            yellow.push({ geo: new THREE.CylinderGeometry(0.02, 0.02, len, 8), m: mat4(THREE, dx / 2, (1.9 + FLOOR_Y) / 2, tz, 0, 0, Math.atan2(dx, 1.9 - FLOOR_Y)) });
         }
-        steel.push({ geo: new THREE.CylinderGeometry(0.04, 0.04, 0.07, 8), m: mat4(THREE, 0, TRI_Y, tz) });
+        steel.push({ geo: new THREE.CylinderGeometry(0.04, 0.04, 0.07, 8), m: mat4(THREE, 0, 1.9, tz) });
     }
 
     // ---- signage -----------------------------------------------------------
     // hung route-map displays transverse over the aisle (~2 per car)
     const rmZ = P.rmZ || (cab ? [2.0, -4.9] : [2.6, -2.9]);
-    const RM_Y = CEIL_Y - 0.28;
     for (const rz of rmZ) {
-        grey.push({ geo: new THREE.BoxGeometry(1.56, 0.34, 0.055), m: mat4(THREE, 0, RM_Y, rz) });
+        grey.push({ geo: new THREE.BoxGeometry(1.56, 0.34, 0.055), m: mat4(THREE, 0, 2.68, rz) });
         steel.push({ geo: new THREE.BoxGeometry(0.03, 0.12, 0.03), m: mat4(THREE, -0.6, CEIL_Y - 0.06, rz) });
         steel.push({ geo: new THREE.BoxGeometry(0.03, 0.12, 0.03), m: mat4(THREE, 0.6, CEIL_Y - 0.06, rz) });
         for (const f of [-1, 1]) {
-            decal.push({ geo: zRect(THREE, rz + f * 0.03, f > 0 ? -0.75 : 0.75, f > 0 ? 0.75 : -0.75, RM_Y - 0.14, RM_Y + 0.15, f, uvR(0, 0, 1024, 200)), m: M() });
+            decal.push({ geo: zRect(THREE, rz + f * 0.03, f > 0 ? -0.75 : 0.75, f > 0 ? 0.75 : -0.75, 2.54, 2.83, f, uvR(0, 0, 1024, 200)), m: M() });
         }
     }
     // ceiling PID boxes near two doorways
-    const PID_Y = CEIL_Y - 0.11;
     const pidZ = [doorZ[0] - 1.35, doorZ[2] + 1.35];
     for (const pz3 of pidZ) {
-        grey.push({ geo: new THREE.BoxGeometry(0.6, 0.19, 0.1), m: mat4(THREE, 0, PID_Y, pz3) });
+        grey.push({ geo: new THREE.BoxGeometry(0.6, 0.19, 0.1), m: mat4(THREE, 0, 2.83, pz3) });
         for (const f of [-1, 1]) {
-            decal.push({ geo: zRect(THREE, pz3 + f * 0.051, f > 0 ? -0.28 : 0.28, f > 0 ? 0.28 : -0.28, PID_Y - 0.085, PID_Y + 0.085, f, uvR(0, 210, 400, 340)), m: M() });
+            decal.push({ geo: zRect(THREE, pz3 + f * 0.051, f > 0 ? -0.28 : 0.28, f > 0 ? 0.28 : -0.28, 2.745, 2.915, f, uvR(0, 210, 400, 340)), m: M() });
         }
     }
-    // ceiling air-conditioning grilles down the centre band
-    for (let z = zMin + 2.6; z < zMax - 1.4; z += 3.6) {
-        if (doorZ.some(dz => Math.abs(z - dz) < 1.9)) continue;   // clear of doorways and the PID boxes beside them
-        decal.push({ geo: yRect(THREE, CEIL_Y - 0.012, -0.28, 0.28, z - 0.3, z + 0.3, -1, uvR(760, 700, 900, 816)), m: M() });
-    }
-
     // wall decals: carriage plates, network map poster, emergency panel, priority sticker
     for (const s of [-1, 1]) {
         const x = s * (wallX - 0.006), face = -s;
         const midDoor = doorZ[1];
-
-        // the pictogram band that sits over every doorway
-        for (const dz of doorZ) {
-            decal.push({ geo: xRect(THREE, x, DOOR_TOP + 0.03, DOOR_TOP + 0.155, dz - 0.62, dz + 0.62, face, uvR(0, 700, 664, 790)), m: M() });
-        }
-
-        // the long navy line-diagram display, high on the wall between doorways
-        const dispZ = (doorZ[0] + doorZ[1]) / 2;
-        decal.push({ geo: xRect(THREE, x, DOOR_TOP + 0.05, DOOR_TOP + 0.20, dispZ - 1.35, dispZ + 1.35, face, uvR(0, 820, 1024, 900)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 1.50, FLOOR_Y + 1.61, zMin + 0.5, zMin + 0.92, face, uvR(0, 360, 300, 440)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.85, FLOOR_Y + 1.57, midDoor + 1.22, midDoor + 1.72, face, uvR(420, 210, 700, 650)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.70, FLOOR_Y + 1.10, midDoor - 1.42, midDoor - 1.2, face, uvR(720, 210, 850, 450)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 1.55, FLOOR_Y + 1.83, doorZ[2] - 1.48, doorZ[2] - 1.24, face, uvR(220, 470, 340, 610)), m: M() });
+        decal.push({ geo: xRect(THREE, x, 2.5, 2.61, zMin + 0.5, zMin + 0.92, face, s > 0 ? uvR(0, 360, 300, 440) : uvR(0, 360, 300, 440)), m: M() });
+        decal.push({ geo: xRect(THREE, x, 1.85, 2.57, midDoor + 1.02, midDoor + 1.52, face, uvR(420, 210, 700, 650)), m: M() });
+        decal.push({ geo: xRect(THREE, x, 1.7, 2.1, midDoor - 1.42, midDoor - 1.2, face, uvR(720, 210, 850, 450)), m: M() });
+        decal.push({ geo: xRect(THREE, x, 2.55, 2.83, doorZ[2] - 1.2, doorZ[2] - 0.96, face, uvR(220, 470, 340, 610)), m: M() });
     }
 
     // ---- build merged meshes
@@ -1105,7 +1012,7 @@ function buildInterior(THREE, mats, P) {
             for (const dz of doorZ) {
                 const z0 = dir > 0 ? dz : dz - LEAF_W;
                 const z1 = dir > 0 ? dz + LEAF_W : dz;
-                const y0 = DOOR_SILL, y1 = LEAF_TOP;
+                const y0 = 0.88, y1 = 0.88 + LEAF_H;
                 // near meeting edge is at dz. ext texture column: leaf left-of-centre = N
                 // for s=+1 (right side, u toward -z when seen from +x): choose by geometry
                 const extCol = dir > 0 ? 'extP' : 'extN';
@@ -1144,36 +1051,57 @@ export function buildHCMT(THREE, canvasTexture) {
     const matBellows = new THREE.MeshStandardMaterial({ map: bellowsTex, roughness: 0.95 });
 
     // car end caps: charcoal with facet wrap edges + recessed gangway door
-    // 100 px per metre: the cap spans x -1.525..1.525 and y SIDE_Y0..SIDE_Y1
-    const capW = Math.round(CAR_W * 100), capH = Math.round((SIDE_Y1 - SIDE_Y0) * 100);
-    const cX = m => (m + CAR_W / 2) * 100, cY = m => (SIDE_Y1 - m) * 100;
-    const endTex = canvasTexture(capW, capH, (ctx) => {
-        ctx.fillStyle = C.dark; ctx.fillRect(0, 0, capW, capH);
-        drawFacets(ctx, 0, 0, 72, capH, 5);
-        drawFacets(ctx, capW - 72, 0, 72, capH, 9);
-        ctx.fillStyle = '#141516';
-        ctx.fillRect(cX(-0.84), cY(GANG_TOP + 0.16), cX(0.84) - cX(-0.84), cY(FLOOR_Y - 0.28) - cY(GANG_TOP + 0.16));
+    const endTex = canvasTexture(306, 226, (ctx) => {
+        ctx.fillStyle = C.dark; ctx.fillRect(0, 0, 306, 226);
+        drawFacets(ctx, 0, 0, 72, 226, 5);
+        drawFacets(ctx, 234, 0, 72, 226, 9);
+        ctx.fillStyle = '#141516'; ctx.fillRect(103, 16, 100, 210);
         // open gangway aperture (real hole; alphaTest cuts it)
-        ctx.clearRect(cX(-0.71), cY(GANG_TOP), cX(0.71) - cX(-0.71), cY(FLOOR_Y - 0.15) - cY(GANG_TOP));
+        ctx.clearRect(88, 8, 130, 201);
     });
-    const matEnd = new THREE.MeshStandardMaterial({ map: endTex, roughness: 0.7, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+    // NOTE: walls stay in the OPAQUE render pass (alphaTest only, never
+    // transparent:true) — transparent walls get depth-rejected when viewed
+    // through other transparent surfaces (e.g. platform screen doors) and the
+    // train appears to have missing walls.
+    const matEnd = new THREE.MeshStandardMaterial({ map: endTex, roughness: 0.7, alphaTest: 0.5, side: THREE.DoubleSide });
 
     const midTexR = makeSideTex(canvasTexture, midLayout, false, 40);
     const midTexL = makeSideTex(canvasTexture, midLayout, true, 40);
     const cabTexR = makeSideTex(canvasTexture, cabLayout, false, 71);
     const cabTexL = makeSideTex(canvasTexture, cabLayout, true, 71);
-    const sideOpts = { roughness: 0.55, metalness: 0.1, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide };
+    const sideOpts = { roughness: 0.38, metalness: 0.35, alphaTest: 0.5, side: THREE.DoubleSide };
     const matMidR = new THREE.MeshStandardMaterial({ map: midTexR, ...sideOpts });
     const matMidL = new THREE.MeshStandardMaterial({ map: midTexL, ...sideOpts });
     const matCabR = new THREE.MeshStandardMaterial({ map: cabTexR, ...sideOpts });
     const matCabL = new THREE.MeshStandardMaterial({ map: cabTexL, ...sideOpts });
 
-    const frontTex = makeFrontTex(canvasTexture);
-    const matFront = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.5, metalness: 0.1 });
-    const noseSideTexR = makeNoseSideTex(canvasTexture, false);
-    const noseSideTexL = makeNoseSideTex(canvasTexture, true);
-    const matNoseR = new THREE.MeshStandardMaterial({ map: noseSideTexR, roughness: 0.5, metalness: 0.1 });
-    const matNoseL = new THREE.MeshStandardMaterial({ map: noseSideTexL, roughness: 0.5, metalness: 0.1 });
+    // tinted window glass (separate planes behind the cut-out bezels)
+    const matGlass = new THREE.MeshStandardMaterial({
+        color: '#26343d', roughness: 0.12, metalness: 0.4,
+        transparent: true, opacity: 0.52, depthWrite: false, side: THREE.DoubleSide
+    });
+    // merged glass quads for one car side; sGn is the layout, s the side sign
+    function glassGeo(layoutL, windows, s) {
+        const items = [];
+        const gx = s * (SIDE_X - 0.025);
+        for (const wz of windows) {
+            const z0 = layoutL / 2 - wz[1], z1 = layoutL / 2 - wz[0];
+            items.push({ geo: xRect(THREE, gx, 1.72, 2.80, z0, z1, s), m: mat4(THREE, 0, 0, 0) });
+        }
+        return mergeGeoms(THREE, items);
+    }
+    const midGlassR = glassGeo(CAR_L, midLayout.windows, 1);
+    const midGlassL = glassGeo(CAR_L, midLayout.windows, -1);
+    const cabGlassR = glassGeo(cabBodyL, cabLayout.windows, 1);
+    const cabGlassL = glassGeo(cabBodyL, cabLayout.windows, -1);
+
+    // lofted nose (geometry + painted livery + emissive display/headlights)
+    const noseTexs = makeNoseTexPair(canvasTexture);
+    const matNose = new THREE.MeshStandardMaterial({
+        map: noseTexs.map, roughness: 0.42, metalness: 0.3,
+        emissive: '#ffffff', emissiveMap: noseTexs.emissiveMap, emissiveIntensity: 0.85
+    });
+    const noseGeo = noseGeometry(THREE);
 
     // ---- interior shared materials ----------------------------------------
     const midDoorZ = doorCentresLocal(midLayout);
@@ -1321,6 +1249,9 @@ export function buildHCMT(THREE, canvasTexture) {
         const eq = new THREE.Mesh(roofEquipG, matEquip);
         car.add(eq);
 
+        car.add(new THREE.Mesh(midGlassR, matGlass));
+        car.add(new THREE.Mesh(midGlassL, matGlass));
+
         car.add(midInterior.clone());
         return car;
     }
@@ -1373,103 +1304,17 @@ export function buildHCMT(THREE, canvasTexture) {
         ant.position.set(0, ROOF_Y1 + 0.05, 5.6);
         car.add(ant);
 
-        // ---- nose ----
-        // front face: 3 vertical strips x 2 rows — raked windscreen above,
-        // protruding chin/bib below (widest at the mid line)
-        const colX = [-1.35, -0.72, 0.72, 1.35];
-        const colZ = [zf - 0.55, zf, zf, zf - 0.55];
-        const topShrink = 0.96, rake = 0.62;
-        const yBot = NM(0.35), yMid = NM(1.95), yTop = NM(3.05);
-        const botShrink = 0.92, chin = 0.18, botTuck = 0.28;
-        function frontCol(i, row) {
-            if (row === 2) return [colX[i] * topShrink, yTop, colZ[i] - rake];
-            if (row === 1) return [colX[i], yMid, colZ[i] + chin];
-            return [colX[i] * botShrink, yBot, colZ[i] + chin - botTuck];
-        }
-        const vMid = (yMid - yBot) / (yTop - yBot);
-        const rowV = [0, vMid, 1];
-        const frontItems = [];
-        for (let i = 0; i < 3; i++) {
-            const u0 = (colX[i] + 1.35) / 2.7, u1 = (colX[i + 1] + 1.35) / 2.7;
-            for (let r = 0; r < 2; r++) {
-                frontItems.push({
-                    geo: quadGeo(THREE,
-                        frontCol(i, r), frontCol(i + 1, r), frontCol(i + 1, r + 1), frontCol(i, r + 1),
-                        [[u0, rowV[r]], [u1, rowV[r]], [u1, rowV[r + 1]], [u0, rowV[r + 1]]]),
-                    m: new THREE.Matrix4()
-                });
-            }
-        }
-        car.add(new THREE.Mesh(mergeGeoms(THREE, frontItems), matFront));
+        // window glass planes (body section)
+        const gR = new THREE.Mesh(cabGlassR, matGlass); gR.position.z = bodyCz; car.add(gR);
+        const gL = new THREE.Mesh(cabGlassL, matGlass); gL.position.z = bodyCz; car.add(gL);
 
-        const foTopX = 1.35 * topShrink, foTopZ = zf - 0.55 - rake; // outer front-top corner
-        const fiTopZ = zf - rake;
-        const foMidZ = zf - 0.55 + chin;
-        const foBotX = 1.35 * botShrink, foBotZ = zf - 0.55 + chin - botTuck;
-        const rMidY = SIDE_Y0 + (SIDE_Y1 - SIDE_Y0) * vMid; // rear edge mid point
-        const vMidTex = vMid;
-
-        // nose side quads (two rows to follow the chin profile)
-        const srLow = quadGeo(THREE,
-            [SIDE_X, SIDE_Y0, zb],
-            [SIDE_X, rMidY, zb],
-            [1.35, yMid, foMidZ],
-            [foBotX, yBot, foBotZ],
-            [[1, 0], [1, vMidTex], [0, vMidTex], [0, 0]]);
-        const srHigh = quadGeo(THREE,
-            [SIDE_X, rMidY, zb],
-            [SIDE_X, SIDE_Y1, zb],
-            [foTopX, yTop, foTopZ],
-            [1.35, yMid, foMidZ],
-            [[1, vMidTex], [1, 1], [0, 1], [0, vMidTex]]);
-        car.add(new THREE.Mesh(mergeGeoms(THREE, [
-            { geo: srLow, m: new THREE.Matrix4() }, { geo: srHigh, m: new THREE.Matrix4() }
-        ]), matNoseR));
-        const slLow = quadGeo(THREE,
-            [-foBotX, yBot, foBotZ],
-            [-1.35, yMid, foMidZ],
-            [-SIDE_X, rMidY, zb],
-            [-SIDE_X, SIDE_Y0, zb],
-            [[0, 0], [0, vMidTex], [1, vMidTex], [1, 0]]);
-        const slHigh = quadGeo(THREE,
-            [-1.35, yMid, foMidZ],
-            [-foTopX, yTop, foTopZ],
-            [-SIDE_X, SIDE_Y1, zb],
-            [-SIDE_X, rMidY, zb],
-            [[0, vMidTex], [0, 1], [1, 1], [1, vMidTex]]);
-        const sl = mergeGeoms(THREE, [
-            { geo: slLow, m: new THREE.Matrix4() }, { geo: slHigh, m: new THREE.Matrix4() }
-        ]);
-        car.add(new THREE.Mesh(sl, matNoseL));
-
-        // roof cap over cab (pale blue), 3 strips + corner fillers
-        const rc = [];
-        const rearPts = [[-1.5, SHOULDER_Y], [-0.76, ROOF_Y1], [0.76, ROOF_Y1], [1.5, SHOULDER_Y]];
-        const frontPts = [
-            [-foTopX, yTop, foTopZ],
-            [-0.72 * topShrink, yTop, fiTopZ],
-            [0.72 * topShrink, yTop, fiTopZ],
-            [foTopX, yTop, foTopZ]
-        ];
-        for (let i = 0; i < 3; i++) {
-            rc.push({
-                geo: quadGeo(THREE,
-                    [rearPts[i + 1][0], rearPts[i + 1][1], zb],
-                    [rearPts[i][0], rearPts[i][1], zb],
-                    frontPts[i],
-                    frontPts[i + 1]),
-                m: new THREE.Matrix4()
-            });
-        }
-        // corner fillers between roof cap and nose sides
-        rc.push({ geo: triGeo(THREE, [1.5, SHOULDER_Y, zb], [foTopX, yTop, foTopZ], [SIDE_X, SIDE_Y1, zb]), m: new THREE.Matrix4() });
-        rc.push({ geo: triGeo(THREE, [-SIDE_X, SIDE_Y1, zb], [-foTopX, yTop, foTopZ], [-1.5, SHOULDER_Y, zb]), m: new THREE.Matrix4() });
-        car.add(new THREE.Mesh(mergeGeoms(THREE, rc), matRoof));
+        // ---- nose: smooth lofted bullet slope (single mesh) ----
+        car.add(new THREE.Mesh(noseGeo, matNose));
 
         // under-nose skirt + coupler
         const skirtItems = [
-            { geo: new THREE.BoxGeometry(2.2, 0.42, 2.2), m: mat4(THREE, 0, 0.35, zf - 1.0) },
-            { geo: new THREE.BoxGeometry(0.44, 0.34, 0.9), m: mat4(THREE, 0, 0.5, zf - 0.35) },
+            { geo: new THREE.BoxGeometry(1.6, 0.34, 1.7), m: mat4(THREE, 0, 0.3, zf - 1.15) },
+            { geo: new THREE.BoxGeometry(0.44, 0.3, 1.0), m: mat4(THREE, 0, 0.32, zf - 0.45) },
             // filler under the tapered cab side, closes the daylight gap
             { geo: new THREE.BoxGeometry(2.4, 0.5, 2.2), m: mat4(THREE, 0, 0.6, zb + 1.1) }
         ];
@@ -1487,28 +1332,26 @@ export function buildHCMT(THREE, canvasTexture) {
     function makeGangway() {
         const g = new THREE.Group();
         // exterior bellows shell: 4 slabs (sides + roof + under) so the passage is open
-        const shellBot = FLOOR_Y - 0.46, shellTop = CEIL_Y + 0.42;
         const shellItems = [
-            { geo: new THREE.BoxGeometry(0.36, shellTop - shellBot, 0.62), m: mat4(THREE, -0.895, (shellBot + shellTop) / 2, 0) },
-            { geo: new THREE.BoxGeometry(0.36, shellTop - shellBot, 0.62), m: mat4(THREE, 0.895, (shellBot + shellTop) / 2, 0) },
-            { geo: new THREE.BoxGeometry(2.15, 0.32, 0.62), m: mat4(THREE, 0, shellTop - 0.16, 0) },
-            { geo: new THREE.BoxGeometry(2.15, 0.30, 0.62), m: mat4(THREE, 0, shellBot + 0.15, 0) }
+            { geo: new THREE.BoxGeometry(0.36, 2.3, 0.62), m: mat4(THREE, -0.895, 2.2, 0) },
+            { geo: new THREE.BoxGeometry(0.36, 2.3, 0.62), m: mat4(THREE, 0.895, 2.2, 0) },
+            { geo: new THREE.BoxGeometry(2.15, 0.32, 0.62), m: mat4(THREE, 0, 3.19, 0) },
+            { geo: new THREE.BoxGeometry(2.15, 0.30, 0.62), m: mat4(THREE, 0, 0.84, 0) }
         ];
         g.add(new THREE.Mesh(mergeGeoms(THREE, shellItems), matBellows));
         const cap = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, GAP + 0.2), matRoof);
-        cap.position.y = SHOULDER_Y;
+        cap.position.y = 3.42;
         g.add(cap);
         // interior lining: inward-facing tunnel walls + ceiling, ribbed grey
-        const linBot = FLOOR_Y - 0.10, linTop = CEIL_Y - 0.07;
         const lin = [];
-        lin.push({ geo: xRect(THREE, -0.71, linBot, linTop, -0.55, 0.55, 1), m: new THREE.Matrix4() });
-        lin.push({ geo: xRect(THREE, 0.71, linBot, linTop, -0.55, 0.55, -1), m: new THREE.Matrix4() });
-        lin.push({ geo: yRect(THREE, linTop, -0.71, 0.71, -0.55, 0.55, -1), m: new THREE.Matrix4() });
+        lin.push({ geo: xRect(THREE, -0.71, 1.03, 2.86, -0.55, 0.55, 1), m: new THREE.Matrix4() });
+        lin.push({ geo: xRect(THREE, 0.71, 1.03, 2.86, -0.55, 0.55, -1), m: new THREE.Matrix4() });
+        lin.push({ geo: yRect(THREE, 2.86, -0.71, 0.71, -0.55, 0.55, -1), m: new THREE.Matrix4() });
         // concertina ribs: rectangular loops standing proud of the lining
         for (const rz of [-0.3, -0.1, 0.1, 0.3]) {
-            lin.push({ geo: new THREE.BoxGeometry(0.06, linTop - linBot, 0.075), m: mat4(THREE, -0.665, (linBot + linTop) / 2, rz) });
-            lin.push({ geo: new THREE.BoxGeometry(0.06, linTop - linBot, 0.075), m: mat4(THREE, 0.665, (linBot + linTop) / 2, rz) });
-            lin.push({ geo: new THREE.BoxGeometry(1.4, 0.06, 0.075), m: mat4(THREE, 0, linTop - 0.03, rz) });
+            lin.push({ geo: new THREE.BoxGeometry(0.06, 1.8, 0.075), m: mat4(THREE, -0.665, 1.93, rz) });
+            lin.push({ geo: new THREE.BoxGeometry(0.06, 1.8, 0.075), m: mat4(THREE, 0.665, 1.93, rz) });
+            lin.push({ geo: new THREE.BoxGeometry(1.4, 0.06, 0.075), m: mat4(THREE, 0, 2.8, rz) });
         }
         const linMesh = new THREE.Mesh(mergeGeoms(THREE, lin), matGangIn);
         g.add(linMesh);
@@ -1520,7 +1363,7 @@ export function buildHCMT(THREE, canvasTexture) {
         const yr = [];
         for (const sx of [-0.58, 0.58]) {
             for (const sz of [-0.44, 0.44]) {
-                yr.push({ geo: new THREE.CylinderGeometry(0.02, 0.02, 1.62, 8), m: mat4(THREE, sx, FLOOR_Y + 0.79, sz) });
+                yr.push({ geo: new THREE.CylinderGeometry(0.02, 0.02, 1.5, 8), m: mat4(THREE, sx, 1.86, sz) });
             }
         }
         g.add(new THREE.Mesh(mergeGeoms(THREE, yr), intMats.yellow));
@@ -1600,19 +1443,8 @@ export function buildHCMT(THREE, canvasTexture) {
         train.add(gw);
     }
 
-    return attachDoorControl(THREE, train);
-}
-
-/**
- * Gives a train its `setDoors(k, worldSide)`.
- *
- * Separate from buildHCMT because a second train is usually a clone of the
- * first — and three serialises userData through JSON when it copies an object,
- * so a cloned train arrives with the function silently missing. Call this on
- * any clone, AFTER setting its rotation: the side each leaf ends up on is read
- * from the world matrix, so a train turned to face the other way sorts itself.
- */
-export function attachDoorControl(THREE, train) {
+    // ---- door control ------------------------------------------------------
+    // collect leaf mover meshes, classified by their TRAIN-local side
     train.updateMatrixWorld(true);
     const moversP = [], moversN = [];
     const q = new THREE.Quaternion(), ax = new THREE.Vector3();
@@ -1621,16 +1453,17 @@ export function attachDoorControl(THREE, train) {
         const { s, dir } = o.userData.leaf;
         o.getWorldQuaternion(q);
         ax.set(1, 0, 0).applyQuaternion(q);
-        const worldSide = s * (ax.x < 0 ? -1 : 1);
+        const worldSide = s * Math.sign(ax.x || 1);
         (worldSide > 0 ? moversP : moversN).push({ mesh: o, dir });
     });
-    train.userData.setDoors = (k, worldSide) => {
+    train.userData.setDoors = (k, localSide) => {
         k = Math.max(0, Math.min(1, k || 0));
-        const arr = worldSide < 0 ? moversN : moversP;
+        const arr = localSide < 0 ? moversN : moversP;
         for (let i = 0; i < arr.length; i++) {
             arr[i].mesh.position.z = arr[i].dir * LEAF_TRAVEL * k;
         }
     };
+
     return train;
 }
 
