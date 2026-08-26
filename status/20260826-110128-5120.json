@@ -1,5 +1,6 @@
 {
   "id": "20260826-110128-5120",
-  "state": "building",
-  "at": "2026-08-26T11:01:34Z"
+  "state": "failed",
+  "at": "2026-08-26T11:01:38Z",
+  "reason": "Failed to authenticate: OAuth session expired and could not be refreshed"
 }
