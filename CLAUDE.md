@@ -131,6 +131,10 @@ terminal, so:
 
 - Work autonomously start to finish: never ask a question, never pause for
   approval, never leave the work half-done.
+- Subagents are allowed and encouraged for big worlds (the Task tool is on the
+  allow-list): fan out — one per region, one per system, a reviewer — so long
+  as everything converges into the world's one coherent module and a single
+  final commit.
 - Attached photos, when there are any, sit beside the request at
   `requests/<id>/ref-*.jpg` — look at them before building; they are the
   visual brief.
