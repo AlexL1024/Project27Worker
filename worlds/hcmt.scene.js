@@ -895,9 +895,18 @@ function buildInterior(THREE, mats, P) {
     }
 
     // ---- seats -------------------------------------------------------------
+    // Every seat records the length of wall it occupies, so the vestibule
+    // pilasters placed later can simply refuse to stand where a seat already is
+    // rather than relying on me to have done the arithmetic right six times.
+    const occupied = { '-1': [], '1': [] };
+    const occupy = (s, z0, z1) => occupied[String(s)].push([Math.min(z0, z1), Math.max(z0, z1)]);
+    const isFree = (s, z0, z1, pad = 0.05) =>
+        !occupied[String(s)].some(o => o[1] + pad > z0 && o[0] - pad < z1);
+
     // longitudinal flip-up row: n seats from z0, on side s. variant: 0 blue, 1 orange
     function seatRow(s, z0, n, variant, folded) {
         const u0 = variant ? 0.52 : 0.02, u1 = variant ? 0.98 : 0.48;
+        occupy(s, z0 - 0.06, z0 + n * 0.48 + 0.06);   // seats plus the backboard behind them
         for (let i = 0; i < n; i++) {
             const zc = z0 + 0.235 + i * 0.48;
             if (folded) {
@@ -926,6 +935,7 @@ function buildInterior(THREE, mats, P) {
     }
     // facing fixed bay: two benches (2-seat) facing each other, orange variant
     function facingBay(s, zc) {
+        occupy(s, zc - 1.0, zc + 1.0);
         for (const d of [-1, 1]) {
             const zb = zc + d * 0.62;
             const u0 = 0.52, u1 = 0.98;
@@ -954,14 +964,39 @@ function buildInterior(THREE, mats, P) {
         seatRow(-1, -2.2, 2, 0, false); seatRow(1, -2.2, 2, 0, false);
     }
 
-    // ---- poles, overhead rails, straps ------------------------------------
-    // yellow grab rails beside every doorway
+    // ---- vestibule pilasters ------------------------------------------------
+    // The moulded pillar that stands between a doorway and the seating bay: it
+    // is what you actually see framing the door from the platform, and it gives
+    // the grab pole and the hazard stripe something to sit on.
+    const PIL_D = 0.10, PIL_L = 0.28;                 // depth into the saloon / length along z
+    const pilasters = [];
     for (const s of [-1, 1]) {
         for (const dz of doorZ) {
             for (const e of [-1, 1]) {
-                yellow.push({ geo: new THREE.CylinderGeometry(0.019, 0.019, 1.32, 8), m: mat4(THREE, s * 1.36, FLOOR_Y + 0.80, dz + e * (DOOR_W / 2 + 0.09)) });
+                const z0 = dz + e * (DOOR_W / 2 + 0.02), z1 = dz + e * (DOOR_W / 2 + 0.02 + PIL_L);
+                if (!isFree(s, z0, z1)) continue;      // a seat is already there
+                occupy(s, z0, z1);
+                pilasters.push({ s, e, dz, zc: (z0 + z1) / 2 });
+                wall.push({
+                    geo: new THREE.BoxGeometry(PIL_D, CEIL_Y - FLOOR_Y, PIL_L),
+                    m: mat4(THREE, s * (wallX - PIL_D / 2), (FLOOR_Y + CEIL_Y) / 2, (z0 + z1) / 2)
+                });
+                // hazard stripe up the face of it, as on the real door pillar
+                decal.push({
+                    geo: xRect(THREE, s * (wallX - PIL_D - 0.006), FLOOR_Y + 0.12, DOOR_TOP - 0.06,
+                        Math.min(z0, z1) + 0.03, Math.min(z0, z1) + 0.10, -s, uvR(700, 700, 744, 1024)), m: M()
+                });
             }
         }
+    }
+
+    // yellow grab poles, standing proud of the pilaster face
+    for (const p of pilasters) {
+        yellow.push({
+            geo: new THREE.CylinderGeometry(0.019, 0.019, CEIL_Y - FLOOR_Y - 0.06, 8),
+            m: mat4(THREE, p.s * (wallX - PIL_D - 0.05), (FLOOR_Y + CEIL_Y) / 2, p.zc)
+        });
+        steel.push({ geo: new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), m: mat4(THREE, p.s * (wallX - PIL_D - 0.05), CEIL_Y - 0.03, p.zc) });
     }
     // overhead longitudinal rails
     const railLen = zMax - zMin - 1.4;
@@ -1035,17 +1070,15 @@ function buildInterior(THREE, mats, P) {
         // the pictogram band that sits over every doorway
         for (const dz of doorZ) {
             decal.push({ geo: xRect(THREE, x, DOOR_TOP + 0.03, DOOR_TOP + 0.155, dz - 0.62, dz + 0.62, face, uvR(0, 700, 664, 790)), m: M() });
-            // hazard stripe up the pillar on the closing side of the doorway
-            decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.10, DOOR_TOP - 0.06, dz + DOOR_W / 2 + 0.13, dz + DOOR_W / 2 + 0.20, face, uvR(700, 700, 744, 1024)), m: M() });
         }
 
         // the long navy line-diagram display, high on the wall between doorways
         const dispZ = (doorZ[0] + doorZ[1]) / 2;
         decal.push({ geo: xRect(THREE, x, DOOR_TOP + 0.05, DOOR_TOP + 0.20, dispZ - 1.35, dispZ + 1.35, face, uvR(0, 820, 1024, 900)), m: M() });
         decal.push({ geo: xRect(THREE, x, FLOOR_Y + 1.50, FLOOR_Y + 1.61, zMin + 0.5, zMin + 0.92, face, uvR(0, 360, 300, 440)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.85, FLOOR_Y + 1.57, midDoor + 1.02, midDoor + 1.52, face, uvR(420, 210, 700, 650)), m: M() });
+        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.85, FLOOR_Y + 1.57, midDoor + 1.22, midDoor + 1.72, face, uvR(420, 210, 700, 650)), m: M() });
         decal.push({ geo: xRect(THREE, x, FLOOR_Y + 0.70, FLOOR_Y + 1.10, midDoor - 1.42, midDoor - 1.2, face, uvR(720, 210, 850, 450)), m: M() });
-        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 1.55, FLOOR_Y + 1.83, doorZ[2] - 1.2, doorZ[2] - 0.96, face, uvR(220, 470, 340, 610)), m: M() });
+        decal.push({ geo: xRect(THREE, x, FLOOR_Y + 1.55, FLOOR_Y + 1.83, doorZ[2] - 1.48, doorZ[2] - 1.24, face, uvR(220, 470, 340, 610)), m: M() });
     }
 
     // ---- build merged meshes
