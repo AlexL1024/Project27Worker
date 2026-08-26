@@ -1,5 +1,6 @@
 {
   "id": "20260826-103320-290e",
-  "state": "building",
-  "at": "2026-08-26T10:33:29Z"
+  "state": "failed",
+  "at": "2026-08-26T10:33:37Z",
+  "reason": "Claude Code exited with an error."
 }
