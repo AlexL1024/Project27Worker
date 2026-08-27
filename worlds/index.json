@@ -46,6 +46,11 @@
       "scene": "wind-hover.scene.js"
     },
     {
+      "slug": "last-tram",
+      "name": "Last Tram",
+      "scene": "last-tram.scene.js"
+    },
+    {
       "slug": "state-library-station",
       "name": "State Library Station",
       "scene": "station.scene.js",
