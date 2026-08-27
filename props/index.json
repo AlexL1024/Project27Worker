@@ -1,0 +1,64 @@
+{
+  "props": [
+    {
+      "id": "bookshelf",
+      "name": "Bookshelf",
+      "tags": ["furniture", "shelf", "books", "classroom", "library"],
+      "file": "bookshelf.prop.js"
+    },
+    {
+      "id": "pin-board",
+      "name": "Pin Board",
+      "tags": ["wall", "noticeboard", "cork", "classroom", "office"],
+      "file": "pin-board.prop.js"
+    },
+    {
+      "id": "projector",
+      "name": "Projector",
+      "tags": ["equipment", "electronics", "projector", "classroom", "office"],
+      "file": "projector.prop.js"
+    },
+    {
+      "id": "school-chair",
+      "name": "School Chair",
+      "tags": ["classroom", "furniture", "chair", "seat", "school"],
+      "file": "school-chair.prop.js"
+    },
+    {
+      "id": "school-desk",
+      "name": "School Desk",
+      "tags": ["classroom", "furniture", "desk", "school", "steel"],
+      "file": "school-desk.prop.js"
+    },
+    {
+      "id": "student",
+      "name": "Student",
+      "tags": ["person", "figure", "student", "classroom", "school"],
+      "file": "student.prop.js"
+    },
+    {
+      "id": "teacher",
+      "name": "Teacher",
+      "tags": ["person", "figure", "teacher", "classroom", "school"],
+      "file": "teacher.prop.js"
+    },
+    {
+      "id": "wall-clock",
+      "name": "Wall Clock",
+      "tags": ["clock", "wall", "time", "classroom", "office"],
+      "file": "wall-clock.prop.js"
+    },
+    {
+      "id": "waste-bin",
+      "name": "Waste Bin",
+      "tags": ["bin", "metal", "clutter", "classroom", "office"],
+      "file": "waste-bin.prop.js"
+    },
+    {
+      "id": "whiteboard",
+      "name": "Whiteboard",
+      "tags": ["classroom", "board", "teaching", "school", "mobile"],
+      "file": "whiteboard.prop.js"
+    }
+  ]
+}

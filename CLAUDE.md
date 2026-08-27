@@ -13,13 +13,16 @@ one self-contained ES module file.
 
 1. Write or edit a world in `worlds/<slug>.scene.js`.
 2. Update `worlds/index.json` — the app only shows what the manifest lists.
-3. `bash tools/check.sh` — checks syntax, the manifest and the performance
-   budget, then **builds every world for real** in node (`tools/smoke.mjs`)
-   with the browser stubbed. A world that throws, or that leaves a mesh with no
-   geometry, fails here. Never commit past a failure — the app cannot survive
-   what this catches.
-4. `git add -A && git commit -m "<what changed>"` — the hook pushes to GitHub.
-5. If the push fails (no network, auth), say so plainly — the iPad can only
+3. Write the world's reusable objects out as props in `props/`, and list them
+   in `props/index.json`. See **The object library** below for what counts as
+   reusable and what a prop module has to look like.
+4. `bash tools/check.sh` — checks syntax, the manifest and the performance
+   budget, then **builds every world and every prop for real** in node
+   (`tools/smoke.mjs`) with the browser stubbed. A world that throws, or that
+   leaves a mesh with no geometry, fails here. Never commit past a failure —
+   the app cannot survive what this catches.
+5. `git add -A && git commit -m "<what changed>"` — the hook pushes to GitHub.
+6. If the push fails (no network, auth), say so plainly — the iPad can only
    see what actually reached GitHub.
 
 ## Repo layout
@@ -28,6 +31,9 @@ one self-contained ES module file.
 worlds/
   index.json            ← the manifest: what the app offers to open
   <slug>.scene.js       ← one world per file, self-contained
+props/
+  index.json            ← the catalogue: what edit mode offers to place
+  <id>.prop.js          ← one reusable object per file, self-contained
 tools/check.sh          ← syntax check, run before every commit
 runtime-reference/      ← read-only copies of the app's runtime, for reference
 ```
@@ -152,6 +158,110 @@ Slug is kebab-case (`coral-cay`), file is `<slug>.scene.js`, display name is
 Title Case. Parts are named `thing_NN` (`hut_00`, `palm_03`) — the app uses
 those names to talk about pieces.
 
+
+## The object library (`props/`)
+
+A world is a room. A prop is one thing out of that room — a desk, a chair, a
+whiteboard, a projector, a person — standing on its own, so that later, in the
+app's edit mode, somebody can search "desk" and drop one into a world that
+never had a desk in it. `props/` is the shelf those pieces sit on, and
+`props/index.json` is what edit mode searches.
+
+```json
+{
+  "props": [
+    { "id": "school-desk", "name": "School Desk", "tags": ["classroom", "furniture", "desk"], "file": "school-desk.prop.js", "world": "classroom-hour" }
+  ]
+}
+```
+
+- `id` — kebab-case, unique across the whole repo, and also the file stem.
+- `name` — Title Case. What a person searches for and reads on a card.
+- `tags` — two to six lowercase words: the room, the kind of thing, the
+  material. These are the search, so tag what someone would type.
+- `file` — always `<id>.prop.js`.
+- `world` — the slug the prop came out of. Omit it for hand-written library
+  pieces that belong to no world.
+
+**Ids are permanent.** Someone's iPad has a placement pointing at
+`school-desk`, so `school-desk` has to keep meaning the same object forever.
+Add entries; never delete, rename or renumber anybody else's.
+
+A prop is one module with one default export:
+
+```js
+export default function build(THREE, helpers) {
+    const group = new THREE.Group();
+    // ...
+    return group;
+}
+```
+
+Hard rules, because a prop has to survive being dropped into a world that
+knows nothing about it:
+
+- **Exactly one default export**, `build(THREE, helpers)`, returning **one**
+  `THREE.Object3D` — usually a `Group`.
+- **`THREE` is passed in; a prop never imports three.** The only import a prop
+  may have is `import { mergeGeometries } from './BufferGeometryUtils.js';`,
+  which the app serves next to the prop.
+- **`helpers` is `{ canvasTexture(width, height, draw) }`** — the same helper a
+  world gets from the runtime. Treat it as optional
+  (`helpers && helpers.canvasTexture`) so the prop still builds if it is ever
+  called without one.
+- **Origin at the object's foot, centred in x and z**, so placing it on the
+  ground is setting its position to the ground point. **+Z is the front.**
+  Metres, y-up: a chair is about 0.9 m tall, a desk 0.75 m, an adult 1.7 m.
+  Something that hangs — a clock, a board — puts the bottom of its own case at
+  y = 0 and lets the room lift it.
+- **No lights.** A prop that adds a PointLight spends one of the four the whole
+  world is allowed on itself. Emissive materials are fine and are how a lamp
+  glows; the world's `bloom` carries the shine.
+- **No `world.*` calls, no `document`/`fetch`/DOM** beyond `canvasTexture`, and
+  no animation loop. A prop is a thing, not a scene.
+- **Under about 40 meshes**, and merge repeated geometry. The same
+  indexed/non-indexed rule the worlds have applies —
+  `mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)))` —
+  because a merge that answers `null` is a mesh that kills the viewport.
+  `tools/smoke.mjs` fails a prop over 60.
+- **`castShadow` and `receiveShadow`** on the meshes that deserve them.
+
+Props are held to the same bar as worlds. Real proportions, real materials, a
+little asymmetry, canvas textures where a surface needs a story. A grey box
+with the right dimensions is not a prop anybody will place twice.
+
+### Writing props while building a world
+
+When a world contains objects worth reusing — furniture, equipment, vehicles,
+people, anything a different room might want — **write them out as props as
+well**, and add them to `props/index.json` with the world's slug in `world`.
+Not everything qualifies: terrain, water, sky, a shoreline, a thing that only
+makes sense where it is, all stay in the world. The test is whether somebody
+furnishing a different room would go looking for it.
+
+Where it is natural, have the world **import its own props** rather than
+keeping two copies of the same geometry:
+
+```js
+import desk from './school-desk.prop.js';
+...
+const desk0 = desk(THREE, { canvasTexture: (w, h, d) => world.canvasTexture(w, h, d) });
+desk0.position.set(-1.2, 0, 0.6);
+world.part('desk_00', desk0);
+scene.add(desk0);
+```
+
+Two things make that work. The app serves the whole download in one flat
+folder, so the import path is `'./school-desk.prop.js'` and never `'../props/…'`.
+And every prop a world imports must be listed in that world's `files` array in
+`worlds/index.json`, exactly the way `hcmt.scene.js` is listed today — the app
+only downloads what the manifest names.
+
+If importing complicates the world — the world's version is posed, or welded
+into merged geometry, or lit differently — **write the prop as a separate copy
+and let the two drift.** Correctness beats purity here. A world that works
+with a duplicated desk is worth more than a world that breaks trying to share
+one.
 
 ## Hand placements (`worlds/*.edits.json`)
 

@@ -8,23 +8,51 @@ cd "$(dirname "$0")/.."
 
 failed=0
 
+# Somewhere to put a compiler's complaint. Per-process rather than a fixed
+# name, because the watcher can have two headless sessions running at once and
+# a shared scratch file makes one of them fail on the other one's errors - or,
+# if the file was left behind by another user, on nothing at all.
+err="${TMPDIR:-/tmp}/p27check.$$.err"
+trap 'rm -f "$err"' EXIT
+
 for f in worlds/*.js; do
     [ -e "$f" ] || continue
-    if node --input-type=module --check < "$f" 2>/tmp/p27check.err; then
+    if node --input-type=module --check < "$f" 2>"$err"; then
         echo "ok      $f"
     else
         echo "BROKEN  $f"
-        sed 's/^/        /' /tmp/p27check.err
+        sed 's/^/        /' "$err"
         failed=1
     fi
 done
 
-if python3 -c "import json; json.load(open('worlds/index.json'))" 2>/tmp/p27check.err; then
+for f in props/*.js; do
+    [ -e "$f" ] || continue
+    if node --input-type=module --check < "$f" 2>"$err"; then
+        echo "ok      $f"
+    else
+        echo "BROKEN  $f"
+        sed 's/^/        /' "$err"
+        failed=1
+    fi
+done
+
+if python3 -c "import json; json.load(open('worlds/index.json'))" 2>"$err"; then
     echo "ok      worlds/index.json"
 else
     echo "BROKEN  worlds/index.json"
-    sed 's/^/        /' /tmp/p27check.err
+    sed 's/^/        /' "$err"
     failed=1
+fi
+
+if [ -e props/index.json ]; then
+    if python3 -c "import json; json.load(open('props/index.json'))" 2>"$err"; then
+        echo "ok      props/index.json"
+    else
+        echo "BROKEN  props/index.json"
+        sed 's/^/        /' "$err"
+        failed=1
+    fi
 fi
 
 # Everything the manifest lists must exist on disk, and every scene on disk
