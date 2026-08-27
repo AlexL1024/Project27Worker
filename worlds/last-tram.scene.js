@@ -23,6 +23,12 @@
 //      ten sources — so the rain is only visible where light is.
 //    · the tram's warmth is a canvas emissive map: individual windows, seat
 //      backs in silhouette, water running down the glass.
+//    · the service. The tram is not parked here. It comes out of the fog up
+//      the line at sixty, brakes into the stop on a real deceleration, stands
+//      with its doors open and its warmth lying across the wet platform, then
+//      powers away toward Vermont South until the fog takes it — and for a
+//      while there is nobody at all. Every reflection it writes, every shaft
+//      of its headlight and the mist off its skirt travel with it.
 //    · four real-time lights, total. Everything else glows.
 //
 //  Scale is metres. The near track is x = 0, the platform is on +x, and the
@@ -114,6 +120,36 @@ export default function build(world) {
     const LAMP_X = 5.30, LAMP_ARM = 1.35, LAMP_Y = 4.95;
     const LAMP_Z = [-19.0, -8.5, 7.2, 16.0];   // clear of the shelter, which sits z −0.4 … 3.4
 
+    /* ------------------------------------------------------------
+       The service.
+
+       One tram, on a loop, in a tram's own numbers: sixty down the
+       reservation, 1.85 m/s² into the stop because that is what a
+       braking tram feels like from the platform, and a gentler
+       1.15 m/s² out of it because a standing load does not like being
+       thrown. Everything else in this world — the pitch of the body,
+       the mist off the skirt, the reflection running down the wet
+       concrete — is derived from these four numbers, so it all agrees.
+       ------------------------------------------------------------ */
+    const V_LINE = 16.6;                                    // m/s on the straight
+    const A_BRAKE = 1.85, A_POWER = 1.15;
+    const Z_IN = 205;                                       // where it waits, far past seeing
+    const D_BRAKE = (V_LINE * V_LINE) / (2 * A_BRAKE);      // 74.5 m
+    const T_BRAKE = V_LINE / A_BRAKE;                       // 8.97 s
+    const T_COAST = (Z_IN - D_BRAKE) / V_LINE;              // 7.86 s
+    const T_APPROACH = T_COAST + T_BRAKE;                   // 16.8 s
+    const T_DWELL = 14.0;
+    const T_HOLD = 1.1;                                     // doors shut, driver waiting on the interlock
+    const T_POWER = V_LINE / A_POWER;                       // 14.4 s to line speed
+    const T_DEPART = T_HOLD + T_POWER + 2.6;
+    const D_OUT = 0.5 * A_POWER * T_POWER * T_POWER + V_LINE * 2.6;   // ~163 m by the time it is gone
+    const T_GONE = 12.0;                                    // the platform to itself
+    const T_CYCLE = T_APPROACH + T_DWELL + T_DEPART + T_GONE;
+    // The world opens with one already coming: five seconds of a headlight
+    // growing in the fog behind you, then it slides past the ramp at thirty-six
+    // and stands down the platform.
+    const T_START = T_APPROACH - 10.5;
+
     const FOG_COL = srgb(0x090c13);
     const FOG_DEN = 0.0128;
     const C_COLD = srgb(0xd6e3f6);
@@ -136,6 +172,12 @@ export default function build(world) {
     addWL(TRAM_HW + 0.05, 2.35, TAIL_Z - 3.0, C_WARM, 0.38, 6.0);                      // 7
     addWL(TRAM_HW + 0.22, 1.60, doorZ(DOOR_U[0]), srgb(0xffc98d), 1.25, 4.6);          // 8  the open door
     addWL(0.0, 1.30, NOSE_Z - 0.35, srgb(0xd9e6ff), 0.95, 7.2);                        // 9  headlights
+
+    // Five of the ten ride with the tram. Their z here is where they sit when
+    // it is standing at the stop; the frame callback slides them along.
+    const RIDE = [5, 6, 7, 8, 9];
+    const RIDE_Z = RIDE.map((i) => WL[i].p.z);
+    const DOOR_WL = 8, DOOR_WL_S = WL[DOOR_WL].s;
 
     const U = {
         uTime: { value: 0 },
@@ -304,14 +346,24 @@ export default function build(world) {
     platLight2.position.set(LAMP_X - LAMP_ARM, LAMP_WY, 7.2);
     scene.add(platLight2);
 
+    /* The tram is two nested groups. `tram` is the part — what someone reaches
+       out and places by hand, and where a hand placement lands. `car` is what
+       the service moves along the rails inside it, so the run stays relative to
+       wherever its owner left the thing. Everything that belongs to the tram —
+       its lights, its headlight shafts, the mist off its skirt — hangs off
+       `car` and travels for free. */
+    const tram = new THREE.Group();
+    const car = new THREE.Group();
+    tram.add(car);
+
     const tramWarm = new THREE.PointLight(0xffb066, 27, 15, 2);
     tramWarm.position.set(TRAM_HW + 0.35, 1.85, doorZ(DOOR_U[0]));
-    scene.add(tramWarm);
+    car.add(tramWarm);
 
     const headSpot = new THREE.SpotLight(0xe8f0ff, 620, 180, 0.215, 0.68, 1.35);
     headSpot.position.set(0, 1.30, NOSE_Z - 0.1);
     headSpot.target.position.set(0, 0.10, NOSE_Z - 140);
-    scene.add(headSpot, headSpot.target);
+    car.add(headSpot, headSpot.target);
 
     /* ============================================================
        5 · ground — ballast, asphalt, dead verge, and the puddles between
@@ -652,10 +704,10 @@ export default function build(world) {
     headShaftMat.uniforms = Object.assign(pick('uTime', 'uCamPos', 'uFogCol', 'uFogDen'), {
         uCol: { value: srgb(0xdfeaff) }, uInt: { value: 0.085 },
     });
-    {
+    {   // these belong to the tram, not the place: they leave with it
         for (const sx of [-0.78, 0.78]) {
             const c = mesh(new THREE.ConeGeometry(2.3, 30, 14, 1, true), headShaftMat, sx, 1.30, NOSE_Z - 15, -Math.PI / 2);
-            scene.add(c); world.ghost(c);
+            car.add(c); world.ghost(c);
         }
     }
 
@@ -816,35 +868,48 @@ export default function build(world) {
         world.part('totem_00', totem);
     }
 
-    // the departure board: scrolling amber dot matrix, the only thing that speaks
-    const pidsTex = tex(2048, 128, (c, W, H) => {
-        c.fillStyle = '#000000'; c.fillRect(0, 0, W, H);
-        c.fillStyle = '#ffa227';
-        c.font = `bold ${Math.round(H * 0.62)}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
-        c.textBaseline = 'middle';
-        let x = 30;
-        x = dotText(c, '75  VERMONT SOUTH', x, H * 0.5, Math.round(H * 0.62), '#ffa227', 2);
-        c.fillStyle = '#ffd07a';
-        x = dotText(c, '   NOW   ', x, H * 0.5, Math.round(H * 0.62), '#ffd07a', 2);
-        x = dotText(c, '•   LAST SERVICE   •   ', x, H * 0.5, Math.round(H * 0.62), '#c97a1e', 2);
-        // punch it out into a dot grid
-        c.globalCompositeOperation = 'destination-out';
-        c.fillStyle = '#000';
-        for (let y = 0; y < H; y += 4) c.fillRect(0, y + 3, W, 1.6);
-        for (let xx = 0; xx < W; xx += 4) c.fillRect(xx + 3, 0, 1.6, H);
-        c.globalCompositeOperation = 'source-over';
-    }, 1, 1);
-    pidsTex.wrapS = THREE.RepeatWrapping;
-    pidsTex.repeat.set(0.30, 1);
+    // the departure board: scrolling amber dot matrix, the only thing that speaks.
+    // Two faces of it, because it has two things to say — one while the tram is
+    // coming or standing, one for the long minutes after it has gone.
+    const makePids = (when, whenCol) => {
+        const t = tex(2048, 128, (c, W, H) => {
+            c.fillStyle = '#000000'; c.fillRect(0, 0, W, H);
+            c.textBaseline = 'middle';
+            let x = 30;
+            x = dotText(c, '75  VERMONT SOUTH', x, H * 0.5, Math.round(H * 0.62), '#ffa227', 2);
+            x = dotText(c, `   ${when}   `, x, H * 0.5, Math.round(H * 0.62), whenCol, 2);
+            x = dotText(c, '•   LAST SERVICE   •   ', x, H * 0.5, Math.round(H * 0.62), '#c97a1e', 2);
+            // punch it out into a dot grid
+            c.globalCompositeOperation = 'destination-out';
+            c.fillStyle = '#000';
+            for (let y = 0; y < H; y += 4) c.fillRect(0, y + 3, W, 1.6);
+            for (let xx = 0; xx < W; xx += 4) c.fillRect(xx + 3, 0, 1.6, H);
+            c.globalCompositeOperation = 'source-over';
+        }, 1, 1);
+        t.wrapS = THREE.RepeatWrapping;
+        t.repeat.set(0.30, 1);
+        return t;
+    };
+    const pidsNow = makePids('NOW', '#ffd07a');
+    const pidsSoon = makePids('12.14 AM', '#ffa227');
+    const pidsFaces = [pidsNow, pidsSoon];
+    const pidsScreenMat = new THREE.MeshStandardMaterial({
+        map: pidsNow, emissiveMap: pidsNow, emissive: srgb(0xffffff), emissiveIntensity: 2.6,
+        color: srgb(0x000000), roughness: 0.35,
+    });
+    let pidsFace = 0, pidsOff = 0;
+    const setPids = (i) => {
+        if (i === pidsFace) return;
+        pidsFace = i;
+        pidsScreenMat.map = pidsFaces[i];
+        pidsScreenMat.emissiveMap = pidsFaces[i];
+        pidsScreenMat.needsUpdate = true;   // twice a cycle, not once a frame
+    };
     {
         const pids = new THREE.Group();
         const box = mesh(new THREE.BoxGeometry(0.16, 0.46, 1.55), steelDark, 0, 2.55, 0);
         pids.add(box);
-        const screenMat = new THREE.MeshStandardMaterial({
-            map: pidsTex, emissiveMap: pidsTex, emissive: srgb(0xffffff), emissiveIntensity: 2.6,
-            color: srgb(0x000000), roughness: 0.35,
-        });
-        const screen = mesh(new THREE.PlaneGeometry(1.42, 0.34), screenMat, -0.085, 2.55, 0, 0, -Math.PI / 2);
+        const screen = mesh(new THREE.PlaneGeometry(1.42, 0.34), pidsScreenMat, -0.085, 2.55, 0, 0, -Math.PI / 2);
         pids.add(screen); world.ghost(screen);
         const arm = mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.6, 8), steelGreen, 0, 1.30, 0);
         pids.add(arm);
@@ -1030,7 +1095,10 @@ export default function build(world) {
         c.fillStyle = grime; c.fillRect(0, 0, W, H);
         rainStreaks(c, 0, 0, W, H, 260, 0.20);
     });
-    const sideEmisA = tex(2048, 290, (c, W, H) => {
+    // Two glow maps for the same flank: doors shut, and the leading door open
+    // and pouring onto the platform. Swapped at the two moments of the dwell —
+    // a door that is painted open all the way to Vermont South is a lie.
+    const makeSideEmis = (open) => tex(2048, 290, (c, W, H) => {
         c.fillStyle = '#000000'; c.fillRect(0, 0, W, H);
         for (const w of WINDOWS) {
             if (isAd(w)) continue;
@@ -1055,10 +1123,10 @@ export default function build(world) {
             // a grab pole
             if ((w[0] * 100 | 0) % 3 === 0) { c.fillStyle = 'rgba(60,36,14,0.7)'; c.fillRect(x + ww * 0.45, y + 4, 4, hh - 8); }
         }
-        // the doors' glass, and the open one pouring onto the platform
+        // the doors' glass, and — when it is standing — the one pouring out
         DOOR_U.forEach((d, i) => {
             const x = W * d, ww = W * DOOR_W;
-            if (i === 0) {
+            if (i === 0 && open) {
                 const g = c.createLinearGradient(0, H * 0.10, 0, H);
                 g.addColorStop(0, '#fff0cf'); g.addColorStop(0.6, '#ffc078'); g.addColorStop(1, '#f0a24a');
                 c.fillStyle = g; c.fillRect(x + 4, H * 0.115, ww - 8, H * 0.86);
@@ -1069,8 +1137,12 @@ export default function build(world) {
         });
         rainStreaks(c, 0, 0, W, H, 300, 0.42);
     });
-    const sideTexB = sideTexA.clone(); sideTexB.repeat.set(-1, 1); sideTexB.offset.set(1, 0); sideTexB.needsUpdate = true;
-    const sideEmisB = sideEmisA.clone(); sideEmisB.repeat.set(-1, 1); sideEmisB.offset.set(1, 0); sideEmisB.needsUpdate = true;
+    const mirrored = (t) => { const m = t.clone(); m.repeat.set(-1, 1); m.offset.set(1, 0); m.needsUpdate = true; return m; };
+    const sideEmisA = makeSideEmis(true);            // the platform side, doors open
+    const sideEmisShutA = makeSideEmis(false);
+    const sideTexB = mirrored(sideTexA);
+    const sideEmisB = mirrored(sideEmisA);
+    const sideEmisShutB = mirrored(sideEmisShutA);
 
     const frontTex = tex(1024, 1024, (c, W, H) => {
         c.fillStyle = '#dfe3e3'; c.fillRect(0, 0, W, H);
@@ -1168,7 +1240,6 @@ export default function build(world) {
         }
     });
 
-    const tram = new THREE.Group();
     const tramSideMats = [];
     {
         const bodyDark = new THREE.MeshStandardMaterial({ color: srgb(0x090b0e), roughness: 0.85 });
@@ -1179,7 +1250,7 @@ export default function build(world) {
         const CH = TRAM_Y1 - TRAM_Y0, CY = (TRAM_Y0 + TRAM_Y1) / 2;
 
         // core
-        tram.add(mesh(new THREE.BoxGeometry(TRAM_HW * 2 - 0.04, CH, TRAM_L - 0.02), bodyDark, 0, CY, TRAM_Z));
+        car.add(mesh(new THREE.BoxGeometry(TRAM_HW * 2 - 0.04, CH, TRAM_L - 0.02), bodyDark, 0, CY, TRAM_Z));
 
         // livery panels — the platform side is +x, so it takes the mirrored map
         const sideGeo = new THREE.PlaneGeometry(TRAM_L, CH);
@@ -1192,8 +1263,8 @@ export default function build(world) {
             color: srgb(0xffffff), roughness: 0.38, metalness: 0.06,
         });
         tramSideMats.push(matA, matB);
-        tram.add(mesh(sideGeo, matA, -TRAM_HW, CY, TRAM_Z, 0, -Math.PI / 2));
-        tram.add(mesh(sideGeo.clone(), matB, TRAM_HW, CY, TRAM_Z, 0, Math.PI / 2));
+        car.add(mesh(sideGeo, matA, -TRAM_HW, CY, TRAM_Z, 0, -Math.PI / 2));
+        car.add(mesh(sideGeo.clone(), matB, TRAM_HW, CY, TRAM_Z, 0, Math.PI / 2));
 
         // corner chamfers, so the nose is not a brick
         const chams = [];
@@ -1204,7 +1275,7 @@ export default function build(world) {
                 chams.push(g);
             }
         }
-        tram.add(mesh(mergeGeometries(chams), whiteMat));
+        car.add(mesh(mergeGeometries(chams), whiteMat));
 
         // front and rear
         const fMat = new THREE.MeshStandardMaterial({
@@ -1216,8 +1287,8 @@ export default function build(world) {
             color: srgb(0xffffff), roughness: 0.34, metalness: 0.06,
         });
         tramSideMats.push(fMat, rMat);
-        tram.add(mesh(new THREE.PlaneGeometry(2.24, CH), fMat, 0, CY, NOSE_Z - 0.012, 0, Math.PI));
-        tram.add(mesh(new THREE.PlaneGeometry(2.24, CH), rMat, 0, CY, TAIL_Z + 0.012));
+        car.add(mesh(new THREE.PlaneGeometry(2.24, CH), fMat, 0, CY, NOSE_Z - 0.012, 0, Math.PI));
+        car.add(mesh(new THREE.PlaneGeometry(2.24, CH), rMat, 0, CY, TAIL_Z + 0.012));
 
         // roof, shoulder, air conditioning
         const roofBits = [];
@@ -1234,7 +1305,7 @@ export default function build(world) {
         const duct = new THREE.BoxGeometry(0.34, 0.16, TRAM_L - 3.0);
         put(duct, 0.72, TRAM_Y1 + 0.30, TRAM_Z);
         roofBits.push(duct);
-        tram.add(mesh(mergeGeometries(roofBits), roofMat));
+        car.add(mesh(mergeGeometries(roofBits), roofMat));
 
         // skirt and underframe
         const under = [];
@@ -1246,7 +1317,7 @@ export default function build(world) {
             put(bg, 0, 0.74, z);
             under.push(bg);
         }
-        tram.add(mesh(mergeGeometries(under), skirtMat));
+        car.add(mesh(mergeGeometries(under), skirtMat));
 
         const wheelMat = new THREE.MeshStandardMaterial({ color: srgb(0x161719), roughness: 0.55, metalness: 0.6 });
         const wheelGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.10, 14);
@@ -1258,7 +1329,7 @@ export default function build(world) {
                 for (const sx of [-HG, HG])
                     wim.setMatrixAt(wi++, M(sx, RAIL_Y + 0.33, bz + dz));   // tread on the railhead
         wim.instanceMatrix.needsUpdate = true;
-        tram.add(wim); world.ghost(wim);
+        car.add(wim); world.ghost(wim);
 
         // pantograph, up to the wire
         const pan = [];
@@ -1278,7 +1349,7 @@ export default function build(world) {
         put(bar, 0, 5.62, TRAM_Z - 0.42); pan.push(bar);
         const shoe = new THREE.BoxGeometry(1.02, 0.03, 0.05);
         put(shoe, 0, 5.66, TRAM_Z - 0.42); pan.push(shoe);
-        tram.add(mesh(mergeGeometries(pan), steelDark));
+        car.add(mesh(mergeGeometries(pan), steelDark));
 
         // the arc that jumps at the shoe every so often
         const arcTex = tex(128, 128, (c, W, H) => {
@@ -1304,21 +1375,132 @@ export default function build(world) {
         const arc = new THREE.Sprite(arcMat);
         arc.position.set(0.12, 5.68, TRAM_Z - 0.42);
         arc.scale.set(1.1, 1.1, 1);
-        tram.add(arc); world.ghost(arc);
-        tram.userData.arc = arcMat;
+        car.add(arc); world.ghost(arc);
+        car.userData.arc = arcMat;
 
-        // the light the open door lays on the platform
+        // the light the open door lays on the platform. This one stays behind
+        // with the platform — it is the stop's light, borrowed.
         const spillMat = new THREE.MeshBasicMaterial({
-            color: srgb(0xffc178), transparent: true, opacity: 0.16,
+            color: srgb(0xffc178), transparent: true, opacity: 0.0,
             depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
         });
         const spillGeo = new THREE.PlaneGeometry(2.6, 1.5);
         spillGeo.rotateX(-Math.PI / 2);
         const spill = mesh(spillGeo, spillMat, PLAT_X0 + 1.4, PLAT_Y + 0.012, doorZ(DOOR_U[0]));
         scene.add(spill); world.ghost(spill);
+        car.userData.spill = spillMat;
+
+        /* The two lights you actually see first and last.
+           At a hundred metres in this fog there is no tram, no rails and no
+           overhead — there is a smear of white where a tram is going to be,
+           and later a smear of red where one was. Fog is off for these on
+           purpose: they are what survives it. */
+        const haloTex = tex(128, 128, (c, W, H) => {
+            c.clearRect(0, 0, W, H);
+            const g = c.createRadialGradient(W / 2, H / 2, 1, W / 2, H / 2, W / 2);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(0.10, 'rgba(255,255,255,0.72)');
+            g.addColorStop(0.34, 'rgba(190,215,255,0.20)');
+            g.addColorStop(1, 'rgba(120,160,230,0)');
+            c.fillStyle = g; c.fillRect(0, 0, W, H);
+        });
+        const makeHalo = (col, x, y, z) => {
+            const m = new THREE.SpriteMaterial({
+                map: haloTex, color: col, transparent: true, opacity: 0,
+                depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+            });
+            const s = new THREE.Sprite(m);
+            s.position.set(x, y, z);
+            s.renderOrder = 12;
+            car.add(s); world.ghost(s);
+            return s;
+        };
+        car.userData.headHalo = makeHalo(new THREE.Color(0xcfe2ff), 0, 1.22, NOSE_Z - 0.4);
+        car.userData.tailHalo = makeHalo(new THREE.Color(0xff5a2a), 0, 1.20, TAIL_Z + 0.4);
+
+        /* ---- the mist a tram throws off standing water -------------------
+           Only when it is moving, and lit by the same ten sources as the rain,
+           so it is white where the lamps are and nothing at all where they
+           aren't. One instanced draw, riding in the tram's own frame. */
+        {
+            const N = 210;
+            const quad = new THREE.PlaneGeometry(1, 1);
+            const g = new THREE.InstancedBufferGeometry();
+            g.setIndex(quad.index);
+            g.setAttribute('position', quad.attributes.position);
+            g.setAttribute('uv', quad.attributes.uv);
+            g.instanceCount = N;
+            const seed = new Float32Array(N * 3), life = new Float32Array(N * 2);
+            for (let i = 0; i < N; i++) {
+                seed[i * 3] = (i % 2 ? 1 : -1) * rr(0.55, 1.45);
+                seed[i * 3 + 1] = rr(0.02, 0.42);
+                seed[i * 3 + 2] = rr(NOSE_Z - 0.6, TAIL_Z + 1.4);
+                life[i * 2] = rr(0.55, 1.30);      // rate
+                life[i * 2 + 1] = rr(0.30, 0.95);  // size
+            }
+            g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 3));
+            g.setAttribute('aLife', new THREE.InstancedBufferAttribute(life, 2));
+            const sprayMat = new THREE.ShaderMaterial({
+                transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+                uniforms: Object.assign(pick('uTime', 'uLPos', 'uLCol', 'uLStr', 'uLRad'), {
+                    uSpray: { value: 0 }, uBase: { value: srgb(0x141c28) },
+                }),
+                vertexShader: /* glsl */`
+                  #define NL ${NL}
+                  attribute vec3 aSeed; attribute vec2 aLife;
+                  uniform float uTime, uSpray;
+                  uniform vec3 uLPos[NL]; uniform vec3 uLCol[NL];
+                  uniform float uLStr[NL]; uniform float uLRad[NL];
+                  varying vec2 vUvv; varying vec3 vLit; varying float vA;
+                  void main(){
+                    vUvv = uv;
+                    float k = fract(aSeed.z * 0.137 + aSeed.x * 2.31 + uTime * aLife.x);
+                    vec3 P = aSeed;
+                    P.x += sign(aSeed.x) * k * 1.35;
+                    P.y += k * k * 1.05 + 0.10;
+                    P.z += k * 3.6;                       // dragged out behind
+                    vec4 wp = modelMatrix * vec4(P, 1.0);
+                    vec3 lit = vec3(0.0);
+                    for (int i = 0; i < NL; i++) {
+                      vec3 d = uLPos[i] - wp.xyz;
+                      float dd = dot(d, d);
+                      lit += uLCol[i] * (uLStr[i] / (1.0 + dd / (uLRad[i] * uLRad[i] * 1.8)));
+                    }
+                    vLit = lit * 0.24;
+                    // and it goes when the fog goes, or there is mist hanging in
+                    // the air around a tram nobody can see any more
+                    float dCam = distance(cameraPosition, wp.xyz);
+                    vA = uSpray * sin(k * 3.14159) * (0.35 + 0.65 * aLife.y)
+                       * (1.0 - smoothstep(40.0, 92.0, dCam));
+                    vec4 mv = viewMatrix * wp;
+                    mv.xy += position.xy * (aLife.y * (0.42 + k * 1.7));
+                    gl_Position = projectionMatrix * mv;
+                  }`,
+                fragmentShader: /* glsl */`
+                  uniform vec3 uBase;
+                  varying vec2 vUvv; varying vec3 vLit; varying float vA;
+                  void main(){
+                    vec2 q = vUvv * 2.0 - 1.0;
+                    float a = 1.0 - smoothstep(0.15, 1.0, length(q));
+                    a *= a * vA;
+                    vec3 col = uBase + vLit;
+                    gl_FragColor = vec4(col * a * 1.8, a);
+                  }`,
+            });
+            const sprayMesh = mesh(g, sprayMat);
+            sprayMesh.frustumCulled = false;
+            sprayMesh.renderOrder = 7;
+            car.add(sprayMesh);
+            car.userData.spray = sprayMat.uniforms.uSpray;
+        }
 
         scene.add(tram);
         world.part('tram_00', tram);
+        // A tram that moves must not be baked into the walk's collision grid —
+        // it would leave a wall standing at the stop long after it had gone,
+        // and put a second one wherever it happened to be. So the whole car is
+        // a ghost, and the platform it stands beside is what anyone stands on.
+        tram.traverse((o) => world.ghost(o));
     }
 
     /* ============================================================
@@ -1603,8 +1785,59 @@ export default function build(world) {
        16 · what moves
        ============================================================ */
     const _cam = new THREE.Vector3();
-    const arcMat = tram.userData.arc;
-    let arcT = 3.5;
+    const arcMat = car.userData.arc;
+    const spillMat = car.userData.spill;
+    const headHalo = car.userData.headHalo;
+    const tailHalo = car.userData.tailHalo;
+    const uSpray = car.userData.spray;
+    const matA = tramSideMats[0], matB = tramSideMats[1];
+    let arcT = 1.4;
+    let doorsPainted = -1;
+
+    /* Where the tram is, how fast it is going and how hard it is working —
+       one answer per frame, written into a record made once, because the frame
+       callback is not allowed to allocate. Position comes out of the physics
+       rather than a keyframe, so the pitch of the body under the brake and the
+       mist off its skirt are reading the same motion the eye is. */
+    const SRV = { z: 0, v: 0, a: 0, door: 0, warn: 0, gone: 0 };
+    function service(ct) {
+        SRV.door = 0; SRV.warn = 0; SRV.gone = 0;
+        if (ct < T_APPROACH) {                                   // out of the fog, and braking
+            if (ct < T_COAST) { SRV.z = Z_IN - V_LINE * ct; SRV.v = -V_LINE; SRV.a = 0; }
+            else {
+                const b = ct - T_COAST;
+                SRV.z = D_BRAKE - (V_LINE * b - 0.5 * A_BRAKE * b * b);
+                SRV.v = -(V_LINE - A_BRAKE * b);
+                SRV.a = A_BRAKE;
+            }
+            return;
+        }
+        ct -= T_APPROACH;
+        if (ct < T_DWELL) {                                      // standing, doors open
+            SRV.z = 0; SRV.v = 0; SRV.a = 0;
+            const shut = T_DWELL - 3.2;
+            SRV.door = smoothstep(0.5, 2.1, ct) * (1 - smoothstep(shut, shut + 1.5, ct));
+            SRV.warn = smoothstep(shut - 1.8, shut - 1.3, ct) * (1 - smoothstep(shut + 1.4, shut + 1.7, ct));
+            return;
+        }
+        ct -= T_DWELL;
+        if (ct < T_DEPART) {                                     // away toward Vermont South
+            const p = ct - T_HOLD;
+            if (p <= 0) { SRV.z = 0; SRV.v = 0; SRV.a = 0; }
+            else if (p < T_POWER) {
+                SRV.z = -0.5 * A_POWER * p * p;
+                SRV.v = -A_POWER * p;
+                SRV.a = -A_POWER;
+            } else {
+                SRV.z = -(0.5 * A_POWER * T_POWER * T_POWER + V_LINE * (p - T_POWER));
+                SRV.v = -V_LINE; SRV.a = 0;
+            }
+            return;
+        }
+        // and then nobody, for a while. Held far enough out that neither the
+        // fog nor the tail-light halo has anything left to show.
+        SRV.z = -D_OUT - 70; SRV.v = 0; SRV.a = 0; SRV.gone = 1;
+    }
 
     world.frame((dt, t) => {
         camera.getWorldPosition(_cam);
@@ -1616,8 +1849,55 @@ export default function build(world) {
         const gz = 0.05 + 0.07 * Math.sin(t * 0.17 + 2.1) + 0.03 * Math.sin(t * 0.49);
         U.uWind.value.set(gx, gz);
 
-        // the board, still promising a tram that is already here
-        pidsTex.offset.x = (pidsTex.offset.x - dt * 0.055) % 1;
+        /* ---- the tram ---------------------------------------------------- */
+        service((t + T_START) % T_CYCLE);
+        const speed = Math.abs(SRV.v);
+        const sn = clamp(speed / V_LINE, 0, 1);
+
+        car.position.z = SRV.z;
+        car.rotation.x = -SRV.a * 0.0040;            // nose down on the brake, tail down under power
+        const jz = SRV.z * 0.0755, jf = jz - Math.floor(jz);   // one kick per rail length
+        car.position.y = sn * (0.010 * Math.sin(t * 3.7) + 0.018 * Math.exp(-jf * 16.0));
+        car.rotation.z = sn * 0.0055 * Math.sin(t * 2.3 + 0.8);
+
+        // five of the ten wet-ground mirrors are aboard, so the warm smear on
+        // the concrete runs down the platform with it
+        for (let k = 0; k < RIDE.length; k++) WL[RIDE[k]].p.z = RIDE_Z[k] + SRV.z;
+
+        // the doorway: a slow open, then the closing lamps flashing over it
+        const blink = SRV.warn > 0.01 ? (0.42 + 0.58 * (Math.sin(t * 11.0) > 0 ? 1 : 0)) : 1;
+        const doorGlow = clamp(SRV.door + SRV.warn * 0.30, 0, 1) * blink;
+        spillMat.opacity = 0.21 * doorGlow;
+        U.uLStr.value[DOOR_WL] = DOOR_WL_S * doorGlow;
+
+        // and the painted door, swapped at the two moments it actually changes
+        const wantOpen = SRV.door > 0.5 ? 1 : 0;
+        if (wantOpen !== doorsPainted) {
+            doorsPainted = wantOpen;
+            matA.emissiveMap = wantOpen ? sideEmisA : sideEmisShutA;
+            matB.emissiveMap = wantOpen ? sideEmisB : sideEmisShutB;
+            matA.needsUpdate = true; matB.needsUpdate = true;
+        }
+
+        // a smear of white where a tram is going to be; later a red one where
+        // one was. Both live past the distance the fog eats everything else at.
+        const ahead = Math.max(SRV.z, 0), behind = Math.max(-SRV.z, 0);
+        const hh = smoothstep(28, 72, ahead) * smoothstep(195, 150, ahead);
+        headHalo.material.opacity = 0.90 * hh;
+        const hs = 1.2 + 3.2 * smoothstep(185, 45, ahead);
+        headHalo.scale.set(hs, hs, 1);
+        const th = smoothstep(14, 46, behind) * smoothstep(160, 108, behind);
+        tailHalo.material.opacity = 0.72 * th;
+        const ts = 0.9 + 2.0 * smoothstep(150, 30, behind);
+        tailHalo.scale.set(ts, ts, 1);
+
+        // mist off the skirt, only where there is speed to throw it
+        uSpray.value = sn * sn * 0.42;
+
+        // the board: NOW while it is coming or standing, a time once it isn't
+        setPids(SRV.gone > 0.5 || SRV.z < -45 ? 1 : 0);
+        pidsOff = (pidsOff - dt * 0.055) % 1;
+        pidsFaces[pidsFace].offset.x = pidsOff;
 
         // fluorescent tubes never quite hold still
         const hum = 1.0 + 0.030 * Math.sin(t * 21.7) + 0.018 * Math.sin(t * 7.3 + 1.1);
@@ -1626,16 +1906,21 @@ export default function build(world) {
         platLight.intensity = 38 * hum * dip;
         platLight2.intensity = 32 * (2.0 - hum) * dip;
 
-        // the tram's warmth breathes; the headlight does not
+        // the tram's warmth breathes; the headlight is dipped at the stop and
+        // comes back up as it pulls away
         const warm = 1.0 + 0.022 * Math.sin(t * 1.7) + 0.014 * Math.sin(t * 0.63 + 2.0);
-        tramSideMats[0].emissiveIntensity = 2.55 * warm;
-        tramSideMats[1].emissiveIntensity = 2.55 * warm;
-        tramWarm.intensity = 27 * warm;
-        headSpot.intensity = 620 * (1.0 + 0.012 * Math.sin(t * 2.3));
+        matA.emissiveIntensity = 2.55 * warm;
+        matB.emissiveIntensity = 2.55 * warm;
+        tramWarm.intensity = 27 * warm * (0.58 + 0.42 * doorGlow);
+        const beam = 0.40 + 0.60 * smoothstep(0.4, 5.5, speed);
+        headSpot.intensity = 620 * beam * (1.0 + 0.012 * Math.sin(t * 2.3));
+        U.uLStr.value[9] = 0.95 * beam;
 
-        // a blue crack at the pantograph shoe, now and then
+        // a blue crack at the pantograph shoe — rare standing, often under power
         arcT -= dt;
-        if (arcT <= 0) { arcT = rr(4.5, 13.0); arcMat.opacity = 0.95; }
-        else if (arcMat.opacity > 0) arcMat.opacity = Math.max(0, arcMat.opacity - dt * 6.5);
+        if (arcT <= 0) {
+            arcT = speed > 1.0 ? rr(0.7, 3.4) : rr(4.5, 13.0);
+            arcMat.opacity = 0.95;
+        } else if (arcMat.opacity > 0) arcMat.opacity = Math.max(0, arcMat.opacity - dt * 6.5);
     });
 }
