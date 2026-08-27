@@ -29,13 +29,13 @@ export default function build(world) {
     /* ============================================================
        0 · constants + helpers
        ============================================================ */
-    const LEN = 110, HALF = LEN / 2;      // cavern length, z in [-55, 55]
-    const R = 8.6, CY = 2.6;              // vault radius / centre height (crown 11.2)
+    const LEN = 220, HALF = LEN / 2;      // cavern length, z in [-110, 110] (10-car provision)
+    const R = 11.9, CY = 2.4;             // vault radius / centre height (crown 14.3)
     const COL_X = 5.2;                    // blade column line
     const BEAM_Y = 5.1, BEAM_H = 1.0;     // longitudinal beam centre / depth
     const BAY = 6;                        // arch bay
     const ARCH_X = 4.8, ARCH_Y0 = 5.45, ARCH_H = 4.4;   // arch span/spring/rise (crown ~9.85)
-    const PSD_X = 8.3;                    // platform screen door wall
+    const PSD_X = 11.4;                   // platform screen door wall (6.2 m platforms)
     const MEZZ = { z0: -8, z1: 8, y: 4.0 };             // Exit 1 mezzanine
 
     const tex = (w, h, draw, rx, ry) => {
@@ -180,14 +180,14 @@ export default function build(world) {
     /* ============================================================
        3 · vault, floor, ceiling bands
        ============================================================ */
-    const vaultGeo = new THREE.CylinderGeometry(R, R, LEN, 64, 1, true, 1.745, 2.793);
+    const vaultGeo = new THREE.CylinderGeometry(R, R, LEN, 64, 1, true, 1.782, 2.72);
     vaultGeo.rotateX(Math.PI / 2);
     const vault = new THREE.Mesh(vaultGeo, new THREE.MeshStandardMaterial({
         map: concreteTex, roughness: 0.94, side: THREE.BackSide }));
     vault.position.y = CY;
     scene.add(vault);
 
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(17, LEN), floorMat);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(23.4, LEN), floorMat);
     floor.rotation.x = -Math.PI / 2;
     scene.add(world.ground(floor));
 
@@ -197,7 +197,7 @@ export default function build(world) {
         m.rotation.x = -Math.PI / 2; m.position.set(x, 0.012, 0);
         scene.add(world.ghost(m));
     };
-    strip(-6.9, 0.45, 0x8f8c86); strip(6.9, 0.45, 0x8f8c86);   // platform tactiles
+    strip(-9.9, 0.45, 0x8f8c86); strip(9.9, 0.45, 0x8f8c86);   // platform tactiles
     strip(-3.9, 0.3, 0xa5a29b); strip(3.9, 0.3, 0xa5a29b);     // concourse guides
     strip(0, 0.28, 0xa19e97);
 
@@ -211,7 +211,7 @@ export default function build(world) {
                 items.push({ geo: slat, m: M(Math.cos(phi) * rc, CY + Math.sin(phi) * rc, 0, 0, 0, phi) });
             }
         };
-        band(54, 87); band(93, 126);
+        band(66, 87); band(93, 114);
         scene.add(new THREE.Mesh(mergeGeos(items), slatMat));
 
         // dark timber vault bands over each platform (backing + batten ribs)
@@ -221,11 +221,11 @@ export default function build(world) {
         const backG = new THREE.BoxGeometry(1.15, 0.06, LEN);
         const ribG = new THREE.BoxGeometry(0.16, 0.1, LEN);
         for (const s2 of [-1, 1]) {
-            for (let a = 13; a <= 41; a += 7) {
+            for (let a = 13; a <= 57; a += 7) {
                 const phi = (s2 > 0 ? a : 180 - a) * Math.PI / 180;
                 backs.push({ geo: backG, m: M(Math.cos(phi) * (R - 0.14), CY + Math.sin(phi) * (R - 0.14), 0, 0, 0, phi) });
             }
-            for (let a = 11.5; a <= 42; a += 1.6) {
+            for (let a = 11.5; a <= 59; a += 1.6) {
                 const phi = (s2 > 0 ? a : 180 - a) * Math.PI / 180;
                 ribs.push({ geo: ribG, m: M(Math.cos(phi) * (R - 0.3), CY + Math.sin(phi) * (R - 0.3), 0, 0, 0, phi) });
             }
@@ -267,7 +267,7 @@ export default function build(world) {
         shape.moveTo(-0.30, -0.09); shape.lineTo(0.30, -0.09);
         shape.lineTo(0.30, 0.09); shape.lineTo(-0.30, 0.09); shape.closePath();
         const archItems = [], steelItems = [], rodItems = [];
-        const rodG = new THREE.CylinderGeometry(0.035, 0.035, 1.6, 8);
+        const rodG = new THREE.CylinderGeometry(0.035, 0.035, 4.5, 8);
         const nodeG = new THREE.BoxGeometry(0.3, 0.55, 0.3);
         const brktG = new THREE.BoxGeometry(0.8, 0.5, 0.8);
         for (let z0 = -HALF + 1; z0 + BAY <= HALF - 0.99; z0 += BAY) {
@@ -277,7 +277,7 @@ export default function build(world) {
                 { geo: new THREE.ExtrudeGeometry(shape, { steps: 56, bevelEnabled: false, extrudePath: new ArchCurve(ARCH_X, -ARCH_X, z0, z1) }) });
             const zc = z0 + BAY / 2;
             steelItems.push({ geo: nodeG, m: M(0, ARCH_Y0 + ARCH_H, zc) });
-            rodItems.push({ geo: rodG, m: M(0, ARCH_Y0 + ARCH_H + 0.75, zc) });
+            rodItems.push({ geo: rodG, m: M(0, ARCH_Y0 + ARCH_H + 2.5, zc) });
         }
         for (let z = -HALF + 1; z <= HALF - 0.99; z += BAY) {
             steelItems.push({ geo: brktG, m: M(-ARCH_X - 0.1, BEAM_Y + BEAM_H / 2 + 0.25, z) });
@@ -353,19 +353,34 @@ export default function build(world) {
             beam.position.set(s * COL_X, BEAM_Y, 0);
             scene.add(beam);
         }
+        // pier upstands: each column continues above the beam to the vault
+        {
+            const upItems = [];
+            const upH = 7.6, upY = BEAM_Y + BEAM_H / 2 + upH / 2;
+            const upEnd = new THREE.CylinderGeometry(0.34, 0.34, upH, 12);
+            const upMid = new THREE.BoxGeometry(0.68, upH, 1.4);
+            for (let z = -HALF + 3; z <= HALF - 2; z += BAY) {
+                for (const s2 of [-1, 1]) {
+                    upItems.push({ geo: upMid, m: M(s2 * COL_X, upY, z) });
+                    upItems.push({ geo: upEnd, m: M(s2 * COL_X, upY, z - 0.7) });
+                    upItems.push({ geo: upEnd, m: M(s2 * COL_X, upY, z + 0.7) });
+                }
+            }
+            scene.add(new THREE.Mesh(mergeGeos(upItems), columnMat));
+        }
 
         // orange cone lamps over the platforms
         const coneItems = [], glowItems = [], stemItems = [];
         const coneG = new THREE.CylinderGeometry(0.3, 0.07, 0.36, 12, 1, true);
         const glowG = new THREE.CylinderGeometry(0.26, 0.26, 0.02, 12);
-        const stemG = new THREE.CylinderGeometry(0.02, 0.02, 1.1, 6);
+        const stemG = new THREE.CylinderGeometry(0.02, 0.02, 3.4, 6);
         const coneMat = new THREE.MeshStandardMaterial({ color: 0x453325, roughness: 0.55, metalness: 0.4, side: THREE.DoubleSide });
         for (let z = -HALF + 4; z <= HALF - 3; z += 5.5) {
             for (const s of [-1, 1]) {
-                const x = s * 6.85;
-                stemItems.push({ geo: stemG, m: M(x, 7.3, z) });
-                coneItems.push({ geo: coneG, m: M(x, 6.78, z) });
-                glowItems.push({ geo: glowG, m: M(x, 6.72, z) });
+                const x = s * 8.5;
+                stemItems.push({ geo: stemG, m: M(x, 9.1, z) });
+                coneItems.push({ geo: coneG, m: M(x, 7.35, z) });
+                glowItems.push({ geo: glowG, m: M(x, 7.29, z) });
             }
         }
         scene.add(new THREE.Mesh(mergeGeos(stemItems), darkMetal));
@@ -387,15 +402,22 @@ export default function build(world) {
                 ctx.fillStyle = '#1E2022'; ctx.fillRect(x, 0, 5, h);
                 ctx.fillStyle = '#07,0808'.length ? '#070808' : '#070808'; ctx.fillRect(x + 5, 0, 5, h);
             }
-        }, 55, 1);
+        }, LEN / 2, 1);
         const arrowTex = tex(96, 64, (ctx, w, h) => {
             ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = '#2C7BC4'; ctx.fillRect(8, 12, 80, 40);
             ctx.fillStyle = '#fff'; ctx.font = '700 34px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
             ctx.fillText('→', w / 2, h / 2 + 2);
         });
-        const doorZBase = (typeof HCMT_DOORS !== 'undefined' && HCMT_DOORS.all ? HCMT_DOORS.all : [])
-            .filter(z => Math.abs(z) < 53.4);
+        const STOP = 35.5;   // where a train's centre halts (front 21 of 30 doorways)
+        const trainDoors = (typeof HCMT_DOORS !== 'undefined' && HCMT_DOORS.all ? HCMT_DOORS.all : [])
+            .map(z => z + STOP);
+        const extraDoors = [];
+        for (const c of [-90.4, -113, -135.6]) {         // 10-car provision doors, never open
+            for (const o of [-7.85, -0.15, 6.75]) extraDoors.push(c + o + STOP);
+        }
+        const activeSet = new Set(trainDoors.map(z => z.toFixed(1)));
+        const doorZBase = [...trainDoors, ...extraDoors].filter(z => Math.abs(z) < HALF - 1.6);
         const numTexs = { '1': tex(128, 128, (ctx, w, h) => {
                 ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
                 ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
@@ -438,7 +460,7 @@ export default function build(world) {
                     arrow.position.set(sd * (PSD_X - 0.055), 1.5, dz + lr * 0.48);
                     leaf.userData.arrow = arrow;
                     scene.add(arrow);
-                    psdLeaves[String(sd)].push({ leaf, arrow, z0: dz + lr * 0.48, dir: lr });
+                    psdLeaves[String(sd)].push({ leaf, arrow, z0: dz + lr * 0.48, dir: lr, active: activeSet.has((sd > 0 ? dz : -dz).toFixed(1)) });
                 }
                 const tile = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), numMat);
                 tile.rotation.y = rotY;
@@ -471,7 +493,7 @@ export default function build(world) {
        8 · Exit 1 mezzanine (mid-station), info box, lifts, Exit 2
        ============================================================ */
     {   // ---- Exit 1 lift wall: full-height glazed wall closing the -z end ----
-        const WALL_Z = -45, WW = 10.4, WH = 11.0;
+        const WALL_Z = -105, WW = 10.4, WH = 11.0;
         const px = 1024;
         const mx = (m) => (m / WW + 0.5) * px;          // metres (x, centred) -> canvas x
         const my = (m) => (1 - m / WH) * px;            // metres (height)     -> canvas y
@@ -600,7 +622,7 @@ export default function build(world) {
             const art = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.1),
                 new THREE.MeshStandardMaterial({ map: artTex, transparent: true, roughness: 0.85 }));
             art.rotation.x = -Math.PI / 2;
-            art.position.set(0, 0.014, -40.5);
+            art.position.set(0, 0.014, -100.5);
             scene.add(world.ghost(art));
         }
     }
@@ -704,13 +726,13 @@ export default function build(world) {
     // Exit 1 (mid-station) and Exit 2 (end) hanging signs
     hungSign(2.5, 0.8, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station'), 0, 5.0, -19.5, 9.4, 0.9);
     hungSign(2.5, 0.8, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station'), 0, 5.0, 19.5, 9.4, 0.9);
-    hungSign(2.1, 0.6, mkExit('Exit 2', 'Franklin Street'), -3.0, 5.1, 39.5, 10.4, 0.7);
-    hungSign(2.1, 0.6, mkExit('Exit 2', 'Franklin Street'), 3.0, 5.1, 39.5, 10.4, 0.7);
-    hungSign(2.4, 0.78, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station  70m'), -3.6, 5.0, -42.6, 9.2, 0.85);
-    hungSign(2.4, 0.78, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station  70m'), 3.6, 5.0, -42.6, 9.2, 0.85);
+    hungSign(2.1, 0.6, mkExit('Exit 2', 'Franklin Street'), -3.0, 5.1, 92, 10.4, 0.7);
+    hungSign(2.1, 0.6, mkExit('Exit 2', 'Franklin Street'), 3.0, 5.1, 92, 10.4, 0.7);
+    hungSign(2.4, 0.78, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station  70m'), -3.6, 5.0, -102.6, 9.2, 0.85);
+    hungSign(2.4, 0.78, mkExit('Exit 1', 'Lifts to Swanston St', 'M Melbourne Central Station  70m'), 3.6, 5.0, -102.6, 9.2, 0.85);
     // white destination signs over each platform
-    for (const [x, z, fn] of [[-6.8, -26, drawPlat2], [6.8, -26, drawPlat1], [-6.8, 30, drawPlat2], [6.8, 30, drawPlat1]]) {
-        hungSign(2.6, 0.62, fn, x, 4.6, z, 7.6, 0.9, { edge: 0xd9d9d6 });
+    for (const [x, z, fn] of [[-8.8, -26, drawPlat2], [8.8, -26, drawPlat1], [-8.8, 30, drawPlat2], [8.8, 30, drawPlat1], [-8.8, -75, drawPlat2], [8.8, -75, drawPlat1], [-8.8, 76, drawPlat2], [8.8, 76, drawPlat1]]) {
+        hungSign(2.6, 0.62, fn, x, 4.6, z, 10.4, 0.9, { edge: 0xd9d9d6 });
     }
     // station name signs on the blade columns, facing the platforms
     {
@@ -762,7 +784,7 @@ export default function build(world) {
             scene.add(grp);
             pids.push({ canvas, t, side, offset: idx * 2 });
         };
-        mk(1, -30, 0); mk(-1, -22, 1); mk(1, 26, 2); mk(-1, 34, 3);
+        mk(1, -75, 0); mk(-1, -30, 1); mk(1, 26, 2); mk(-1, 75, 3);
     }
     function drawPIDNow(p, tSec) {
         const ctx = p.canvas.getContext('2d'), w = p.canvas.width, h = p.canvas.height;
@@ -819,49 +841,49 @@ export default function build(world) {
         world.part(`bench_${String(benchN).padStart(2, '0')}`, g); benchN++;
         scene.add(g);
     }
-    bench(0, -42); bench(0, -33); bench(-2.2, 24); bench(2.2, 33);
+    bench(0, -88); bench(0, -70); bench(-2.2, -20); bench(2.2, 10); bench(0, 58); bench(2.2, 84);
 
     /* ============================================================
        10b · track cavities + HCMTs passing through
        ============================================================ */
-    const TL = 300;                      // tunnel length either side of centre
+    const TL = 520;                      // tunnel length either side of centre
     for (const s2 of [-1, 1]) {
         const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.3, TL),
             new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.95 }));
-        slab.position.set(s2 * 10.05, -1.2, 0);
+        slab.position.set(s2 * 13.15, -1.2, 0);
         scene.add(slab);
         const railMat = new THREE.MeshStandardMaterial({ color: 0x8A8D8F, roughness: 0.35, metalness: 0.7 });
         for (const rr of [-0.72, 0.72]) {
             const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.17, TL), railMat);
-            rail.position.set(s2 * 10.05 + rr, -0.915, 0);
+            rail.position.set(s2 * 13.15 + rr, -0.915, 0);
             scene.add(rail);
         }
         const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.95 }));
-        wallT.position.set(s2 * 12.35, 2.2, 0);
+        wallT.position.set(s2 * 15.6, 2.2, 0);
         scene.add(wallT);
-        const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, TL),
+        const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, TL),
             new THREE.MeshStandardMaterial({ color: 0x0C0D0E, roughness: 0.95 }));
-        soffit.position.set(s2 * 10.35, 5.15, 0);
+        soffit.position.set(s2 * 13.6, 5.15, 0);
         scene.add(soffit);
         const edge = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.35, LEN),
             new THREE.MeshStandardMaterial({ color: 0x3A3A3C, roughness: 0.85 }));
-        edge.position.set(s2 * 8.42, -0.62, 0);
+        edge.position.set(s2 * 11.52, -0.62, 0);
         scene.add(edge);
-        for (const lz of [-38, -22, -8, 8, 22, 38]) {   // cavity lighting so trains read
+        for (let lz = -98; lz <= 98; lz += 26) {        // cavity lighting so trains read
             const cl = new THREE.PointLight(0xEDE9DF, 58, 13, 2);
-            cl.position.set(s2 * 9.35, 3.1, lz);
+            cl.position.set(s2 * 12.45, 3.1, lz);
             scene.add(cl);
         }
     }
     const trains = [];
     {
         const t1 = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
-        t1.position.set(10.05, -0.83, -200);
+        t1.position.set(13.15, -0.83, -280);
         scene.add(world.ghost(t1));
         const t2 = t1.clone(true);           // shares geometry + materials
         t2.rotation.y = Math.PI;             // nose toward -z on platform 2
-        t2.position.set(-10.05, -0.83, 200);
+        t2.position.set(-13.15, -0.83, 280);
         scene.add(world.ghost(t2));
         trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
     }
@@ -870,8 +892,8 @@ export default function build(world) {
        11 · end walls
        ============================================================ */
     for (const s of [-1, 1]) {
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(15.2, 13.5, 0.6), concreteMat);
-        wall.position.set(0, 6, s * (HALF + 0.3));
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(20, 14.5, 0.6), concreteMat);
+        wall.position.set(0, 6.5, s * (HALF + 0.3));
         scene.add(wall);
     }
 
@@ -905,28 +927,32 @@ export default function build(world) {
         pmrem.dispose();
     } catch (e) { /* environment is a nicety — carry on without it */ }
 
-    scene.fog = new THREE.Fog(0x7b7a76, 48, 135);
+    scene.fog = new THREE.Fog(0x7b7a76, 52, 165);
     scene.add(new THREE.HemisphereLight(0xE9EAEB, 0x7A7876, 0.52));
-    for (let bi = 0; bi < 18; bi += 3) {                    // lantern pools
+    for (let bi = 0; bi * BAY < LEN - 4; bi += 4) {         // lantern pools
         const zc = -HALF + 1 + bi * BAY + BAY / 2;
         if (zc > HALF - 2) break;
-        if (zc < -43.5) continue;
+        if (zc < -103.5) continue;
         const pl = new THREE.PointLight(0xFFDFAE, 30, 15, 2);
         pl.position.set(0, 6.9, zc);
         scene.add(pl);
     }
-    for (const [z, i] of [[-40, 80], [-28, 70], [30, 80]]) {           // concourse fill
+    for (const [z, i] of [[-95, 75], [-55, 70], [-5, 70], [45, 70], [95, 75]]) {           // concourse fill
         const fill = new THREE.PointLight(0xFFF0DC, i, 52, 2);
         fill.position.set(0, 8.0, z);
         scene.add(fill);
     }
-    for (const [x, z] of [[-6.8, -38], [6.8, -20], [-6.8, 2], [6.8, 14], [-6.8, 32], [6.8, 46]]) {
-        const o = new THREE.PointLight(0xFF9F45, 16, 10, 2); // orange platform cones
-        o.position.set(x, 6.3, z);
-        scene.add(o);
+    {   // orange platform cone glow, alternating sides
+        let flip = 1;
+        for (let z = -96; z <= 96; z += 26) {
+            const o = new THREE.PointLight(0xFF9F45, 16, 10, 2);
+            o.position.set(flip * 8.55, 6.9, z);
+            scene.add(o);
+            flip = -flip;
+        }
     }
     const midLight = new THREE.PointLight(0xFFEFD8, 60, 26, 2);
-    midLight.position.set(0, 7.5, 0);
+    midLight.position.set(0, 7.5, -40);
     scene.add(midLight);
     for (const s2 of [-1, 1]) for (let z = -42; z <= 46; z += 22) {
         const wl = new THREE.PointLight(0xF5EEDD, 9, 8, 2);   // platform washes
@@ -934,24 +960,24 @@ export default function build(world) {
         scene.add(wl);
     }
     const endLight = new THREE.PointLight(0xFFF0DC, 60, 30, 2);
-    endLight.position.set(0, 8.0, 48);
+    endLight.position.set(0, 8.0, 102);
     scene.add(endLight);
     const liftLow = new THREE.PointLight(0xF6F2E8, 24, 15, 2);
-    liftLow.position.set(0, 3.2, -42.0);
+    liftLow.position.set(0, 3.2, -102.0);
     scene.add(liftLow);
     const liftHigh = new THREE.PointLight(0xF3EEE2, 20, 16, 2);
-    liftHigh.position.set(0, 7.8, -41.3);
+    liftHigh.position.set(0, 7.8, -101.3);
     scene.add(liftHigh);
 
     /* ============================================================
        13 · what moves
        ============================================================ */
     let pidClock = 0, pidLast = -1;
-    const CYCLE = 92, APP = 14, DWELL = 22, DEP = 14, FAR = 200;
+    const CYCLE = 92, APP = 14, DWELL = 22, DEP = 14, FAR = 260, STOPZ = 35.5;
     function trainRun(u) {                    // position along its own direction
-        if (u < APP) { const k = u / APP; return [-FAR + (1 - Math.pow(1 - k, 3)) * FAR, true]; }
-        if (u < APP + DWELL) return [0, true];
-        if (u < APP + DWELL + DEP) { const k = (u - APP - DWELL) / DEP; return [Math.pow(k, 3) * FAR, true]; }
+        if (u < APP) { const k = u / APP; return [-FAR + (1 - Math.pow(1 - k, 3)) * (FAR + STOPZ), true]; }
+        if (u < APP + DWELL) return [STOPZ, true];
+        if (u < APP + DWELL + DEP) { const k = (u - APP - DWELL) / DEP; return [STOPZ + Math.pow(k, 3) * (FAR - STOPZ), true]; }
         return [FAR, false];
     }
     world.frame((dt) => {
@@ -978,6 +1004,7 @@ export default function build(world) {
             if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, -1);
             const side = tr.dir > 0 ? '1' : '-1';
             for (const d of psdLeaves[side]) {
+                if (!d.active) continue;
                 const zz = d.z0 + d.dir * k * 0.94;
                 d.leaf.position.z = zz;
                 d.arrow.position.z = zz;

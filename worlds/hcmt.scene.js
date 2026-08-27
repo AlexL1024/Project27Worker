@@ -250,22 +250,34 @@ function makeSideTex(canvasTexture, layout, mirror, seed) {
 const NOSE = {
     zb: CAR_L / 2 - NOSE_L,   // 7.6  (bulkhead, matches body cross-section)
     len: NOSE_L + 0.1,        // ring run 7.6 -> 11.1
-    rings: 22, around: 40
+    rings: 34, around: 48, capT: 0.10, tMax: 1.10
 };
 function smoothstep(a, b, x) {
     x = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return x * x * (3 - 2 * x);
 }
+// ONE shared convex easing drives BOTH the vertical drop and the plan taper,
+// so the two convergences stay in step and the silhouette is a single clean
+// bullet curve: a cosine arc (zero slope at the roof) blended with a
+// superellipse term (steepening finish into the chin). Monotonic, convex,
+// no inflection, no pinch.
+const NOSE_TH = 1.35;
+const NOSE_COS0 = 1 - Math.cos(NOSE_TH);
+function noseEase(t) {
+    const cosE = (1 - Math.cos(NOSE_TH * t)) / NOSE_COS0;
+    const seE = 1 - Math.pow(1 - Math.pow(t, 2.6), 1 / 2.6);
+    return 0.68 * cosE + 0.32 * seE;
+}
 // ring parameters at t in [0,1] (t=0 bulkhead, t=1 tip)
 function noseProf(t) {
-    const cv = smoothstep(0.92, 1, t);   // tip convergence
-    const w = 1.522 * (1 - 0.55 * Math.pow(smoothstep(0.16, 1, t), 1.5) - 0.28 * cv);
-    const y1 = 3.68 - 2.35 * Math.pow(smoothstep(0.08, 1, t), 1.35) - 0.15 * cv;
-    const y0 = 0.83 - 0.38 * smoothstep(0.0, 0.45, t) + 0.42 * smoothstep(0.72, 1, t) + 0.15 * cv;
-    const r = Math.min(0.55 + 0.9 * t, w * 0.92, (y1 - y0) * 0.55);
+    const E = noseEase(t);
+    const w = 1.522 - (1.522 - 0.62) * E;
+    const y1 = 3.68 - (3.68 - 1.62) * E;
+    const y0 = 0.83 - 0.31 * smoothstep(0.0, 0.6, t) + 0.12 * E * E * E;
+    const r = Math.min(0.55 + 0.95 * E, w * 0.92, Math.max((y1 - y0) * 0.46, 0.06));
     const z = NOSE.zb + NOSE.len * t;
-    const crown = 0.05 * (w / 1.522) * smoothstep(0.18, 1, t);
-    return { w, y0, y1, r, z, crown };
+    const crown = 0.05 * (w / 1.522);
+    return { w, y0, y1, r, z, crown, E };
 }
 // M equal-arc-length points around the ring (left-bottom over the top to right-bottom)
 function noseRing(t, M) {
@@ -287,6 +299,8 @@ function noseRing(t, M) {
         seg.push([p.w - p.r + Math.cos(a) * p.r, p.y1 - p.r + Math.sin(a) * p.r]);
     }
     seg.push([p.w, p.y0]);
+    // bottom closure run (keeps the nose watertight from every angle)
+    for (let i = 1; i <= 8; i++) seg.push([p.w - (2 * p.w) * (i / 8), p.y0]);
     // cumulative arc length, resample to M points
     const cum = [0];
     for (let i = 1; i < seg.length; i++) {
@@ -304,16 +318,27 @@ function noseRing(t, M) {
     }
     return out;
 }
+// ring + z at extended parameter t in [0, tMax]; t>1 folds the tip ring
+// inward to a gently domed front face (real world-space cap, no UV smear)
+function noseRingAt(t, M) {
+    if (t <= 1) return { ring: noseRing(t, M), z: noseProf(t).z };
+    const f = Math.min((t - 1) / NOSE.capT, 1);
+    const p1 = noseProf(1);
+    const base = noseRing(1, M);
+    const cy = (p1.y0 + p1.y1) / 2;
+    const s = Math.cos(f * Math.PI / 2);
+    const ring = base.map(pt => [pt[0] * s, cy + (pt[1] - cy) * s]);
+    return { ring, z: p1.z + 0.10 * Math.sin(f * Math.PI / 2) };
+}
 function noseGeometry(THREE) {
     const N = NOSE.rings, M = NOSE.around;
     const pos = [], uv = [], idx = [];
     for (let k = 0; k <= N; k++) {
-        const t = k / N;
-        const ring = noseRing(t, M);
-        const z = noseProf(t).z;
+        const t = (k / N) * NOSE.tMax;
+        const R = noseRingAt(t, M);
         for (let j = 0; j < M; j++) {
-            pos.push(ring[j][0], ring[j][1], z);
-            uv.push(j / (M - 1), t);
+            pos.push(R.ring[j][0], R.ring[j][1], R.z);
+            uv.push(j / (M - 1), t / NOSE.tMax);
         }
     }
     for (let k = 0; k < N; k++) {
@@ -322,10 +347,10 @@ function noseGeometry(THREE) {
             idx.push(a, c, b, b, c, d);
         }
     }
-    // front cap fan (tiny closing face)
-    const pTip = noseProf(1);
+    // tiny closing fan at the fold centre
+    const Rt = noseRingAt(NOSE.tMax, 8);
     const ci = pos.length / 3;
-    pos.push(0, (pTip.y0 + pTip.y1) / 2, pTip.z + 0.10);
+    pos.push(0, Rt.ring[0][1], Rt.z);
     uv.push(0.5, 1);
     const base = N * M;
     for (let j = 0; j < M - 1; j++) idx.push(base + j, ci, base + j + 1);
@@ -338,9 +363,9 @@ function noseGeometry(THREE) {
 }
 // per-pixel painted nose livery in the loft's (u,v) space
 function makeNoseTexPair(canvasTexture) {
-    const W = 1024, H = 512;
+    const W = 1536, H = 768;
     const pal = [[46, 109, 180], [27, 63, 122], [71, 168, 216], [61, 132, 196], [37, 90, 156], [99, 182, 221]];
-    const anchors = {};   // canvas-px anchors recorded during the pixel pass
+    const anchors = { led: [], lens: [] };   // canvas-px anchors from the pixel pass
     function hash2(a, b, c) {
         let h = (a * 374761393 + b * 668265263 + c * 1274126177) | 0;
         h = ((h ^ (h >> 13)) * 1103515245) | 0;
@@ -350,23 +375,38 @@ function makeNoseTexPair(canvasTexture) {
         const img = ctx.createImageData(W, H);
         const d = img.data;
         for (let j = 0; j < H; j++) {
-            const t = 1 - j / (H - 1);
-            const p = noseProf(t);
-            const ring = noseRing(t, W);
+            const t = (1 - j / (H - 1)) * NOSE.tMax;
+            const p = noseProf(Math.min(t, 1));
+            const R = noseRingAt(t, W);
+            const ring = R.ring;
+            // arc-space windscreen-edge columns for the headlamp pods
+            const gh0 = 0.72 * p.w;
+            let iL = -1, iR = -1;
+            if (t > 0.4 && t <= 1) {
+                for (let i = 1; i < W; i++) {
+                    if (ring[i][1] < 1.9) continue;
+                    if (iL < 0 && ring[i][0] >= -gh0) iL = i;
+                    if (ring[i][0] <= gh0) iR = i;
+                }
+            }
+            let arcL = 0;
+            for (let i = 1; i < W; i++) arcL += Math.hypot(ring[i][0] - ring[i - 1][0], ring[i][1] - ring[i - 1][1]);
+            const stepArc = arcL / (W - 1);
             for (let i = 0; i < W; i++) {
-                const x = ring[i][0], y = ring[i][1], z = p.z;
+                const x = ring[i][0], y = ring[i][1], z = R.z;
                 const ax = Math.abs(x);
-                const u = i / (W - 1);
-                const glassHalf = 0.70 * p.w;
+                const gh = 0.72 * p.w;               // windscreen half-width this ring
                 // base warm silver, slight vertical shade
                 let r = 197, gg = 194, b = 186;
                 const sh = 0.88 + 0.12 * Math.min(1, (y - 0.4) / 2.6);
                 r *= sh; gg *= sh; b *= sh;
-                const isGlassCol = ax < glassHalf && y > 2.02 && y < 3.22 && t > 0.12;
-                const rimCol = ax < glassHalf + 0.07 && y > 1.95 && y < 3.30 && t > 0.12 && !isGlassCol;
-                // flank facets (blue vinyl) with cab door
-                const flank = ax > 0.80 * p.w && y > p.y0 + 0.14 && y < 2.92 && z < 9.4 + (2.6 - y) * 0.5;
+                const isGlass = ax < gh && y > 2.0 && y < 3.26 && t > 0.1 && t <= 1;
+                const isRim = !isGlass && ax < gh + 0.03 && y > 1.95 && y < 3.31 && t > 0.1 && t <= 1;
+                // flank facets (blue vinyl) with cab door; boundary sweeps
+                // forward as y falls (mask curves down beside the windscreen)
+                const flank = ax > 0.80 * p.w && y > p.y0 + 0.14 && y < 2.92 && z < 9.5 + (2.4 - y) * 0.55;
                 if (flank) {
+                    const u = i / (W - 1);
                     const fu = u * 9 + t * 2.0, fv = t * 5 - u * 3.0;
                     const iu = Math.floor(fu), iv = Math.floor(fv);
                     const dg = (fu - iu) + (fv - iv) > 1 ? 1 : 0;
@@ -376,7 +416,6 @@ function makeNoseTexPair(canvasTexture) {
                     if (z > 8.55 && z < 9.4 && y > 0.98 && y < 2.85) {
                         r *= 0.82; gg *= 0.82; b *= 0.82;
                         if (z < 8.61 || z > 9.34 || y > 2.80) { r = 34; gg = 38; b = 44; }
-                        // door window (small, rounded-ish)
                         if (z > 8.88 && z < 9.16 && y > 1.95 && y < 2.5) { r = 14; gg = 16; b = 18; }
                     }
                     // slim silver grab rail at the door's leading edge
@@ -389,41 +428,78 @@ function makeNoseTexPair(canvasTexture) {
                     const f = 1 - smoothstep(0.32, 0.5, t);
                     r = r + (168 - r) * f; gg = gg + (203 - gg) * f; b = b + (232 - b) * f;
                 }
-                // dark chin / lower nose
-                const chin = (y < 2.0 && z + 0.45 * (y - 1.2) > 10.05) || y < p.y0 + 0.04;
-                if (chin) { r = 58; gg = 61; b = 64; }
-                // yellow bib patch (rounded) centred below the windscreen
-                if (chin && z > 10.0) {
-                    const dx = Math.max(ax - 0.50, 0), dy = Math.max(Math.abs(y - 1.48) - 0.24, 0);
-                    if (Math.hypot(dx, dy) < 0.28) { r = 247; gg = 181; b = 0; }
+                // dark grey chin / lower nose (front-lower wrap)
+                const chin = (y < 2.02 && z + 0.5 * (y - 1.0) > 10.2) || (t <= 1 && y < p.y0 + 0.05) || (t > 0.92 && y < 1.3);
+                if (chin) { r = 66; gg = 70; b = 74; }
+                // large rounded yellow bib centred below the windscreen
+                if (chin || t > 0.72) {
+                    const dxq = Math.max(ax - 0.48, 0), dyq = Math.max(Math.abs(y - 1.46) - 0.24, 0);
+                    if (Math.hypot(dxq, dyq) < 0.28 && z > 10.15) { r = 247; gg = 181; b = 0; }
                 }
-                // headlamp slivers inset in the mask beside the windscreen
-                if (!flank && y > 2.02 && y < 2.38 && t > 0.42 && ax > glassHalf + 0.09 && ax < glassHalf + 0.15 && y < p.y1 - 0.15) {
-                    r = 28; gg = 30; b = 33;
-                }
-                if (rimCol) { r = 16; gg = 17; b = 18; }
-                if (isGlassCol) {
-                    // raked windscreen glass with vertical gradient
-                    const f = (y - 2.02) / 1.2;
+                if (isRim) { r = 16; gg = 17; b = 18; }
+                if (isGlass) {
+                    // raked wrap-around windscreen with vertical gradient
+                    const f = (y - 2.0) / 1.26;
                     r = 14 + 26 * f; gg = 17 + 32 * f; b = 20 + 38 * f;
-                    if (y > 2.92) {  // destination display zone (dark backing)
+                    // wiper arm
+                    const wax = -0.5 + (y - 2.1) * 0.56;
+                    if (y > 2.08 && y < 2.85 && Math.abs(x - wax) < 0.03) { r = 12; gg = 13; b = 14; }
+                    if (y > 2.95) {  // destination display zone (dark backing)
                         r = 8; gg = 9; b = 10;
-                        const dd = Math.hypot(x, y - 3.05);
-                        if (!anchors['disp'] || dd < anchors['disp'][2]) anchors['disp'] = [i, j, dd];
+                        const dd = Math.hypot(x, y - 3.08);
+                        if (!anchors.disp || dd < anchors.disp[2]) anchors.disp = [i, j, dd];
                     }
                 }
-                // small blue arrow decals near the bottom front edge
-                if (chin && z > 10.55) {
-                    for (const s of [-1, 1]) {
-                        if (Math.abs(x - s * 0.45) < 0.02 && Math.abs(y - (p.y0 + 0.16)) < 0.02) {
-                            if (!anchors[s < 0 ? 'arrL' : 'arrR']) anchors[s < 0 ? 'arrL' : 'arrR'] = [i, j];
+                // headlamp teardrop pods: recessed pocket where the silver
+                // mask curves down each side of the windscreen — painted in
+                // ring-arc space so the pod hugs the glass edge exactly.
+                // Wide at the top, tapering to a point below (teardrop), with
+                // an LED strip of distinct dots along its inner edge.
+                if (!isGlass && !isRim && t > 0.56 && t < 0.96 && y > 1.98) {
+                    const podT = smoothstep(0.56, 0.96, t);   // 0 top -> 1 bottom
+                    const hw = 0.135 - 0.105 * podT;          // arc half-profile
+                    const edge = x < 0 ? iL : iR;
+                    if (edge > 0) {
+                        const dArc = (x < 0 ? (edge - i) : (i - edge)) * stepArc; // + = outside glass
+                        if (dArc > 0.025 && dArc < 0.025 + hw) {
+                            // dark recess
+                            r = 24 + 8 * podT; gg = 26 + 8 * podT; b = 30 + 8 * podT;
+                            // LED dot strip on the inner edge
+                            if (dArc < 0.072 && podT < 0.92 && y < 2.95) {
+                                if ((z * 22) % 1 < 0.55) {
+                                    r = 240; gg = 246; b = 252;
+                                    anchors.led.push([i, j]);
+                                } else { r = 44; gg = 47; b = 52; }
+                            }
+                            // main lamp lens near the pod top
+                            if (podT > 0.1 && podT < 0.3 && dArc > 0.075 && dArc < 0.025 + hw - 0.008) {
+                                r = 242; gg = 238; b = 226;
+                                anchors.lens.push([i, j]);
+                            }
+                        } else if (dArc >= 0.025 + hw && dArc < 0.047 + hw) {
+                            // clean silver mask border highlight around the pod
+                            r = 217; gg = 215; b = 208;
+                        }
+                    }
+                }
+                // small blue arrow decals at the bottom front edge (per-pixel,
+                // so they stay crisp on the folded cap)
+                if (t > 0.9 && y > p.y0 + 0.1 && y < 1.15) {
+                    for (const s2 of [-1, 1]) {
+                        const lx = x - s2 * 0.35, ly = y - 0.92;
+                        if (Math.max(Math.abs(lx), Math.abs(ly)) < 0.055) {
+                            r = 46; gg = 109; b = 180;
+                            if ((ly > 0.002 && ly < 0.045 && Math.abs(lx) < Math.max(0.04 - ly * 0.85, 0)) ||
+                                (ly > -0.042 && ly <= 0.002 && Math.abs(lx) < 0.012)) {
+                                r = 250; gg = 252; b = 255;
+                            }
                         }
                     }
                 }
                 // 9065 number anchor on each flank (facet zone behind the cab door)
                 if (flank && Math.abs(z - 8.22) < 0.05 && Math.abs(y - 2.6) < 0.05) {
-                    if (x < 0 && !anchors['numL']) anchors['numL'] = [i, j];
-                    if (x > 0 && !anchors['numR']) anchors['numR'] = [i, j];
+                    if (x < 0 && !anchors.numL) anchors.numL = [i, j];
+                    if (x > 0 && !anchors.numR) anchors.numR = [i, j];
                 }
                 const o = (j * W + i) * 4;
                 d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = 255;
@@ -431,25 +507,14 @@ function makeNoseTexPair(canvasTexture) {
         }
         ctx.putImageData(img, 0, 0);
         // ---- overdraw: display text, arrows, numbers (anchor-positioned)
-        if (anchors['disp']) {
-            const [ax2, ay2] = anchors['disp'];
+        if (anchors.disp) {
+            const [ax2, ay2] = anchors.disp;
             ctx.save();
             ctx.translate(ax2, ay2);
             ctx.scale(1, -1);   // v axis runs opposite to canvas rows on the rake
             ctx.fillStyle = '#f5d33f'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
             ctx.fillText('Westall', 0, 10);
             ctx.restore();
-        }
-        for (const key of ['arrL', 'arrR']) {
-            if (!anchors[key]) continue;
-            const [ax2, ay2] = anchors[key];
-            ctx.fillStyle = C.mid;
-            roundRect(ctx, ax2 - 11, ay2 - 11, 22, 22, 4); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.moveTo(ax2, ay2 - 6); ctx.lineTo(ax2 - 6, ay2 + 1); ctx.lineTo(ax2 + 6, ay2 + 1);
-            ctx.closePath(); ctx.fill();
-            ctx.fillRect(ax2 - 2, ay2 + 1, 4, 6);
         }
         for (const key of ['numL', 'numR']) {
             if (!anchors[key]) continue;
@@ -465,8 +530,8 @@ function makeNoseTexPair(canvasTexture) {
     });
     const emissiveMap = canvasTexture(W, H, (ctx) => {
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-        if (anchors['disp']) {
-            const [ax2, ay2] = anchors['disp'];
+        if (anchors.disp) {
+            const [ax2, ay2] = anchors.disp;
             ctx.save();
             ctx.translate(ax2, ay2);
             ctx.scale(1, -1);
@@ -474,6 +539,10 @@ function makeNoseTexPair(canvasTexture) {
             ctx.fillText('Westall', 0, 10);
             ctx.restore();
         }
+        ctx.fillStyle = '#b9cede';
+        for (const [i, j] of anchors.led) ctx.fillRect(i, j, 1, 1);
+        ctx.fillStyle = '#fff2dd';
+        for (const [i, j] of anchors.lens) ctx.fillRect(i, j, 1, 1);
     });
     return { map, emissiveMap };
 }
