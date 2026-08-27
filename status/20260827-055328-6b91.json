@@ -1,5 +1,8 @@
 {
   "id": "20260827-055328-6b91",
-  "state": "building",
-  "at": "2026-08-27T10:41:21Z"
+  "state": "done",
+  "at": "2026-08-27T11:34:00Z",
+  "slug": "wind-hover",
+  "name": "Wind Hover",
+  "scene": "wind-hover.scene.js"
 }
