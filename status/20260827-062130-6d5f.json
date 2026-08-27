@@ -1,5 +1,8 @@
 {
   "id": "20260827-062130-6d5f",
-  "state": "building",
-  "at": "2026-08-27T12:20:15Z"
+  "state": "done",
+  "at": "2026-08-27T12:55:32Z",
+  "slug": "pontoon-scrap",
+  "name": "Pontoon Scrap",
+  "scene": "pontoon-scrap.scene.js"
 }
