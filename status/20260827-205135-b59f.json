@@ -1,5 +1,8 @@
 {
   "id": "20260827-205135-b59f",
-  "state": "building",
-  "at": "2026-08-27T20:51:40Z"
+  "state": "done",
+  "at": "2026-08-27T21:06:05Z",
+  "slug": "last-tram",
+  "name": "Last Tram",
+  "scene": "last-tram.scene.js"
 }

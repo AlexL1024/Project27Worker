@@ -6,7 +6,12 @@
 //  so a world that throws — or quietly makes a mesh with no geometry — is
 //  caught here rather than on the iPad as "three.js couldn't start".
 //
-//  Usage: node tools/smoke.mjs [world.scene.js ...]   (default: every world)
+//  The same argument, said the same way, applies to the object library: every
+//  prop in `props/` is built too, because a prop that throws takes down whatever
+//  world someone dropped it into, and that world is not the one that broke.
+//
+//  Usage: node tools/smoke.mjs [world.scene.js | prop.prop.js ...]
+//         (default: every world, then every prop)
 //
 import fs from 'node:fs';
 import path from 'node:path';
@@ -61,6 +66,7 @@ if (!WEB) {
     process.exit(0);
 }
 const WORLDS = path.join(REPO, 'worlds');
+const PROPS = path.join(REPO, 'props');
 
 // The worlds import './BufferGeometryUtils.js' as a sibling, so they are run
 // from a scratch folder holding both them and three.
@@ -71,6 +77,14 @@ for (const name of fs.readdirSync(WEB)) {
 fs.copyFileSync(path.join(REPO, 'runtime-reference/runtime.js'), path.join(STAGE, 'runtime.js'));
 for (const name of fs.readdirSync(WORLDS)) {
     if (name.endsWith('.js')) fs.copyFileSync(path.join(WORLDS, name), path.join(STAGE, name));
+}
+// The app serves the whole download in one flat folder, so a world importing
+// one of its own props writes './school-desk.prop.js'. Staging props beside the
+// worlds is what makes that import resolve here the way it resolves there.
+if (fs.existsSync(PROPS)) {
+    for (const name of fs.readdirSync(PROPS)) {
+        if (name.endsWith('.js')) fs.copyFileSync(path.join(PROPS, name), path.join(STAGE, name));
+    }
 }
 process.chdir(STAGE);
 
@@ -184,12 +198,122 @@ async function smoke(file) {
     }
 }
 
-const files = process.argv.slice(2).length
-    ? process.argv.slice(2).map((f) => path.basename(f))
+// ---- one prop -------------------------------------------------------------
+
+// A prop is a thing, not a scene: no runtime, no world argument, just THREE and
+// the one helper. It has to survive being dropped into somebody else's world,
+// which is a harsher test than being built inside its own — so the things that
+// would only misbehave there are failures here.
+const PROP_MESHES = 60;
+
+// The same canvasTexture a world is handed, borrowed off a throwaway World so a
+// prop's textures are made exactly the way the runtime will make them.
+const propHelpers = {
+    canvasTexture: (w, h, draw) => new World({
+        THREE, scene: new THREE.Scene(), renderer,
+        camera: new THREE.PerspectiveCamera(55, 1.4, 0.01, 4000),
+    }).canvasTexture(w, h, draw),
+};
+
+async function smokeProp(file) {
+    const troubles = [];
+    try {
+        const module = await import(path.join(STAGE, file));
+        const build = module.default;
+        if (typeof build !== 'function') {
+            return { file, fatal: 'no default export — a prop is `export default function build(THREE, helpers)`' };
+        }
+
+        const object = await build(THREE, propHelpers);
+        if (!object || !object.isObject3D) {
+            const what = object === undefined ? 'nothing' : (object === null ? 'null' : typeof object);
+            return { file, fatal: `build() answered ${what} — a prop returns one THREE.Object3D` };
+        }
+
+        let meshes = 0, lights = 0;
+        object.traverse((node) => {
+            if (node.isLight) { lights++; return; }
+            if (!node.isMesh) return;
+            meshes++;
+            if (!node.geometry || !node.geometry.attributes || !node.geometry.attributes.position) {
+                troubles.push(`mesh "${node.name || '(unnamed)'}" has no geometry — a merge that returned null?`);
+            }
+            if (!node.material) troubles.push(`mesh "${node.name || '(unnamed)'}" has no material`);
+        });
+
+        if (meshes === 0) troubles.push('no meshes — build() returned an empty group');
+        if (meshes > PROP_MESHES) {
+            troubles.push(`${meshes} meshes (budget: ~${PROP_MESHES}) — merge the repeats before this lands in a world`);
+        }
+        if (lights) {
+            troubles.push(`${lights} light${lights > 1 ? 's' : ''} — a prop never lights a world it does not own; make the glow emissive`);
+        }
+        return { file, meshes, troubles };
+    } catch (error) {
+        return { file, fatal: String(error && error.stack || error).split('\n').slice(0, 4).join('\n') };
+    }
+}
+
+// The shelf and its catalogue have to agree, in both directions: an entry with
+// no file is a card the app offers and then cannot place, and a file nobody
+// listed is work already done that nobody can find.
+function propManifest(onDisk) {
+    let bad = false;
+    const indexFile = path.join(PROPS, 'index.json');
+    if (!fs.existsSync(indexFile)) {
+        if (onDisk.length) {
+            console.log('BROKEN  props/index.json is missing but props exist on disk');
+            bad = true;
+        }
+        return bad;
+    }
+
+    let manifest;
+    try {
+        manifest = JSON.parse(fs.readFileSync(indexFile, 'utf8'));
+    } catch (error) {
+        console.log(`BROKEN  props/index.json does not parse — ${error.message}`);
+        return true;
+    }
+
+    const listed = new Set();
+    const ids = new Set();
+    for (const prop of manifest.props || []) {
+        const name = prop.file || '';
+        listed.add(name);
+        if (ids.has(prop.id)) {
+            console.log(`BROKEN  props/index.json lists the id "${prop.id}" twice — ids are unique and permanent`);
+            bad = true;
+        }
+        ids.add(prop.id);
+        if (name !== `${prop.id}.prop.js`) {
+            console.log(`BROKEN  props/index.json: "${prop.id}" points at ${name || '(nothing)'}, not ${prop.id}.prop.js`);
+            bad = true;
+        }
+        if (!fs.existsSync(path.join(PROPS, name))) {
+            console.log(`BROKEN  props/index.json lists props/${name} but it does not exist`);
+            bad = true;
+        }
+    }
+    for (const name of onDisk) {
+        if (!listed.has(name)) console.log(`note    props/${name} exists but the manifest does not list it`);
+    }
+    return bad;
+}
+
+// ---- the run ---------------------------------------------------------------
+
+const asked = process.argv.slice(2).map((f) => path.basename(f));
+const onDisk = fs.existsSync(PROPS)
+    ? fs.readdirSync(PROPS).filter((f) => f.endsWith('.prop.js')).sort()
+    : [];
+const worldFiles = asked.length
+    ? asked.filter((f) => !f.endsWith('.prop.js'))
     : fs.readdirSync(WORLDS).filter((f) => f.endsWith('.scene.js')).sort();
+const propFiles = asked.length ? asked.filter((f) => f.endsWith('.prop.js')) : onDisk;
 
 let bad = 0;
-for (const file of files) {
+for (const file of worldFiles) {
     const r = await smoke(file);
     if (r.skipped) { console.log(`skip    ${file}  (${r.skipped})`); continue; }
     if (r.fatal) { bad++; console.log(`THROWS  ${file}\n${r.fatal.replace(/^/gm, '        ')}`); continue; }
@@ -202,4 +326,21 @@ for (const file of files) {
         console.log(`ok      ${file}  (${r.meshes} meshes, ${r.parts} parts, ${r.solids} ground)`);
     }
 }
+
+if (propFiles.length || fs.existsSync(PROPS)) {
+    console.log();
+    if (!asked.length && propManifest(onDisk)) bad++;
+    for (const file of propFiles) {
+        const r = await smokeProp(file);
+        if (r.fatal) { bad++; console.log(`THROWS  props/${file}\n${r.fatal.replace(/^/gm, '        ')}`); continue; }
+        if (r.troubles.length) {
+            bad++;
+            console.log(`BROKEN  props/${file}  (${r.meshes} meshes)`);
+            for (const t of [...new Set(r.troubles)].slice(0, 4)) console.log('        ' + t);
+        } else {
+            console.log(`ok      props/${file}  (${r.meshes} meshes)`);
+        }
+    }
+}
+
 process.exit(bad ? 1 : 0);
