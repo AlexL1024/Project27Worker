@@ -194,12 +194,22 @@ def serve(request_id):
         cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
 
-    # stderr gets its own reader: a full, unread pipe would deadlock the child.
+    # Reader threads for both pipes: a full, unread pipe would deadlock the
+    # child, and reading stdout through a queue lets the loop notice silence —
+    # a build that says nothing for twenty-five minutes is not thinking, it is
+    # hung (or the Mac slept under it), and it must not starve the queue.
+    import queue as lineq
     import threading
     error_lines = []
+    lines = lineq.Queue()
+    def read_out():
+        for line in process.stdout:
+            lines.put(line)
+        lines.put(None)
     def drain():
         for line in process.stderr:
             error_lines.append(line)
+    threading.Thread(target=read_out, daemon=True).start()
     threading.Thread(target=drain, daemon=True).start()
 
     # Everything Claude says is kept on disk, so a failed build is a file to
@@ -207,8 +217,22 @@ def serve(request_id):
     os.makedirs(LOGS, exist_ok=True)
     transcript = open(os.path.join(LOGS, f"{request_id}.log"), "w")
 
+    STALL = 25 * 60
+    last_heard = time.time()
+    stalled = False
     result_text = ""
-    for line in process.stdout:
+    while True:
+        try:
+            line = lines.get(timeout=30)
+        except lineq.Empty:
+            if time.time() - last_heard > STALL:
+                stalled = True
+                process.kill()
+                break
+            continue
+        if line is None:
+            break
+        last_heard = time.time()
         transcript.write(line)
         try:
             event = json.loads(line)
@@ -226,6 +250,15 @@ def serve(request_id):
                     spot = os.path.basename(str(spot).split()[0]) if spot else ""
                     feed.say(f"{block.get('name', '?')} {spot}".strip()[:120])
     process.wait()
+
+    if stalled:
+        transcript.write("\n--- killed: no output for 25 minutes ---\n")
+        transcript.close()
+        write_status(request_id, "failed",
+                     {"reason": "The build went silent for 25 minutes and was stopped "
+                                "(did the Mac sleep?). Send the prompt again."},
+                     also_remove_request=True)
+        return
     if error_lines:
         transcript.write("\n--- stderr ---\n" + "".join(error_lines))
     transcript.close()
