@@ -31,6 +31,11 @@
       "scene": "lantern-shore.scene.js"
     },
     {
+      "slug": "pontoon-scrap",
+      "name": "Pontoon Scrap",
+      "scene": "pontoon-scrap.scene.js"
+    },
+    {
       "slug": "standing-vault",
       "name": "Standing Vault",
       "scene": "standing-vault.scene.js"
