@@ -21,6 +21,11 @@
       "scene": "crumb-hour.scene.js"
     },
     {
+      "slug": "long-call",
+      "name": "Long Call",
+      "scene": "long-call.scene.js"
+    },
+    {
       "slug": "lantern-shore",
       "name": "Lantern Shore",
       "scene": "lantern-shore.scene.js"
