@@ -1,6 +1,11 @@
 {
   "worlds": [
     {
+      "slug": "chip-carousel",
+      "name": "Chip Carousel",
+      "scene": "chip-carousel.scene.js"
+    },
+    {
       "slug": "chip-thief",
       "name": "Chip Thief",
       "scene": "chip-thief.scene.js"
