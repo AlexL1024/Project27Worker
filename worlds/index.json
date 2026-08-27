@@ -16,6 +16,11 @@
       "scene": "lantern-shore.scene.js"
     },
     {
+      "slug": "standing-vault",
+      "name": "Standing Vault",
+      "scene": "standing-vault.scene.js"
+    },
+    {
       "slug": "state-library-station",
       "name": "State Library Station",
       "scene": "station.scene.js",
