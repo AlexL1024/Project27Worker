@@ -353,20 +353,12 @@ export default function build(world) {
             beam.position.set(s * COL_X, BEAM_Y, 0);
             scene.add(beam);
         }
-        // pier upstands: each column continues above the beam to the vault
-        {
-            const upItems = [];
-            const upH = 7.6, upY = BEAM_Y + BEAM_H / 2 + upH / 2;
-            const upEnd = new THREE.CylinderGeometry(0.34, 0.34, upH, 12);
-            const upMid = new THREE.BoxGeometry(0.68, upH, 1.4);
-            for (let z = -HALF + 3; z <= HALF - 2; z += BAY) {
-                for (const s2 of [-1, 1]) {
-                    upItems.push({ geo: upMid, m: M(s2 * COL_X, upY, z) });
-                    upItems.push({ geo: upEnd, m: M(s2 * COL_X, upY, z - 0.7) });
-                    upItems.push({ geo: upEnd, m: M(s2 * COL_X, upY, z + 0.7) });
-                }
-            }
-            scene.add(new THREE.Mesh(mergeGeos(upItems), columnMat));
+        // the beam itself continues as a solid wall all the way up to the vault
+        for (const s2 of [-1, 1]) {
+            const upH = 8.0;
+            const up = new THREE.Mesh(new THREE.BoxGeometry(0.9, upH, LEN), concreteMat);
+            up.position.set(s2 * COL_X, BEAM_Y + BEAM_H / 2 + upH / 2, 0);
+            scene.add(up);
         }
 
         // orange cone lamps over the platforms
@@ -391,7 +383,7 @@ export default function build(world) {
     /* ============================================================
        6 · full-height platform screen doors
        ============================================================ */
-    const psdLeaves = { '1': [], '-1': [] };
+    const psdMovers = { '1': null, '-1': null };
     {
         const psSteel = new THREE.MeshStandardMaterial({ color: 0xC9CCCE, roughness: 0.3, metalness: 0.6 });
         const leafMat = new THREE.MeshStandardMaterial({ color: 0x22262A, roughness: 0.08, metalness: 0.5,
@@ -400,7 +392,7 @@ export default function build(world) {
             ctx.fillStyle = '#101112'; ctx.fillRect(0, 0, w, h);
             for (let x = 0; x < w; x += 10) {
                 ctx.fillStyle = '#1E2022'; ctx.fillRect(x, 0, 5, h);
-                ctx.fillStyle = '#07,0808'.length ? '#070808' : '#070808'; ctx.fillRect(x + 5, 0, 5, h);
+                ctx.fillStyle = '#070808'; ctx.fillRect(x + 5, 0, 5, h);
             }
         }, LEN / 2, 1);
         const arrowTex = tex(96, 64, (ctx, w, h) => {
@@ -409,11 +401,12 @@ export default function build(world) {
             ctx.fillStyle = '#fff'; ctx.font = '700 34px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
             ctx.fillText('→', w / 2, h / 2 + 2);
         });
+        const arrowMat = new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true });
         const STOP = 35.5;   // where a train's centre halts (front 21 of 30 doorways)
         const trainDoors = (typeof HCMT_DOORS !== 'undefined' && HCMT_DOORS.all ? HCMT_DOORS.all : [])
             .map(z => z + STOP);
         const extraDoors = [];
-        for (const c of [-90.4, -113, -135.6]) {         // 10-car provision doors, never open
+        for (const c of [-90.4, -113, -135.6]) {
             for (const o of [-7.85, -0.15, 6.75]) extraDoors.push(c + o + STOP);
         }
         const activeSet = new Set(trainDoors.map(z => z.toFixed(1)));
@@ -426,15 +419,17 @@ export default function build(world) {
                 ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
                 ctx.fillStyle = '#222'; ctx.font = '600 84px Arial'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
                 ctx.fillText('2', w / 2, h / 2 + 4); }) };
+        const leafG = new THREE.BoxGeometry(0.06, 2.52, 0.96);
+        const arrowG = new THREE.PlaneGeometry(0.34, 0.22);
+        const tileG = new THREE.PlaneGeometry(0.34, 0.34);
         for (const sd of [-1, 1]) {
             const x = sd * PSD_X;
             const rotY = sd > 0 ? -Math.PI / 2 : Math.PI / 2;
-            const doorZ = sd > 0 ? doorZBase : doorZBase.map(z => -z);   // platform 2 train is reversed
-            const frames = [], posts = [];
-            // base rail + transom
+            const doorZ = sd > 0 ? doorZBase : doorZBase.map(z => -z);
+            const frames = [], posts = [], glassGeos = [], tileGeos = [];
+            const actL = [], actR = [], statLeaf = [], arrActL = [], arrActR = [], arrStat = [];
             frames.push({ geo: new THREE.BoxGeometry(0.14, 0.1, LEN), m: M(x, 0.05, 0) });
             frames.push({ geo: new THREE.BoxGeometry(0.2, 0.35, LEN), m: M(x, 2.75, 0) });
-            // black louvre band above, with platform number tiles over each doorway
             const band = new THREE.Mesh(new THREE.PlaneGeometry(LEN, 2.0),
                 new THREE.MeshStandardMaterial({ map: louvreTex, roughness: 0.7, metalness: 0.3 }));
             band.rotation.y = rotY; band.position.set(sd * (PSD_X + 0.06), 3.95, 0);
@@ -442,45 +437,47 @@ export default function build(world) {
             const led = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, LEN), ledMat);
             led.position.set(sd * (PSD_X - 0.25), 4.72, 0);
             scene.add(led);
-            const numMat = new THREE.MeshBasicMaterial({ map: numTexs[String(sd)] });
-            // doorways with sliding leaves
             const sorted = [...doorZ].sort((a, b) => a - b);
             for (const dz of sorted) {
+                const active = activeSet.has((sd > 0 ? dz : -dz).toFixed(1));
                 for (const pz of [dz - 1.05, dz + 1.05]) {
                     posts.push({ geo: new THREE.BoxGeometry(0.15, 2.72, 0.15), m: M(x, 1.36, pz) });
                 }
                 for (const lr of [-1, 1]) {
-                    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.52, 0.96), leafMat);
-                    leaf.position.set(x, 1.31, dz + lr * 0.48);
-                    scene.add(leaf);
-                    const arrow = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.22),
-                        new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true }));
-                    arrow.rotation.y = rotY;
-                    arrow.rotation.z = lr * (sd > 0 ? 0 : Math.PI);
-                    arrow.position.set(sd * (PSD_X - 0.055), 1.5, dz + lr * 0.48);
-                    leaf.userData.arrow = arrow;
-                    scene.add(arrow);
-                    psdLeaves[String(sd)].push({ leaf, arrow, z0: dz + lr * 0.48, dir: lr, active: activeSet.has((sd > 0 ? dz : -dz).toFixed(1)) });
+                    const lm = M(x, 1.31, dz + lr * 0.48);
+                    const am = M(sd * (PSD_X - 0.055), 1.5, dz + lr * 0.48, 0, rotY, 0);
+                    if (active) {
+                        (lr < 0 ? actL : actR).push({ geo: leafG, m: lm });
+                        (lr < 0 ? arrActL : arrActR).push({ geo: arrowG, m: am });
+                    } else {
+                        statLeaf.push({ geo: leafG, m: lm });
+                        arrStat.push({ geo: arrowG, m: am });
+                    }
                 }
-                const tile = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), numMat);
-                tile.rotation.y = rotY;
-                tile.position.set(sd * (PSD_X + 0.02), 3.5, dz);
-                scene.add(tile);
+                tileGeos.push({ geo: tileG, m: M(sd * (PSD_X + 0.02), 3.5, dz, 0, rotY, 0) });
             }
-            // fixed glazed bays between doorways
-            let edges = [-HALF + 0.4, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 0.4];
+            const edges = [-HALF + 0.4, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 0.4];
             for (let i = 0; i < edges.length; i += 2) {
                 const a = edges[i], b = edges[i + 1];
                 if (b - a < 0.35) continue;
-                const glass = new THREE.Mesh(new THREE.PlaneGeometry(b - a - 0.06, 2.55), psdGlassMat);
-                glass.rotation.y = rotY;
-                glass.position.set(x, 1.325, (a + b) / 2);
-                scene.add(glass);
+                glassGeos.push({ geo: new THREE.PlaneGeometry(b - a - 0.06, 2.55), m: M(x, 1.325, (a + b) / 2, 0, rotY, 0) });
                 frames.push({ geo: new THREE.BoxGeometry(0.1, 0.08, b - a), m: M(x, 1.32, (a + b) / 2) });
                 if (b - a > 3.4) frames.push({ geo: new THREE.BoxGeometry(0.09, 2.55, 0.08), m: M(x, 1.325, (a + b) / 2) });
             }
             scene.add(new THREE.Mesh(mergeGeos(frames), darkMetal));
             scene.add(new THREE.Mesh(mergeGeos(posts), psSteel));
+            scene.add(new THREE.Mesh(mergeGeos(glassGeos), psdGlassMat));
+            scene.add(new THREE.Mesh(mergeGeos(tileGeos), new THREE.MeshBasicMaterial({ map: numTexs[String(sd)] })));
+            if (statLeaf.length) scene.add(new THREE.Mesh(mergeGeos(statLeaf), leafMat));
+            if (arrStat.length) scene.add(new THREE.Mesh(mergeGeos(arrStat), arrowMat));
+            const mv = {
+                L: new THREE.Mesh(mergeGeos(actL), leafMat),
+                R: new THREE.Mesh(mergeGeos(actR), leafMat),
+                aL: new THREE.Mesh(mergeGeos(arrActL), arrowMat),
+                aR: new THREE.Mesh(mergeGeos(arrActR), arrowMat),
+            };
+            for (const k2 of ['L', 'R', 'aL', 'aR']) scene.add(mv[k2]);
+            psdMovers[String(sd)] = mv;
         }
     }
 
@@ -639,8 +636,11 @@ export default function build(world) {
             emissiveMap: opts.glow ? t : null,
             emissiveIntensity: opts.glow ? 0.85 : 0 });
         const edge = new THREE.MeshStandardMaterial({ color: opts.edge || 0x222325, roughness: 0.6 });
-        return new THREE.Mesh(new THREE.BoxGeometry(w, h, opts.t || 0.08),
-            [edge, edge, edge, edge, face, face]);
+        const g = new THREE.BoxGeometry(w, h, opts.t || 0.08);
+        g.clearGroups();
+        g.addGroup(0, 24, 0);      // the four edge faces
+        g.addGroup(24, 12, 1);     // front + back
+        return new THREE.Mesh(g, [edge, face]);
     }
     function hangRods(group, sign, topY, spread) {
         const g = new THREE.CylinderGeometry(0.016, 0.016, 1, 6);
@@ -687,23 +687,23 @@ export default function build(world) {
         ctx.fillText('Cranbourne', 320, h * 0.34);
         ctx.fillText('or Pakenham', 320, h * 0.68);
     };
-    const drawName = (ctx, w, h) => {
+    const drawNameFor = (nm, e1, e2) => (ctx, w, h) => {
         ctx.fillStyle = '#F6F6F3'; ctx.fillRect(0, 0, w, h);
         ctx.fillStyle = '#2C7BC4'; ctx.fillRect(0, 0, w, h * 0.06);
         ctx.fillStyle = '#1E1E1E'; ctx.font = '600 64px Arial'; ctx.textBaseline = 'middle';
-        ctx.fillText('State Library', 40, h * 0.22);
+        ctx.fillText(nm, 40, h * 0.22);
         ctx.fillStyle = '#101112'; ctx.fillRect(0, h * 0.38, w, h * 0.62);
         ctx.fillStyle = '#F5C400'; ctx.font = '600 44px Arial';
         ctx.fillText('← Exit 1', 40, h * 0.52);
         ctx.fillStyle = '#fff'; ctx.font = '400 32px Arial';
-        ctx.fillText('Swanston St', 52, h * 0.63);
+        ctx.fillText(e1, 52, h * 0.63);
         ctx.fillStyle = '#2C7BC4'; ctx.fillRect(30, h * 0.7, w - 60, h * 0.11);
         ctx.fillStyle = '#fff'; ctx.font = '500 30px Arial';
         ctx.fillText('M  Melbourne Central Station  210m', 44, h * 0.755);
         ctx.fillStyle = '#F5C400'; ctx.font = '600 40px Arial';
         ctx.fillText('Exit 2 →', w - 260, h * 0.88);
         ctx.fillStyle = '#fff'; ctx.font = '400 30px Arial';
-        ctx.fillText('Franklin St', w - 250, h * 0.96 - 6);
+        ctx.fillText(e2, w - 250, h * 0.96 - 6);
     };
     const plate = (num) => (ctx, w, h) => {
         ctx.fillStyle = '#F4F4F1'; ctx.fillRect(0, 0, w, h);
@@ -735,9 +735,13 @@ export default function build(world) {
         hungSign(2.6, 0.62, fn, x, 4.6, z, 10.4, 0.9, { edge: 0xd9d9d6 });
     }
     // station name signs on the blade columns, facing the platforms
+    let nameMat, nameTexSL, nameTexTH;
     {
-        const t = tex(640, 420, drawName);
+        nameTexSL = tex(640, 420, drawNameFor('State Library', 'Swanston St', 'Franklin St'));
+        nameTexTH = tex(640, 420, drawNameFor('Town Hall', 'Collins St', 'City Square'));
+        const t = nameTexSL;
         const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.55 });
+        nameMat = m;
         const g = new THREE.PlaneGeometry(1.5, 0.98);
         for (let z = -HALF + 9; z <= HALF - 6; z += BAY * 3) {
             for (const s of [-1, 1]) {
@@ -775,7 +779,9 @@ export default function build(world) {
             const face = new THREE.MeshStandardMaterial({
                 map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.85, roughness: 0.6 });
             const edge = new THREE.MeshStandardMaterial({ color: 0x1a1b1c, roughness: 0.6 });
-            const s = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.78, 0.1), [edge, edge, edge, edge, face, face]);
+            const bg = new THREE.BoxGeometry(1.3, 0.78, 0.1);
+            bg.clearGroups(); bg.addGroup(0, 24, 0); bg.addGroup(24, 12, 1);
+            const s = new THREE.Mesh(bg, [edge, face]);
             s.position.set(side * (COL_X + 0.35), 3.85, z);
             s.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
             s.rotation.z = side > 0 ? -0.08 : 0.08;
@@ -817,25 +823,23 @@ export default function build(world) {
        10 · benches
        ============================================================ */
     const benchFrame = new THREE.MeshStandardMaterial({ color: 0x8B9094, roughness: 0.45, metalness: 0.4 });
+    const benchPlinthMat = new THREE.MeshStandardMaterial({ color: 0x6E6B66, roughness: 0.7, metalness: 0.15 });
     let benchN = 0;
     function bench(x, z, ry) {
         const g = new THREE.Group();
-        const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.1, 0.85),
-            new THREE.MeshStandardMaterial({ color: 0x6E6B66, roughness: 0.7, metalness: 0.15 }));
+        const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.1, 0.85), benchPlinthMat);
         plinth.position.y = 0.05; g.add(plinth);
-        for (const [yy, zz] of [[0.62, 0], [0.78, 0.01], [0.94, 0.02]]) {   // open back rails
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.07, 0.04), benchFrame);
-            rail.position.set(0, yy, zz); g.add(rail);
+        const items = [];
+        for (const [yy, zz] of [[0.62, 0], [0.78, 0.01], [0.94, 0.02]]) {
+            items.push({ geo: new THREE.BoxGeometry(2.55, 0.07, 0.04), m: M(0, yy, zz) });
         }
-        for (const sx of [-1.2, 0, 1.2]) {                                   // back posts
-            const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.55, 0.05), benchFrame);
-            post.position.set(sx, 0.72, 0); g.add(post);
+        for (const sx of [-1.2, 0, 1.2]) {
+            items.push({ geo: new THREE.BoxGeometry(0.05, 0.55, 0.05), m: M(sx, 0.72, 0) });
         }
         for (const s2 of [-1, 1]) for (let i = 0; i < 4; i++) {
-            const slat = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.035, 0.09), benchFrame);
-            slat.position.set(0, 0.46, s2 * (0.1 + i * 0.1));
-            g.add(slat);
+            items.push({ geo: new THREE.BoxGeometry(2.55, 0.035, 0.09), m: M(0, 0.46, s2 * (0.1 + i * 0.1)) });
         }
+        g.add(new THREE.Mesh(mergeGeos(items), benchFrame));
         g.position.set(x, 0, z);
         if (ry) g.rotation.y = ry;
         world.part(`bench_${String(benchN).padStart(2, '0')}`, g); benchN++;
@@ -846,7 +850,7 @@ export default function build(world) {
     /* ============================================================
        10b · track cavities + HCMTs passing through
        ============================================================ */
-    const TL = 520;                      // tunnel length either side of centre
+    const TL = 940;                      // tunnel length either side of centre
     for (const s2 of [-1, 1]) {
         const slab = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.3, TL),
             new THREE.MeshStandardMaterial({ color: 0x232426, roughness: 0.95 }));
@@ -858,11 +862,11 @@ export default function build(world) {
             rail.position.set(s2 * 13.15 + rr, -0.915, 0);
             scene.add(rail);
         }
-        const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, TL),
+        const wallT = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, LEN + 4),
             new THREE.MeshStandardMaterial({ color: 0x121314, roughness: 0.95 }));
         wallT.position.set(s2 * 15.6, 2.2, 0);
         scene.add(wallT);
-        const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, TL),
+        const soffit = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, LEN + 4),
             new THREE.MeshStandardMaterial({ color: 0x0C0D0E, roughness: 0.95 }));
         soffit.position.set(s2 * 13.6, 5.15, 0);
         scene.add(soffit);
@@ -870,22 +874,78 @@ export default function build(world) {
             new THREE.MeshStandardMaterial({ color: 0x3A3A3C, roughness: 0.85 }));
         edge.position.set(s2 * 11.52, -0.62, 0);
         scene.add(edge);
-        for (let lz = -98; lz <= 98; lz += 26) {        // cavity lighting so trains read
-            const cl = new THREE.PointLight(0xEDE9DF, 58, 13, 2);
+        for (const lz of (s2 > 0 ? [8, 36, 62] : [-8, -36, -62])) {   // light the dwell zone
+            const cl = new THREE.PointLight(0xEDE9DF, 70, 15, 2);
             cl.position.set(s2 * 12.45, 3.1, lz);
             scene.add(cl);
         }
     }
+    {   // TBM running tunnels beyond the cavern (segmented rings, trays, catwalk, lights)
+        const ringTex = tex(256, 512, (ctx, w, h) => {
+            ctx.fillStyle = '#B9B7B2'; ctx.fillRect(0, 0, w, h);
+            for (let i = 0; i < 1400; i++) {
+                ctx.fillStyle = `rgba(${Math.random() < 0.5 ? '138,136,130' : '205,203,197'},${Math.random() * 0.15})`;
+                ctx.fillRect(Math.random() * w, Math.random() * h, 1.6, 1.6);
+            }
+            ctx.strokeStyle = 'rgba(90,88,84,0.55)'; ctx.lineWidth = 4;
+            for (let y = 0; y <= h; y += 128) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+            ctx.lineWidth = 2.5;
+            for (let y = 0; y < h; y += 128) {
+                const off = (y / 128) % 2 ? 64 : 0;
+                for (let x = off; x <= w; x += 128) {
+                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 128); ctx.stroke();
+                }
+            }
+        }, 5, 1);
+        const tubeMat = new THREE.MeshStandardMaterial({ map: ringTex, roughness: 0.92, side: THREE.BackSide });
+        const trayMat = new THREE.MeshStandardMaterial({ color: 0x8E9194, roughness: 0.5, metalness: 0.5 });
+        const walkMat = new THREE.MeshStandardMaterial({ color: 0xA9A7A0, roughness: 0.8 });
+        const tubeLight = new THREE.MeshStandardMaterial({ color: 0x888888, emissive: 0xE8EDEE, emissiveIntensity: 1.6 });
+        for (const s2 of [-1, 1]) {
+            const xc = s2 * 13.15;
+            for (const [z0, z1] of [[HALF, 470], [-470, -HALF]]) {
+                const len = z1 - z0, zc = (z0 + z1) / 2;
+                const cg = new THREE.CylinderGeometry(3.45, 3.45, len, 20, 1, true);
+                cg.rotateX(Math.PI / 2);
+                const tube = new THREE.Mesh(cg, tubeMat);
+                const rt = ringTex.clone(); rt.needsUpdate = true; rt.repeat.set(5, Math.abs(len) / 1.75);
+                tube.material = tubeMat.clone(); tube.material.map = rt;
+                tube.position.set(xc, 2.0, zc);
+                scene.add(tube);
+                const items = [];
+                items.push({ geo: new THREE.BoxGeometry(0.4, 0.12, Math.abs(len)), m: M(xc - s2 * 3.05, 3.3, zc) });
+                items.push({ geo: new THREE.BoxGeometry(0.35, 0.1, Math.abs(len)), m: M(xc - s2 * 3.2, 2.2, zc) });
+                scene.add(new THREE.Mesh(mergeGeos(items), trayMat));
+                const walk = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.1, Math.abs(len)), walkMat);
+                walk.position.set(xc + s2 * 2.35, -0.55, zc);
+                scene.add(walk);
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, Math.abs(len)), trayMat);
+                rail.position.set(xc + s2 * 2.85, 0.45, zc);
+                scene.add(rail);
+                const dots = [];
+                const dotG = new THREE.BoxGeometry(0.5, 0.07, 0.14);
+                for (let z = z0 + 8 * Math.sign(len); Math.abs(z - z0) < Math.abs(len); z += 16 * Math.sign(len)) {
+                    dots.push({ geo: dotG, m: M(xc - s2 * 2.6, 4.6, z, 0, 0, s2 * 0.5) });
+                }
+                scene.add(new THREE.Mesh(mergeGeos(dots), tubeLight));
+            }
+        }
+    }
     const trains = [];
+    let heroTrain;
     {
-        const t1 = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
-        t1.position.set(13.15, -0.83, -280);
-        scene.add(world.ghost(t1));
-        const t2 = t1.clone(true);           // shares geometry + materials
-        t2.rotation.y = Math.PI;             // nose toward -z on platform 2
-        t2.position.set(-13.15, -0.83, 280);
-        scene.add(world.ghost(t2));
-        trains.push({ g: t1, dir: 1, phase: 0 }, { g: t2, dir: -1, phase: 48 });
+        heroTrain = buildHCMT(THREE, (w, h, fn) => world.canvasTexture(w, h, fn));
+        heroTrain.position.set(13.15, -0.83, -260);
+        scene.add(world.ground(heroTrain));   // solid: you can stand inside it
+        // a little light aboard so the ride isn't pitch black in the tunnel
+        for (const lz of [20, 45]) {
+            const cab = new THREE.PointLight(0xF2EFE6, 14, 12, 2);
+            cab.position.set(13.15, 2.4, lz);
+            heroTrain.userData.keepLit = true;
+            scene.add(cab);
+            cab.userData.followTrain = lz - 35.5;   // offset from stop point
+            trains.push({ light: cab });
+        }
     }
 
     /* ============================================================
@@ -929,22 +989,22 @@ export default function build(world) {
 
     scene.fog = new THREE.Fog(0x7b7a76, 52, 165);
     scene.add(new THREE.HemisphereLight(0xE9EAEB, 0x7A7876, 0.52));
-    for (let bi = 0; bi * BAY < LEN - 4; bi += 4) {         // lantern pools
+    for (let bi = 0; bi * BAY < LEN - 4; bi += 6) {         // lantern pools
         const zc = -HALF + 1 + bi * BAY + BAY / 2;
         if (zc > HALF - 2) break;
         if (zc < -103.5) continue;
-        const pl = new THREE.PointLight(0xFFDFAE, 30, 15, 2);
+        const pl = new THREE.PointLight(0xFFDFAE, 40, 16, 2);
         pl.position.set(0, 6.9, zc);
         scene.add(pl);
     }
-    for (const [z, i] of [[-95, 75], [-55, 70], [-5, 70], [45, 70], [95, 75]]) {           // concourse fill
+    for (const [z, i] of [[-70, 95], [0, 95], [70, 95]]) {           // concourse fill
         const fill = new THREE.PointLight(0xFFF0DC, i, 52, 2);
         fill.position.set(0, 8.0, z);
         scene.add(fill);
     }
     {   // orange platform cone glow, alternating sides
         let flip = 1;
-        for (let z = -96; z <= 96; z += 26) {
+        for (let z = -84; z <= 96; z += 56) {
             const o = new THREE.PointLight(0xFF9F45, 16, 10, 2);
             o.position.set(flip * 8.55, 6.9, z);
             scene.add(o);
@@ -962,24 +1022,42 @@ export default function build(world) {
     const endLight = new THREE.PointLight(0xFFF0DC, 60, 30, 2);
     endLight.position.set(0, 8.0, 102);
     scene.add(endLight);
-    const liftLow = new THREE.PointLight(0xF6F2E8, 24, 15, 2);
-    liftLow.position.set(0, 3.2, -102.0);
-    scene.add(liftLow);
     const liftHigh = new THREE.PointLight(0xF3EEE2, 20, 16, 2);
     liftHigh.position.set(0, 7.8, -101.3);
     scene.add(liftHigh);
 
     /* ============================================================
-       13 · what moves
+       13 · what moves: the ride loop
+       ------------------------------------------------------------
+       One hero train. If you are aboard when the doors close, the
+       train stays put and the WORLD slides past (the only way a
+       rider can work while the app owns the camera). Mid-tunnel,
+       hidden by fog, the world swaps ends and the same cavern
+       re-docks wearing Town Hall signage.
        ============================================================ */
     let pidClock = 0, pidLast = -1;
-    const CYCLE = 92, APP = 14, DWELL = 22, DEP = 14, FAR = 260, STOPZ = 35.5;
-    function trainRun(u) {                    // position along its own direction
-        if (u < APP) { const k = u / APP; return [-FAR + (1 - Math.pow(1 - k, 3)) * (FAR + STOPZ), true]; }
-        if (u < APP + DWELL) return [STOPZ, true];
-        if (u < APP + DWELL + DEP) { const k = (u - APP - DWELL) / DEP; return [STOPZ + Math.pow(k, 3) * (FAR - STOPZ), true]; }
-        return [FAR, false];
+    const STOPZ = 35.5, FAR = 260;
+    const RIDE_D = 640, JUMP_AT = 320, VMAX = 24, ACC = 1.15;
+    let phase = 'approach', pt = 0, traveled = 0, atTownHall = false, riding = false;
+    heroTrain.position.z = -FAR;
+
+    function playerAboard() {
+        const p = world.camera && world.camera.position;
+        if (!p) return false;
+        return Math.abs(p.x - 13.15) < 1.7 && Math.abs(p.z - STOPZ) < 80 && p.y < 4.2;
     }
+
+    // everything except the train (and its lights, and the sky light) rides in worldG
+    const worldG = new THREE.Group();
+    {
+        for (const c of [...scene.children]) {
+            if (c === heroTrain) continue;
+            if (c.isLight && (c.type === 'HemisphereLight' || c.userData.followTrain !== undefined)) continue;
+            worldG.add(c);
+        }
+        scene.add(worldG);
+    }
+
     world.frame((dt) => {
         pidClock += dt;
         const step = Math.floor(pidClock / 45);
@@ -987,28 +1065,57 @@ export default function build(world) {
             pidLast = step;
             pids.forEach(p => drawPIDNow(p, pidClock));
         }
+        let k = 0;
+        if (phase === 'approach') {
+            pt += dt;
+            const kk = Math.min(1, pt / 14);
+            heroTrain.visible = true;
+            heroTrain.position.z = -FAR + (1 - Math.pow(1 - kk, 3)) * (FAR + STOPZ);
+            if (kk >= 1) { phase = 'dwell'; pt = 0; }
+        } else if (phase === 'dwell') {
+            pt += dt;
+            const DW = 26;
+            const open = Math.min(1, Math.max(0, (pt - 0.8) / 1.5));
+            const close = Math.min(1, Math.max(0, (DW - 1.0 - pt) / 1.7));
+            k = Math.max(0, Math.min(open, close));
+            k = k * k * (3 - 2 * k);
+            if (pt >= DW) {
+                riding = playerAboard();
+                traveled = 0;
+                phase = riding ? 'ride' : 'away';
+                pt = 0;
+            }
+        } else if (phase === 'ride') {
+            const remaining = Math.max(0.01, RIDE_D - traveled);
+            const v = Math.min(VMAX, Math.sqrt(2 * ACC * Math.min(traveled + 1.5, remaining)));
+            const before = traveled;
+            traveled += v * dt;
+            if (before < JUMP_AT && traveled >= JUMP_AT) {
+                atTownHall = !atTownHall;          // arrive somewhere new each ride
+                nameMat.map = atTownHall ? nameTexTH : nameTexSL;
+                nameMat.needsUpdate = true;
+            }
+            worldG.position.z = traveled < JUMP_AT ? -traveled : (RIDE_D - traveled);
+            if (traveled >= RIDE_D) { worldG.position.z = 0; phase = 'dwell'; pt = 0; }
+        } else if (phase === 'away') {
+            pt += dt;
+            if (pt < 14) {
+                const kk = pt / 14;
+                heroTrain.position.z = STOPZ + Math.pow(kk, 3) * (FAR - STOPZ);
+            } else {
+                heroTrain.visible = false;
+                if (pt > 26) { phase = 'approach'; pt = 0; heroTrain.position.z = -FAR; }
+            }
+        }
+        if (heroTrain.userData.setDoors) heroTrain.userData.setDoors(k, -1);
+        const mv = psdMovers['1'];
+        if (mv) {
+            const o = k * 0.94;
+            mv.L.position.z = -o; mv.aL.position.z = -o;
+            mv.R.position.z = o; mv.aR.position.z = o;
+        }
         for (const tr of trains) {
-            const u = (pidClock + tr.phase) % CYCLE;
-            const [z, vis] = trainRun(u);
-            tr.g.position.z = tr.dir * z;
-            tr.g.visible = vis;
-            // door opening fraction: open shortly after stopping, close before departing
-            const od = u - APP;
-            let k = 0;
-            if (od > 0 && od < DWELL) {
-                const open = Math.min(1, Math.max(0, (od - 0.7) / 1.5));
-                const close = Math.min(1, Math.max(0, (DWELL - 0.9 - od) / 1.7));
-                k = Math.min(open, close);
-                k = k * k * (3 - 2 * k);
-            }
-            if (tr.g.userData.setDoors) tr.g.userData.setDoors(k, -1);
-            const side = tr.dir > 0 ? '1' : '-1';
-            for (const d of psdLeaves[side]) {
-                if (!d.active) continue;
-                const zz = d.z0 + d.dir * k * 0.94;
-                d.leaf.position.z = zz;
-                d.arrow.position.z = zz;
-            }
+            if (tr.light) tr.light.position.z = heroTrain.position.z + tr.light.userData.followTrain;
         }
     });
 }
