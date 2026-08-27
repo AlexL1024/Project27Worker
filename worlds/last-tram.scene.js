@@ -1452,7 +1452,11 @@ export default function build(world) {
                 i * 0.5, i * 0.9, i * 0.3, 1.25, 0.72, 1.25);
             parts.push(c);
         }
-        const treeGeo = mergeGeometries(parts);
+        // Made alike before merging. `IcosahedronGeometry` comes out non-indexed
+        // and the cylinders come out indexed; `mergeGeometries` refuses a mixed
+        // list and answers null — which is an InstancedMesh with no geometry, and
+        // a viewport that dies the first time anything touches it.
+        const treeGeo = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
         const treeMat = new THREE.MeshStandardMaterial({ color: srgb(0x111d15), roughness: 1.0, flatShading: true });
         const im = new THREE.InstancedMesh(treeGeo, treeMat, 44);
         const col = new THREE.Color();

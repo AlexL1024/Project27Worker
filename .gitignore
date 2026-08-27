@@ -3,3 +3,4 @@ logs/
 .feed/
 _to_delete/
 __pycache__/
+.three/

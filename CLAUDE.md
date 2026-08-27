@@ -13,7 +13,11 @@ one self-contained ES module file.
 
 1. Write or edit a world in `worlds/<slug>.scene.js`.
 2. Update `worlds/index.json` — the app only shows what the manifest lists.
-3. `bash tools/check.sh` — syntax-checks every module and the manifest.
+3. `bash tools/check.sh` — checks syntax, the manifest and the performance
+   budget, then **builds every world for real** in node (`tools/smoke.mjs`)
+   with the browser stubbed. A world that throws, or that leaves a mesh with no
+   geometry, fails here. Never commit past a failure — the app cannot survive
+   what this catches.
 4. `git add -A && git commit -m "<what changed>"` — the hook pushes to GitHub.
 5. If the push fails (no network, auth), say so plainly — the iPad can only
    see what actually reached GitHub.
@@ -85,6 +89,12 @@ Hard rules, because breaking them breaks the app around the world:
   serves that file itself.
 - No `fetch()`, no external URLs, no DOM beyond what `canvasTexture` hands you.
   A world is code that stands alone.
+- **Merge only geometries that are alike.** `mergeGeometries` answers `null`
+  when a list mixes indexed and non-indexed geometry — and three's primitives
+  disagree: box, cylinder, sphere and lathe are indexed; the polyhedra
+  (icosahedron and friends) and extrude are not. A null geometry is a mesh that
+  kills the whole viewport, so normalise first:
+  `mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)))`.
 - Custom `ShaderMaterial`s are encouraged (that's where real water and skies
   live) — see `worlds/coral-cay.scene.js` for shaders done right.
 - Scale is metres, y-up. People walk in these worlds: groundLevel matters,

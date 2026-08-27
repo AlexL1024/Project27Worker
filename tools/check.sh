@@ -80,4 +80,10 @@ PERF
 [ $? -ne 0 ] && failed=1
 fi
 
+# Parsing is not passing. This builds every world for real against three.js with
+# the browser stubbed, which is the only way to catch the quiet killers — a merge
+# that answered null, a frame callback that throws — before the iPad does.
+echo
+node tools/smoke.mjs || failed=1
+
 exit $failed
