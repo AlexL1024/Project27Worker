@@ -1,6 +1,11 @@
 {
   "worlds": [
     {
+      "slug": "chip-thief",
+      "name": "Chip Thief",
+      "scene": "chip-thief.scene.js"
+    },
+    {
       "slug": "coral-cay",
       "name": "Coral Cay",
       "scene": "coral-cay.scene.js"
