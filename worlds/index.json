@@ -31,6 +31,11 @@
       "scene": "standing-vault.scene.js"
     },
     {
+      "slug": "wind-hover",
+      "name": "Wind Hover",
+      "scene": "wind-hover.scene.js"
+    },
+    {
       "slug": "state-library-station",
       "name": "State Library Station",
       "scene": "station.scene.js",
