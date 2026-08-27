@@ -1,5 +1,6 @@
 {
   "id": "20260827-054649-e509",
-  "state": "building",
-  "at": "2026-08-27T06:48:41Z"
+  "state": "failed",
+  "at": "2026-08-27T09:16:01Z",
+  "reason": "API Error: Your computer went to sleep mid-response. The response above may be incomplete."
 }
