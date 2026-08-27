@@ -109,6 +109,33 @@ world. New worlds should land much closer to the ceiling than the floor —
 write real shaders, real variety, real atmosphere. A world that merely loads
 is not the product; a world someone wants to stand in is.
 
+## The performance budget
+
+The screen this runs on is an iPad, and the renderer is plain forward WebGL:
+every real-time light is evaluated by every lit fragment, every frame. Twelve
+point lights in an enclosed scene is twelve full-screen light passes - that is
+why the budget below is hard, and `bash tools/check.sh` fails a world that
+breaks it.
+
+- **At most 4 real-time lights** in the whole scene (Directional, Point, Spot,
+  RectArea combined; Ambient and Hemisphere are free). One hemisphere + one
+  key light + at most two accents is the usual shape.
+- **Glow is emissive, not a light.** A lamp, a lit sign, a lightbox ceiling, a
+  headlight is an emissive material (`emissiveIntensity` above 1) and
+  `world.bloom(...)` carries the shine. Reserve actual PointLights for the one
+  or two places where light visibly falls on other surfaces and moves the
+  scene.
+- **Repeats are instanced.** Eight or more alike - columns, seats, lamps,
+  trees, sleepers - is one `InstancedMesh`, never a loop of `new THREE.Mesh`.
+  Aim under ~120 individual meshes; merge static architecture that shares a
+  material (`BufferGeometryUtils.mergeGeometries`) where practical.
+- **The frame callback allocates nothing.** No `new THREE.Vector3()` per
+  frame - make scratch objects once outside. No `material.needsUpdate`, no
+  texture re-upload per frame; canvas textures redraw at most a few times a
+  minute.
+
+A world over budget is not done, however good it looks in a still.
+
 ## Naming
 
 Slug is kebab-case (`coral-cay`), file is `<slug>.scene.js`, display name is

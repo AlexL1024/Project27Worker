@@ -47,4 +47,37 @@ sys.exit(1 if bad else 0)
 PY
 [ $? -ne 0 ] && failed=1
 
+# The performance budget (CLAUDE.md). Only worlds touched in this session are
+# held to it - older worlds are grandfathered until the next time one is edited,
+# at which point it goes on the same diet as everything new.
+changed=$(git status --porcelain -- worlds 2>/dev/null | awk '{print $NF}' | grep '\.scene\.js$')
+if [ -n "$changed" ]; then
+python3 - $changed <<'PERF'
+import re, sys
+bad = False
+for path in sys.argv[1:]:
+    try:
+        text = open(path).read()
+    except OSError:
+        continue
+    lights = len(re.findall(r'new\s+THREE\.(?:Point|Spot|Directional|RectArea)Light\b', text))
+    meshes = len(re.findall(r'new\s+THREE\.Mesh\(', text))
+    if lights > 4:
+        print(f"BROKEN  {path}: {lights} real-time lights (budget: 4 - Ambient/Hemisphere are free).")
+        print( "        Make lamps emissive meshes and let world.bloom carry the glow;")
+        print( "        keep real lights for the one or two that visibly fall on surfaces.")
+        bad = True
+    if meshes > 150:
+        print(f"BROKEN  {path}: {meshes} individual meshes (budget: ~120).")
+        print( "        Use InstancedMesh for repeats and merge static geometry.")
+        bad = True
+    elif meshes > 100:
+        print(f"note    {path}: {meshes} meshes - instance or merge before it grows.")
+if not bad:
+    print("ok      performance budget")
+sys.exit(1 if bad else 0)
+PERF
+[ $? -ne 0 ] && failed=1
+fi
+
 exit $failed
