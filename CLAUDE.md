@@ -270,8 +270,22 @@ around by hand on the iPad. Those files are the person's own placements, laid
 over the scene each time it loads — the scene's code stays pristine underneath
 them.
 
+An overlay may also carry a `hidden` list — the names of parts the person
+deleted in edit mode:
+
+```json
+{ "parts": { "hut_00": { "position": [2, 0, -1] } }, "hidden": ["hut_01"] }
+```
+
+Deleted, not undone: the world's code is the builder's and the app never
+rewrites it, so a part somebody threw away is recorded by name here and hidden
+when the world loads. That is what makes a deletion survive reopening the world
+on another device.
+
 - **Never** delete, regenerate, or edit these files, and never fold their
-  values back into the scene code. They are not yours to write.
+  values back into the scene code. They are not yours to write. In particular,
+  never "fix" a world by deleting the part somebody hid — they hid it on
+  purpose.
 - Keep part names stable when editing a world — placements are keyed by name
   (`hut_00`), and renaming a part silently discards where its owner put it.
 - When building or editing a world, don't create an `.edits.json` yourself.
@@ -305,3 +319,36 @@ terminal, so:
 
   That line is how the watcher tells the app which world to pull. No slug
   line, no world on the iPad.
+
+### Two kinds of request
+
+A request carries a `kind`. Saying nothing means `"world"` — that is all a
+request could ask for until there was a library to add to, and requests written
+under the old shape still arrive.
+
+```json
+{ "prompt": "a lighthouse on a black sand beach" }          ← a world
+{ "kind": "prop", "prompt": "a red beanbag" }               ← one object
+```
+
+A **prop request** comes from somebody standing in a world they already have,
+in edit mode, who typed the name of a thing they want to put in it. So it is a
+small job and must stay one:
+
+- Write **one** `props/<id>.prop.js` and add **one** entry to
+  `props/index.json`, to the letter of **The object library** above. Give it a
+  Title Case `name` and two to six lowercase `tags`; the tags are the whole of
+  the shelf's search, and an object nobody can type their way to is an object
+  nobody will ever place. Leave `world` off — this one came out of no world.
+- **Change nothing in `worlds/`.** No new world, no edit to an existing one, no
+  touch to `worlds/index.json`. The person is looking at a world right now, and
+  a world arriving would replace what they are looking at.
+- Run `bash tools/check.sh`, commit, and end your final message with exactly
+  one line:
+
+      PROP: <id>
+
+  Read the same way `WORLD:` is, and needed for the same reason: it is how the
+  watcher tells the app which object to fetch and drop into the scene. The app
+  places it the moment it lands, so a prop that took the id you meant is a prop
+  standing in front of somebody a few seconds later.

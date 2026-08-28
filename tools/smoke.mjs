@@ -286,6 +286,26 @@ function propManifest(onDisk) {
             bad = true;
         }
         ids.add(prop.id);
+
+        // The shelf is a search box over a grid of names, and nothing else: an
+        // entry with no name is a blank card, and one with no tags can only be
+        // found by somebody who already knows what it is called. Both are how an
+        // object built for someone quietly becomes an object they can never find
+        // again — which matters more now that props are written headlessly, from
+        // a line somebody typed on an iPad, with nobody reading the manifest
+        // afterwards.
+        if (typeof prop.name !== 'string' || !prop.name.trim()) {
+            console.log(`BROKEN  props/index.json: "${prop.id}" has no name — the name is what a card reads`);
+            bad = true;
+        }
+        const tags = Array.isArray(prop.tags)
+            ? prop.tags.filter((tag) => typeof tag === 'string' && tag.trim())
+            : [];
+        if (tags.length < 2) {
+            console.log(`BROKEN  props/index.json: "${prop.id}" has ${tags.length} usable tag(s) — CLAUDE.md asks for two to six, and the tags are the search`);
+            bad = true;
+        }
+
         if (name !== `${prop.id}.prop.js`) {
             console.log(`BROKEN  props/index.json: "${prop.id}" points at ${name || '(nothing)'}, not ${prop.id}.prop.js`);
             bad = true;

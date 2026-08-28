@@ -112,6 +112,21 @@ def manifest():
         return {}
 
 
+def catalogue():
+    """The object library's manifest, keyed by id.
+
+    The same job `manifest()` does for worlds, for the other thing a request can
+    ask to have built. Read before and after a build so that a session which
+    forgot to say what it made can still be asked, in the only way that cannot
+    be forgotten: what is in the catalogue now that was not there before.
+    """
+    try:
+        with open(os.path.join(REPO, "props", "index.json")) as f:
+            return {p["id"]: p for p in json.load(f).get("props", [])}
+    except Exception:
+        return {}
+
+
 def write_status(request_id, state, extra=None, also_remove_request=False):
     """One status hop, committed and pushed — this is how the iPad hears back."""
     os.makedirs(STATUS, exist_ok=True)
@@ -133,8 +148,35 @@ def write_status(request_id, state, extra=None, also_remove_request=False):
         log(f"PUSH FAILED — the iPad can't hear back until this resolves: {output[-200:]}")
 
 
+def photos_beside(request_id):
+    """Reference photos committed next to the request, in name order.
+
+    Shared by both kinds of build, because a photograph pins down what one
+    beanbag should look like exactly as well as it pins down a whole shoreline.
+    """
+    folder = os.path.join(REQUESTS, request_id)
+    if not os.path.isdir(folder):
+        return []
+    return sorted(
+        os.path.join("requests", request_id, name) for name in os.listdir(folder)
+    )
+
+
 def compose(ask):
-    """The instruction handed to Claude Code for one request."""
+    """The instruction handed to Claude Code for one request.
+
+    A request says what kind of thing it wants. Saying nothing means a world:
+    that is all a request could ask for until there was an object library to add
+    to, and requests written under the old shape are sitting in this repo right
+    now. They must build exactly what they have always built.
+    """
+    if ask.get("kind") == "prop":
+        return compose_prop(ask)
+    return compose_world(ask)
+
+
+def compose_world(ask):
+    """A whole room, built or edited. The long job — forty minutes is normal."""
     parent = ask.get("parent")
     request_id = ask["id"]
     lines = []
@@ -150,11 +192,7 @@ def compose(ask):
         )
     lines.append(f"\nThe request:\n{ask.get('prompt', '').strip()}\n")
 
-    photos = sorted(
-        os.path.join("requests", request_id, name)
-        for name in (os.listdir(os.path.join(REQUESTS, request_id))
-                     if os.path.isdir(os.path.join(REQUESTS, request_id)) else [])
-    )
+    photos = photos_beside(request_id)
     if photos:
         lines.append(
             f"Reference photos are at: {', '.join(photos)} — look at them first; "
@@ -171,6 +209,59 @@ def compose(ask):
     return "\n".join(lines)
 
 
+def compose_prop(ask):
+    """One object for the library, and nothing else.
+
+    The person is standing in a world they already have, in edit mode, and what
+    they typed is the name of a thing they want to put in it. So this build is
+    small on purpose: one module, one catalogue entry, minutes rather than the
+    better part of an hour — and emphatically not a world, because a world
+    arriving instead would replace what they are looking at.
+    """
+    request_id = ask["id"]
+    lines = [
+        "Add ONE new object to the library for this request. This is a prop, not "
+        "a world: write `props/<id>.prop.js` and add it to `props/index.json`. "
+        "Nothing in worlds/ changes, and worlds/index.json is not touched.",
+        f"\nThe object:\n{ask.get('prompt', '').strip()}\n",
+    ]
+
+    photos = photos_beside(request_id)
+    if photos:
+        lines.append(
+            f"Reference photos are at: {', '.join(photos)} — look at them first; "
+            f"they show what the person wants the object to look like."
+        )
+
+    lines.append(
+        "Follow the \"The object library (props/)\" section of CLAUDE.md exactly:\n"
+        "- one module with exactly one default export, `build(THREE, helpers)`, "
+        "returning ONE THREE.Object3D;\n"
+        "- origin at the object's foot, centred in x and z, +Z the front, metres "
+        "and y-up, real proportions;\n"
+        "- no lights of any kind — glow is emissive, and the world's bloom carries "
+        "it;\n"
+        "- no `world.*` calls, no fetch, no DOM beyond `helpers.canvasTexture`, and "
+        "`./BufferGeometryUtils.js` is the only import a prop may have;\n"
+        "- under about 40 meshes, repeats merged or instanced, castShadow and "
+        "receiveShadow where they earn it.\n"
+        "Give the catalogue entry a Title Case `name` and two to six lowercase "
+        "`tags` — the room, the kind of thing, the material — because those tags "
+        "are the whole of the shelf's search: an object nobody can type their way "
+        "to is an object nobody will ever place. Leave `world` off; this one came "
+        "out of no world. Ids are permanent: add an entry, never rename or "
+        "renumber anybody else's.\n"
+        "Hold it to the same bar as a world — real materials, real proportions, a "
+        "little asymmetry, a canvas texture where a surface needs a story. A grey "
+        "box with the right dimensions is not a prop anybody will place twice.\n"
+        "Then run `bash tools/check.sh` and commit. Never modify or delete "
+        "anything under requests/ or status/ — they belong to the mailbox. Work "
+        "autonomously — no questions, no pauses.\n"
+        "End your final message with exactly one line:  PROP: <id>"
+    )
+    return "\n".join(lines)
+
+
 def serve(request_id):
     """One request, start to finish. Every exit path answers through status/."""
     try:
@@ -182,12 +273,42 @@ def serve(request_id):
                      {"reason": f"Unreadable request: {error}"}, also_remove_request=True)
         return
 
+    # What this request wants built. Absent means a world — every request
+    # written before there was a library to add to says nothing about kind, and
+    # some of those are sitting in the repo right now.
+    kind = ask.get("kind") or "world"
+    if kind not in ("world", "prop"):
+        # An app newer than this Mac asked for something this watcher has never
+        # heard of. Saying so is the only honest answer; quietly building a
+        # world instead would deliver the wrong thing and look like success.
+        write_status(request_id, "failed",
+                     {"reason": f"This Mac's watcher doesn't know how to build a "
+                                f"\"{kind}\" — update Project27Worker on the Mac."},
+                     also_remove_request=True)
+        return
+
+    def answer(state, extra=None):
+        """One status hop for this request.
+
+        Carries the kind on a prop's hops and on none of a world's, so the
+        status files a world writes stay exactly the shape the app has been
+        reading since there was only one thing to build. Terminal states take
+        the request away with them; `building` is the only one that doesn't.
+        """
+        note = {"kind": kind} if kind == "prop" else {}
+        note.update(extra or {})
+        write_status(request_id, state, note,
+                     also_remove_request=(state != "building"))
+
     feed = Feed(request_id)
-    log(f"building {request_id}: {ask.get('prompt', '')[:80]}")
-    write_status(request_id, "building")
+    log(f"building {request_id} ({kind}): {ask.get('prompt', '')[:80]}")
+    answer("building")
     feed.push(force=True)      # a fresh, empty feed, so old lines never bleed in
 
-    before = manifest()
+    # The catalogue this build is expected to add to. Read before as well as
+    # after, because the diff is the witness of last resort when the session
+    # finished without ever saying what it made.
+    before = catalogue() if kind == "prop" else manifest()
     process = subprocess.Popen(
         [CLAUDE, "-p", compose(ask), "--model", MODEL,
          "--output-format", "stream-json", "--verbose"],
@@ -254,10 +375,9 @@ def serve(request_id):
     if stalled:
         transcript.write("\n--- killed: no output for 25 minutes ---\n")
         transcript.close()
-        write_status(request_id, "failed",
-                     {"reason": "The build went silent for 25 minutes and was stopped "
-                                "(did the Mac sleep?). Send the prompt again."},
-                     also_remove_request=True)
+        answer("failed",
+               {"reason": "The build went silent for 25 minutes and was stopped "
+                          "(did the Mac sleep?). Send the prompt again."})
         return
     if error_lines:
         transcript.write("\n--- stderr ---\n" + "".join(error_lines))
@@ -270,30 +390,38 @@ def serve(request_id):
             or result_text.strip()[-300:] \
             or f"Claude Code exited with code {process.returncode} — see logs/{request_id}.log on the Mac."
         log(f"failed {request_id}: {reason[:160]}")
-        write_status(request_id, "failed", {"reason": reason}, also_remove_request=True)
+        answer("failed", {"reason": reason})
         return
 
-    after = manifest()
-    slug = None
-    match = re.search(r"WORLD:\s*([a-z0-9][a-z0-9-]*)", result_text)
+    # What it made, by the line it was asked to end on — and, when that line
+    # never came, by whatever is in the catalogue now that was not there before.
+    # Both kinds are read the same way, because the second reading is the one
+    # that saves a build, and a prop deserves saving as much as a world does.
+    after = catalogue() if kind == "prop" else manifest()
+    label = "PROP" if kind == "prop" else "WORLD"
+    made = None
+    match = re.search(rf"{label}:\s*([a-z0-9][a-z0-9-]*)", result_text)
     if match and match.group(1) in after:
-        slug = match.group(1)
-    if slug is None:
+        made = match.group(1)
+    if made is None:
         changed = [s for s in after if after[s] != before.get(s)]
         if len(changed) == 1:
-            slug = changed[0]
-    if slug is None:
-        write_status(request_id, "failed",
-                     {"reason": "The build finished but never said which world it made."},
-                     also_remove_request=True)
+            made = changed[0]
+    if made is None:
+        answer("failed", {"reason": f"The build finished but never said which "
+                                    f"{kind} it made."})
         return
 
-    world = after[slug]
+    entry = after[made]
     feed.push(force=True)
-    log(f"done {request_id}: {world.get('name', slug)}")
-    write_status(request_id, "done",
-                 {"slug": slug, "name": world.get("name"), "scene": world.get("scene")},
-                 also_remove_request=True)
+    log(f"done {request_id}: {entry.get('name', made)}")
+    if kind == "prop":
+        # `prop` rather than `slug`: the app has to know at a glance that what
+        # landed is one object for the shelf and not a world to open.
+        answer("done", {"prop": made, "name": entry.get("name")})
+    else:
+        answer("done", {"slug": made, "name": entry.get("name"),
+                        "scene": entry.get("scene")})
 
 
 def pending():
