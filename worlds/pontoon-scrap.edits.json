@@ -13,6 +13,14 @@
     }
   ],
   "parts" : {
+    "gull_05" : {
+      "position" : [
+        2.4462,
+        2.665,
+        2.1581
+      ],
+      "rotationY" : 0
+    },
     "parcel_00" : {
       "position" : [
         -1.6012,
