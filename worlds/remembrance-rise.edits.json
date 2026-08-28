@@ -10,6 +10,28 @@
       "prop" : "waste-bin",
       "rotationY" : 0,
       "scale" : 1
+    },
+    {
+      "id" : "projector_00",
+      "position" : [
+        24.5578,
+        0,
+        123.156
+      ],
+      "prop" : "projector",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "projector_01",
+      "position" : [
+        24.5578,
+        0,
+        123.156
+      ],
+      "prop" : "projector",
+      "rotationY" : 0,
+      "scale" : 1
     }
   ],
   "parts" : {
@@ -18,6 +40,14 @@
         61.4072,
         0,
         116.3552
+      ],
+      "rotationY" : 0
+    },
+    "flagpole_02" : {
+      "position" : [
+        40.2614,
+        0,
+        130.254
       ],
       "rotationY" : 0
     },
