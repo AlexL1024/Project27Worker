@@ -43,6 +43,28 @@
       "prop" : "school-desk",
       "rotationY" : 0,
       "scale" : 1
+    },
+    {
+      "id" : "poppy-wreath_00",
+      "position" : [
+        20.9237,
+        0,
+        152.5197
+      ],
+      "prop" : "poppy-wreath",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "poppy-wreath_01",
+      "position" : [
+        20.9237,
+        0,
+        152.5197
+      ],
+      "prop" : "poppy-wreath",
+      "rotationY" : 0,
+      "scale" : 1
     }
   ],
   "parts" : {
