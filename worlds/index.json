@@ -51,6 +51,11 @@
       "scene": "last-tram.scene.js"
     },
     {
+      "slug": "remembrance-rise",
+      "name": "Remembrance Rise",
+      "scene": "remembrance-rise.scene.js"
+    },
+    {
       "slug": "state-library-station",
       "name": "State Library Station",
       "scene": "station.scene.js",

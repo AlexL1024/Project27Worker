@@ -59,6 +59,41 @@
       "name": "Whiteboard",
       "tags": ["classroom", "board", "teaching", "school", "mobile"],
       "file": "whiteboard.prop.js"
+    },
+    {
+      "id": "park-bench",
+      "name": "Park Bench",
+      "tags": ["park", "seat", "bench", "timber", "iron", "outdoor"],
+      "file": "park-bench.prop.js",
+      "world": "remembrance-rise"
+    },
+    {
+      "id": "flagpole",
+      "name": "Flagpole",
+      "tags": ["memorial", "mast", "pole", "civic", "outdoor"],
+      "file": "flagpole.prop.js",
+      "world": "remembrance-rise"
+    },
+    {
+      "id": "stone-urn",
+      "name": "Stone Urn",
+      "tags": ["memorial", "urn", "bronze", "stone", "plinth", "outdoor"],
+      "file": "stone-urn.prop.js",
+      "world": "remembrance-rise"
+    },
+    {
+      "id": "park-lamp",
+      "name": "Park Lamp",
+      "tags": ["park", "lamp", "light", "iron", "street", "outdoor"],
+      "file": "park-lamp.prop.js",
+      "world": "remembrance-rise"
+    },
+    {
+      "id": "poppy-wreath",
+      "name": "Poppy Wreath",
+      "tags": ["memorial", "wreath", "poppy", "flowers", "remembrance"],
+      "file": "poppy-wreath.prop.js",
+      "world": "remembrance-rise"
     }
   ]
 }
