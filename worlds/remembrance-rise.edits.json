@@ -65,6 +65,17 @@
       "prop" : "poppy-wreath",
       "rotationY" : 0,
       "scale" : 1
+    },
+    {
+      "id" : "park-lamp_00",
+      "position" : [
+        75.9001,
+        -77.842,
+        52.0425
+      ],
+      "prop" : "park-lamp",
+      "rotationY" : 0,
+      "scale" : 1
     }
   ],
   "parts" : {
@@ -91,6 +102,14 @@
         118.0458
       ],
       "rotationY" : -0.018
+    },
+    "wreath_01" : {
+      "position" : [
+        4.1349,
+        0.07,
+        68.9802
+      ],
+      "rotationY" : -0.5
     }
   }
 }
