@@ -1,4 +1,17 @@
 {
+  "added" : [
+    {
+      "id" : "student_00",
+      "position" : [
+        0.7802,
+        0.3578,
+        1.0292
+      ],
+      "prop" : "student",
+      "rotationY" : 0,
+      "scale" : 1
+    }
+  ],
   "parts" : {
     "tinnie_00" : {
       "position" : [
