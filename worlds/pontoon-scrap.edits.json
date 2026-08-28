@@ -13,6 +13,14 @@
     }
   ],
   "parts" : {
+    "parcel_00" : {
+      "position" : [
+        -0.6688,
+        0.44,
+        -0.4174
+      ],
+      "rotationY" : -0.42
+    },
     "tinnie_00" : {
       "position" : [
         2.6356,
