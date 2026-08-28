@@ -76,6 +76,17 @@
       "prop" : "park-lamp",
       "rotationY" : 0,
       "scale" : 1
+    },
+    {
+      "id" : "stone-urn_00",
+      "position" : [
+        -15.5037,
+        0,
+        151.0948
+      ],
+      "prop" : "stone-urn",
+      "rotationY" : 0,
+      "scale" : 1
     }
   ],
   "parts" : {
