@@ -1,0 +1,18 @@
+{
+  "added" : [
+    {
+      "id" : "waste-bin_00",
+      "position" : [
+        25.5538,
+        0,
+        131.6152
+      ],
+      "prop" : "waste-bin",
+      "rotationY" : 0,
+      "scale" : 1
+    }
+  ],
+  "parts" : {
+
+  }
+}
