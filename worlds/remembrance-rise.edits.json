@@ -32,6 +32,17 @@
       "prop" : "projector",
       "rotationY" : 0,
       "scale" : 1
+    },
+    {
+      "id" : "school-desk_00",
+      "position" : [
+        25.4616,
+        0,
+        122.4146
+      ],
+      "prop" : "school-desk",
+      "rotationY" : 0,
+      "scale" : 1
     }
   ],
   "parts" : {
