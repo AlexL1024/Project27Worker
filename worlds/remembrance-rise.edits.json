@@ -114,6 +114,14 @@
       ],
       "rotationY" : -0.018
     },
+    "shrine_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 5.652
+    },
     "wreath_01" : {
       "position" : [
         4.1349,
