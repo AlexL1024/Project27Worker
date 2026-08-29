@@ -72,6 +72,21 @@ export default function build(world) {
     // works in linear space and a hex typed straight into a material is a
     // colour nobody chose.
     const srgb = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+    /* And a second reading of the same paint chip, honest about what three
+       already did with it. `new THREE.Color(hex)` has converted sRGB into the
+       renderer's linear working space by itself since r152 — colour management
+       is on by default — so `srgb` above converts a second time, and a second
+       conversion is not a small error: it costs 0x9aa2a8 a factor of 3.8 and
+       0x3a3c40 a factor of 12.9. Every dark colour in this world is crushed
+       and every pale one is barely touched, which is why the world has facades
+       but no midtones. Every albedo here has been lit and tuned against that,
+       and re-reading all of them at once would be a re-grade rather than a
+       fix, so they stay as they are. The sky and the fog cannot stay: nothing
+       lights them, their colour goes to the screen exactly as it is written,
+       and read twice the overcast at twenty to five came out at fourteen
+       greylevels overhead. That is not a wet afternoon, it is midnight, and it
+       is most of why this world has been reading as one. */
+    const daylight = (hex) => new THREE.Color(hex);
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const lerp = (a, b, t) => a + (b - a) * t;
     const smoothstep = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
@@ -186,7 +201,7 @@ export default function build(world) {
        road, the rain, the standard materials' own fog — reads these four
        numbers, so the horizon in the shader and the horizon in three's fog are
        the same horizon rather than two that nearly agree. */
-    const FOG_COL = srgb(0x9aa2a8);
+    const FOG_COL = daylight(0x9aa2a8);
     const FOG_NEAR = 34, FOG_FAR = 470;
     scene.fog = new THREE.Fog(FOG_COL.clone(), FOG_NEAR, FOG_FAR);
 
@@ -394,10 +409,10 @@ export default function build(world) {
     const skyMat = new THREE.ShaderMaterial({
         side: THREE.BackSide, depthWrite: false, fog: false,
         uniforms: Object.assign(pick('uTime', 'uSun'), {
-            uZen: { value: srgb(0x5c666e) },
-            uMid: { value: srgb(0x8f979c) },
-            uHor: { value: srgb(0xb6bbbc) },
-            uWarm: { value: srgb(0xd8c8ab) },
+            uZen: { value: daylight(0x5c666e) },
+            uMid: { value: daylight(0x8f979c) },
+            uHor: { value: daylight(0xb6bbbc) },
+            uWarm: { value: daylight(0xd8c8ab) },
         }),
         vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
         fragmentShader: NOISE_GLSL + /* glsl */`
