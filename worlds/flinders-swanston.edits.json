@@ -18,6 +18,14 @@
         -6.1239
       ],
       "rotationY" : 2.544
+    },
+    "tower_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 0
     }
   }
 }
