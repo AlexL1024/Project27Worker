@@ -62,6 +62,11 @@
       "files": [
         "hcmt.scene.js"
       ]
+    },
+    {
+      "slug": "flinders-swanston",
+      "name": "Flinders & Swanston",
+      "scene": "flinders-swanston.scene.js"
     }
   ]
 }

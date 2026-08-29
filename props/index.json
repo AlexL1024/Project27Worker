@@ -3,97 +3,232 @@
     {
       "id": "bookshelf",
       "name": "Bookshelf",
-      "tags": ["furniture", "shelf", "books", "classroom", "library"],
+      "tags": [
+        "furniture",
+        "shelf",
+        "books",
+        "classroom",
+        "library"
+      ],
       "file": "bookshelf.prop.js"
     },
     {
       "id": "pin-board",
       "name": "Pin Board",
-      "tags": ["wall", "noticeboard", "cork", "classroom", "office"],
+      "tags": [
+        "wall",
+        "noticeboard",
+        "cork",
+        "classroom",
+        "office"
+      ],
       "file": "pin-board.prop.js"
     },
     {
       "id": "projector",
       "name": "Projector",
-      "tags": ["equipment", "electronics", "projector", "classroom", "office"],
+      "tags": [
+        "equipment",
+        "electronics",
+        "projector",
+        "classroom",
+        "office"
+      ],
       "file": "projector.prop.js"
     },
     {
       "id": "school-chair",
       "name": "School Chair",
-      "tags": ["classroom", "furniture", "chair", "seat", "school"],
+      "tags": [
+        "classroom",
+        "furniture",
+        "chair",
+        "seat",
+        "school"
+      ],
       "file": "school-chair.prop.js"
     },
     {
       "id": "school-desk",
       "name": "School Desk",
-      "tags": ["classroom", "furniture", "desk", "school", "steel"],
+      "tags": [
+        "classroom",
+        "furniture",
+        "desk",
+        "school",
+        "steel"
+      ],
       "file": "school-desk.prop.js"
     },
     {
       "id": "student",
       "name": "Student",
-      "tags": ["person", "figure", "student", "classroom", "school"],
+      "tags": [
+        "person",
+        "figure",
+        "student",
+        "classroom",
+        "school"
+      ],
       "file": "student.prop.js"
     },
     {
       "id": "teacher",
       "name": "Teacher",
-      "tags": ["person", "figure", "teacher", "classroom", "school"],
+      "tags": [
+        "person",
+        "figure",
+        "teacher",
+        "classroom",
+        "school"
+      ],
       "file": "teacher.prop.js"
     },
     {
       "id": "wall-clock",
       "name": "Wall Clock",
-      "tags": ["clock", "wall", "time", "classroom", "office"],
+      "tags": [
+        "clock",
+        "wall",
+        "time",
+        "classroom",
+        "office"
+      ],
       "file": "wall-clock.prop.js"
     },
     {
       "id": "waste-bin",
       "name": "Waste Bin",
-      "tags": ["bin", "metal", "clutter", "classroom", "office"],
+      "tags": [
+        "bin",
+        "metal",
+        "clutter",
+        "classroom",
+        "office"
+      ],
       "file": "waste-bin.prop.js"
     },
     {
       "id": "whiteboard",
       "name": "Whiteboard",
-      "tags": ["classroom", "board", "teaching", "school", "mobile"],
+      "tags": [
+        "classroom",
+        "board",
+        "teaching",
+        "school",
+        "mobile"
+      ],
       "file": "whiteboard.prop.js"
     },
     {
       "id": "park-bench",
       "name": "Park Bench",
-      "tags": ["park", "seat", "bench", "timber", "iron", "outdoor"],
+      "tags": [
+        "park",
+        "seat",
+        "bench",
+        "timber",
+        "iron",
+        "outdoor"
+      ],
       "file": "park-bench.prop.js",
       "world": "remembrance-rise"
     },
     {
       "id": "flagpole",
       "name": "Flagpole",
-      "tags": ["memorial", "mast", "pole", "civic", "outdoor"],
+      "tags": [
+        "memorial",
+        "mast",
+        "pole",
+        "civic",
+        "outdoor"
+      ],
       "file": "flagpole.prop.js",
       "world": "remembrance-rise"
     },
     {
       "id": "stone-urn",
       "name": "Stone Urn",
-      "tags": ["memorial", "urn", "bronze", "stone", "plinth", "outdoor"],
+      "tags": [
+        "memorial",
+        "urn",
+        "bronze",
+        "stone",
+        "plinth",
+        "outdoor"
+      ],
       "file": "stone-urn.prop.js",
       "world": "remembrance-rise"
     },
     {
       "id": "park-lamp",
       "name": "Park Lamp",
-      "tags": ["park", "lamp", "light", "iron", "street", "outdoor"],
+      "tags": [
+        "park",
+        "lamp",
+        "light",
+        "iron",
+        "street",
+        "outdoor"
+      ],
       "file": "park-lamp.prop.js",
       "world": "remembrance-rise"
     },
     {
       "id": "poppy-wreath",
       "name": "Poppy Wreath",
-      "tags": ["memorial", "wreath", "poppy", "flowers", "remembrance"],
+      "tags": [
+        "memorial",
+        "wreath",
+        "poppy",
+        "flowers",
+        "remembrance"
+      ],
       "file": "poppy-wreath.prop.js",
       "world": "remembrance-rise"
+    },
+    {
+      "id": "tram-shelter",
+      "name": "Tram Shelter",
+      "tags": [
+        "tram",
+        "shelter",
+        "street",
+        "transport",
+        "glass",
+        "outdoor"
+      ],
+      "file": "tram-shelter.prop.js",
+      "world": "flinders-swanston"
+    },
+    {
+      "id": "traffic-signal",
+      "name": "Traffic Signal",
+      "tags": [
+        "traffic",
+        "signal",
+        "lights",
+        "street",
+        "road",
+        "outdoor"
+      ],
+      "file": "traffic-signal.prop.js",
+      "world": "flinders-swanston"
+    },
+    {
+      "id": "plane-tree",
+      "name": "Plane Tree",
+      "tags": [
+        "tree",
+        "plane",
+        "street",
+        "park",
+        "foliage",
+        "outdoor"
+      ],
+      "file": "plane-tree.prop.js",
+      "world": "flinders-swanston"
     }
   ]
 }
