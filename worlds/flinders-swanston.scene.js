@@ -2259,36 +2259,72 @@ export default function build(world) {
     /* ============================================================
        12 · Federation Square — the south-east quadrant
 
-       The pinwheel-fractal cladding is the whole building: a rectangle cut into
-       four triangles about a point somewhere off-centre, in zinc, sandstone and
+       The pinwheel fractal is the whole building: a rectangle cut into four
+       triangles about a point somewhere off-centre, in sandstone, zinc and
        glass, repeated until the wall stops being a wall. It is written here as
-       raw vertex colours, so every face of every block on the site is one mesh
-       and one draw.
+       raw vertex colours, so every clad face of every volume on the site is
+       one mesh and one draw.
+
+       What was here before was six boxes with flat pale lids, and from the air
+       that is the one view where the complex is nothing like itself. Two
+       things fix that and both are shape rather than texture. Nothing on this
+       site is a single prism: each building is two or three masses at slightly
+       different angles and heights, so the silhouette breaks. And nothing on
+       this site has a flat top: every roof is two or three shallow planes
+       meeting at a ridge that is never in the middle and never straight, in
+       standing-seam zinc, with the fractal carried up over the steeper folds.
+       Those two moves cost triangles, which are cheap here, and no meshes at
+       all, which are not.
+
+       Seven meshes for the whole complex, which is what it cost before: the
+       cladding, the zinc, the glass, the dark steel, the sandstone, the big
+       screen and the plaza.
        ============================================================ */
     {
-        const frac = [], cores = [], roofs = [], glassy = [], lattice = [], sandy = [], plazaG = [];
+        const dark = [], zinc = [], glassy = [], sandy = [], plazaG = [];
         const pos = [], col = [], nor = [];
-        const pal = [[0.50, 0.53, 0.56], [0.78, 0.67, 0.51], [0.17, 0.27, 0.36],
-                     [0.63, 0.60, 0.55], [0.32, 0.35, 0.38], [0.70, 0.55, 0.38]];
 
-        const fracWall = (w, h, cols, rows, M0) => {
+        /* The cladding is not confetti. On the real building a whole face is
+           predominantly one of the three materials and the other two are the
+           accents in it — sandstone here, zinc there, and the black glass
+           reserved for SBS on the corner — which is why the complex reads as
+           several buildings rather than one pattern. Written linear, because
+           these are vertex colours and three does not convert those. */
+        const SAND_L = [0.300, 0.238, 0.162], SAND_M = [0.196, 0.150, 0.098];
+        const ZINC_L = [0.238, 0.256, 0.276], ZINC_M = [0.142, 0.158, 0.180];
+        const GLAS_D = [0.030, 0.044, 0.062], GLAS_M = [0.072, 0.096, 0.122];
+        const PAL = {
+            sand: [SAND_L, SAND_M, SAND_L, ZINC_M, GLAS_D, SAND_M, SAND_L, GLAS_M],
+            zinc: [ZINC_L, ZINC_M, ZINC_L, SAND_M, GLAS_D, ZINC_M, SAND_L, GLAS_M],
+            dark: [GLAS_D, GLAS_M, GLAS_D, ZINC_M, GLAS_M, ZINC_L, GLAS_D, SAND_M],
+        };
+
+        /* One clad plane, cut into a pinwheel of triangles about a point that
+           moves cell by cell. `cell` is metres, not a count, so a nine-metre
+           wing and a forty-metre facade come out with the same grain — which is
+           the whole point of a fractal cladding and was the thing lost when the
+           divisions were counted per wall instead. */
+        const fracPlane = (w, h, cell, M0, mix) => {
+            const pal = PAL[mix];
             const base = pos.length / 3;
+            const cols = Math.max(2, Math.round(w / cell));
+            const rows = Math.max(2, Math.round(h / cell));
             const cw = w / cols, rh = h / rows;
             for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
                 const x0 = -w / 2 + c * cw, y0 = r * rh;
                 const corner = [[x0, y0], [x0 + cw, y0], [x0 + cw, y0 + rh], [x0, y0 + rh]];
-                const px = x0 + cw * rr(0.25, 0.75), py = y0 + rh * rr(0.25, 0.75);
+                const px = x0 + cw * rr(0.22, 0.78), py = y0 + rh * rr(0.22, 0.78);
                 for (let i = 0; i < 4; i++) {
                     const a = corner[i], b = corner[(i + 1) % 4];
                     pos.push(px, py, 0, a[0], a[1], 0, b[0], b[1], 0);
-                    const cc = pal[irr(0, pal.length - 1)], sh = rr(0.86, 1.12);
+                    const cc = pal[irr(0, pal.length - 1)], sh = rr(0.82, 1.18);
                     for (let k = 0; k < 3; k++) {
                         col.push(clamp(cc[0] * sh, 0, 1), clamp(cc[1] * sh, 0, 1), clamp(cc[2] * sh, 0, 1));
                         nor.push(0, 0, 1);
                     }
                 }
             }
-            // one wall's worth of loose triangles, carried into place in bulk
+            // one plane's worth of loose triangles, carried into place in bulk
             for (let i = base * 3; i < pos.length; i += 3) {
                 _v.set(pos[i], pos[i + 1], pos[i + 2]).applyMatrix4(M0);
                 pos[i] = _v.x; pos[i + 1] = _v.y; pos[i + 2] = _v.z;
@@ -2299,94 +2335,246 @@ export default function build(world) {
                 nor[i] = _v.x; nor[i + 1] = _v.y; nor[i + 2] = _v.z;
             }
         };
-        void frac;
 
-        const fedBlock = (cx, cz, w, d, h, rotY) => {
-            const M0 = MX(cx, 0, cz, 0, rotY || 0, 0);
-            let g = boxG(w, h, d); put(g, 0, h / 2, 0); carry(cores, g, M0);
-            const cw = Math.max(5, Math.round(w / 4.2)), cd = Math.max(5, Math.round(d / 4.2));
-            const rows = Math.max(4, Math.round(h / 3.8));
-            fracWall(w, h, cw, rows, MX(0, 0, d / 2 + 0.1).premultiply(M0));
-            fracWall(w, h, cw, rows, MX(0, 0, -d / 2 - 0.1, 0, Math.PI, 0).premultiply(M0));
-            fracWall(d, h, cd, rows, MX(-w / 2 - 0.1, 0, 0, 0, -Math.PI / 2, 0).premultiply(M0));
-            fracWall(d, h, cd, rows, MX(w / 2 + 0.1, 0, 0, 0, Math.PI / 2, 0).premultiply(M0));
-            g = boxG(w + 0.4, 0.55, d + 0.4); put(g, 0, h + 0.28, 0); carry(roofs, g, M0);
-            g = boxG(w * 0.30, 1.6, d * 0.24); put(g, w * 0.12, h + 1.3, -d * 0.16); carry(roofs, g, M0);
+        /* A wedge, from a profile in (x, y) extruded across `depth`. Every
+           folded roof plane and the glass shard on the river are one of these:
+           an extruded triangle closes its own gable ends, which a pair of
+           tilted slabs does not, and a roof you can see the underside of is a
+           roof somebody will notice from the bridge. */
+        const wedgeG = (pts, depth) => {
+            const s = new THREE.Shape();
+            s.moveTo(pts[0][0], pts[0][1]);
+            for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
+            s.closePath();
+            const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false });
+            g.translate(0, 0, -depth / 2);
+            return g;
+        };
+
+        /* Standing seams, laid up the slope of one roof plane. From the air
+           this is most of what the real roofs are: a fine grain of ribs
+           running with the fall, which is what tells the eye the plane is
+           metal and which way it is tilted. */
+        const seams = (M0, x0, y0, x1, y1, zc, depth, n) => {
+            const L = Math.hypot(x1 - x0, y1 - y0);
+            const a = Math.atan2(y1 - y0, x1 - x0);
+            const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+            for (let i = 0; i < n; i++) {
+                const g = boxG(L * 0.97, 0.10, 0.10);
+                put(g, mx, my + 0.08, zc + depth * ((i + 0.5) / n - 0.5), 0, 0, a);
+                carry(zinc, g, M0);
+            }
+        };
+
+        /* One mass: a clad prism with a folded roof. Three or four of these at
+           slightly different angles make one building, which is how the site
+           actually works — the Ian Potter Centre is not a block, it is a heap
+           of them leaning on each other. */
+        const fedMass = (M0, w, d, h, o) => {
+            o = o || {};
+            const mix = o.clad || 'sand';
+            const cell = o.cell || 2.9;
+
+            // the solid inside the cladding, in the same dark steel the
+            // mullions are: it is never seen except as the sliver behind a
+            // fold, and a bucket of its own for that would be a mesh wasted
+            let g = boxG(w, h, d); put(g, 0, h / 2, 0); carry(dark, g, M0);
+
+            fracPlane(w, h, cell, MX(0, 0, d / 2 + 0.08).premultiply(M0), mix);
+            fracPlane(w, h, cell, MX(0, 0, -d / 2 - 0.08, 0, Math.PI, 0).premultiply(M0), mix);
+            fracPlane(d, h, cell, MX(-w / 2 - 0.08, 0, 0, 0, -Math.PI / 2, 0).premultiply(M0), mix);
+            fracPlane(d, h, cell, MX(w / 2 + 0.08, 0, 0, 0, Math.PI / 2, 0).premultiply(M0), mix);
+
+            // the fascia at the eaves, which is what hides the joint between
+            // the cladding and the roof all the way round
+            g = boxG(w + 0.5, 0.62, d + 0.5); put(g, 0, h + 0.20, 0); carry(zinc, g, M0);
+
+            /* The roof, in two or three bands across the depth, each with its
+               own ridge offset and its own rise — so the ridge kinks from band
+               to band instead of running straight, and the planes either side
+               of it are never the same pitch. That kink is the single thing
+               that reads as Federation Square from above. */
+            const bands = o.bands || (d > 26 ? 3 : 2);
+            const bd = d / bands;
+            for (let b = 0; b < bands; b++) {
+                const zc = -d / 2 + bd * (b + 0.5);
+                const ox = w * rr(-0.30, 0.30);
+                const rise = (o.rise || 2.6) * rr(0.72, 1.28);
+                g = wedgeG([[-w / 2, 0], [w / 2, 0], [ox, rise]], bd + 0.06);
+                put(g, 0, h + 0.45, zc); carry(zinc, g, M0);
+                const nS = Math.max(2, Math.round(bd / 1.7));
+                seams(M0, -w / 2, h + 0.45, ox, h + 0.45 + rise, zc, bd, nS);
+                seams(M0, w / 2, h + 0.45, ox, h + 0.45 + rise, zc, bd, nS);
+
+                // and on the steeper of the two falls, the cladding carried
+                // straight up over the fold — which the real building does
+                // often enough that a complex without it looks tiled rather
+                // than wrapped
+                if (o.cladRoof && b === (o.cladRoof - 1)) {
+                    const run = w / 2 - ox, L = Math.hypot(run, rise);
+                    // Built basis-first rather than from Euler angles: the
+                    // plane has to lie in the fall of this particular fold,
+                    // and three angles that happen to look right at one pitch
+                    // are three angles that are wrong at the next.
+                    const M = new THREE.Matrix4().makeBasis(
+                        new THREE.Vector3(run / L, -rise / L, 0),
+                        new THREE.Vector3(0, 0, -1),
+                        new THREE.Vector3(rise / L, run / L, 0));
+                    M.setPosition(ox + run / 2, h + 0.53 + rise / 2, zc + bd * 0.46);
+                    fracPlane(L, bd * 0.92, cell * 0.8, M.premultiply(M0), mix);
+                }
+            }
+
+            // rooftop plant: the boxy rooms and, on the tall ones, a dish
+            if (o.plant) {
+                g = boxG(w * 0.26, 1.8, d * 0.20); put(g, w * 0.14, h + 1.3, -d * 0.18); carry(zinc, g, M0);
+                g = boxG(w * 0.18, 1.2, d * 0.14); put(g, -w * 0.20, h + 1.0, d * 0.22); carry(zinc, g, M0);
+                g = cylG(1.5, 1.5, 0.35, 12); put(g, -w * 0.20, h + 2.0, d * 0.22, -0.5); carry(zinc, g, M0);
+            }
             return M0;
         };
 
-        // the buildings, west to east
-        const pot = fedBlock(33, 68, 22, 48, 20, -0.02);       // NGV Australia / the Ian Potter Centre
-        void pot;
-        const wing = fedBlock(32, 33, 20, 18, 14, 0.03);       // its lower northern wing
-        for (let s = 0; s < 5; s++) {
-            const g = prismG(20, 1.6, 3.6); put(g, 0, 14.3, -7.4 + s * 3.6); carry(roofs, g, wing);
-        }
-        fedBlock(72, 36, 24, 28, 21, 0.015);                   // ACMI, fronting Flinders Street
-        fedBlock(100, 35, 24, 26, 25, -0.03);                  // SBS at the north-east corner
-        fedBlock(107, 64, 14, 24, 16, 0.04);                   // the eastern edge of the plaza
-        fedBlock(59, 119, 26, 18, 11, -0.02);                  // Transport, on the river side
+        /* --- the buildings, west to east. The names are the real tenants,
+               and the footprints are the real footprints; the second and third
+               mass of each is where the box used to be one. --- */
 
-        /* --- the Atrium: a glazed lattice street running from Flinders Street
-               through to the plaza, roofed in shallow crystalline gables --- */
+        // NGV Australia in the Ian Potter Centre, holding the Swanston Street
+        // frontage and the tallest thing on the site after SBS
+        fedMass(MX(31, 0, 62, 0, -0.02, 0), 22, 40, 20, { clad: 'sand', rise: 3.8, plant: 1, cladRoof: 2 });
+        fedMass(MX(37, 0, 92, 0, 0.11, 0), 18, 22, 16, { clad: 'sand', rise: 3.0 });
+        // its lower northern wing, stepping down to the Flinders Street corner
+        fedMass(MX(32, 0, 33, 0, 0.03, 0), 20, 18, 13, { clad: 'zinc', rise: 3.3, cladRoof: 1 });
+        // ACMI, fronting Flinders Street, and the smaller volume behind it
+        fedMass(MX(72, 0, 36, 0, 0.015, 0), 24, 26, 20, { clad: 'zinc', rise: 3.6, plant: 1 });
+        fedMass(MX(85, 0, 52, 0, -0.24, 0), 14, 16, 14, { clad: 'sand', rise: 2.9 });
+        // SBS on the north-east corner: the dark one, mostly black glass
+        fedMass(MX(101, 0, 34, 0, -0.03, 0), 24, 24, 25, { clad: 'dark', rise: 2.9, plant: 1, cladRoof: 1 });
+        // the eastern edge of the plaza
+        fedMass(MX(107, 0, 64, 0, 0.04, 0), 14, 24, 16, { clad: 'sand', rise: 3.2 });
+        // Transport and the Visitor Centre, low, on the river side
+        fedMass(MX(59, 0, 119, 0, -0.02, 0), 26, 18, 11, { clad: 'zinc', rise: 3.0, cladRoof: 1 });
+        fedMass(MX(41, 0, 122, 0, 0.17, 0), 14, 13, 9, { clad: 'sand', rise: 2.6 });
+
+        /* --- the Atrium: a glazed street running from Flinders Street through
+               to the plaza. It was a steel cage with a pane in it, because the
+               mullions were on a grid a metre and a bit apart in both
+               directions and the glass was darker than they were. It is a
+               concertina now — the walls fold in and out of plane facet by
+               facet, the framing is only at the folds, and the roof is a run
+               of shallow crystalline gables at three different pitches. --- */
         {
             const A = MX(51.5, 0, 42);
-            const AW = 11, AL = 40, AH = 24;
-            let g = boxG(AW, AH, AL); put(g, 0, AH / 2, 0); carry(glassy, g, A);
-            for (let i = 0; i <= 10; i++) for (const x of [-AW / 2, AW / 2]) {
-                g = boxG(0.24, AH, 0.24); put(g, x, AH / 2, -AL / 2 + i * AL / 10); carry(lattice, g, A);
+            const AW = 12, AL = 40, AH = 23, N = 8;
+            let g;
+
+            for (let i = 0; i < N; i++) {
+                const z = -AL / 2 + AL * (i + 0.5) / N;
+                const t = (i % 2 ? 1 : -1) * 0.10;
+                for (const s of [-1, 1]) {
+                    g = boxG(0.10, AH, AL / N + 0.30);
+                    put(g, s * (AW / 2), AH / 2, z, 0, s * t, 0); carry(glassy, g, A);
+                }
             }
+            for (let i = 0; i <= N; i++) for (const s of [-1, 1]) {
+                g = boxG(0.24, AH, 0.24); put(g, s * (AW / 2), AH / 2, -AL / 2 + i * AL / N); carry(dark, g, A);
+            }
+            for (const y of [6.2, 12.6, 19.0]) for (const s of [-1, 1]) {
+                g = boxG(0.15, 0.15, AL); put(g, s * (AW / 2), y, 0); carry(dark, g, A);
+            }
+            // the two ends, glazed right up into the gable
+            for (const s of [-1, 1]) {
+                g = boxG(AW, AH, 0.10); put(g, 0, AH / 2, s * AL / 2); carry(glassy, g, A);
+                g = prismG(AW, 2.9, 0.12); put(g, 0, AH, s * AL / 2); carry(glassy, g, A);
+            }
+
+            // the roof: eight gables, three pitches, ridge bar and rafters at
+            // every fold, so it breaks the light instead of lying flat
+            for (let i = 0; i < N; i++) {
+                const z = -AL / 2 + AL * (i + 0.5) / N, seg = AL / N;
+                const rise = 2.1 + (i % 3) * 0.8;
+                g = prismG(AW + 0.6, rise, seg + 0.08); put(g, 0, AH, z); carry(glassy, g, A);
+                g = boxG(0.18, 0.18, seg + 0.2); put(g, 0, AH + rise, z); carry(dark, g, A);
+                const L = Math.hypot(AW / 2, rise);
+                for (const s of [-1, 1]) for (const e of [-1, 1]) {
+                    g = boxG(L, 0.13, 0.13);
+                    put(g, s * AW / 4, AH + rise / 2, z + e * seg / 2, 0, 0, -s * Math.atan2(rise, AW / 2));
+                    carry(dark, g, A);
+                }
+            }
+        }
+
+        /* --- the shard on the river side. Deakin Edge is a glass wedge that
+               stands tallest where it faces the plaza and falls away towards
+               the Yarra, and the face it turns on the square is broken into
+               raking triangles by its own framing. A gable would have been
+               easier and would have read as a greenhouse. --- */
+        {
+            const E = MX(99, 0, 110, 0, -0.14, 0);
+            let g;
+            g = boxG(30, 3.0, 23); put(g, 0, 1.5, 0); carry(dark, g, E);
+            g = boxG(31, 0.5, 24); put(g, 0, 3.1, 0); carry(zinc, g, E);
+
+            // the wedge itself: 16 m at the plaza corner, 5 at the river
+            g = wedgeG([[-15, 0], [15, 0], [15, 5], [-15, 16]], 23);
+            put(g, 0, 3.2, 0); carry(glassy, g, E);
+
+            // the framing that breaks the rake into shards: purlins across
+            // the raking face, mullions on both end walls, and a diagonal in
+            // every bay, which is where the triangles come from
+            const yAt = (x) => 3.2 + 16 - ((x + 15) / 30) * 11;
             for (let i = 0; i <= 6; i++) {
-                const y = 1 + i * (AH - 2) / 6;
-                for (const z of [-AL / 2, AL / 2]) { g = boxG(AW + 0.4, 0.22, 0.22); put(g, 0, y, z); carry(lattice, g, A); }
-                for (const x of [-AW / 2, AW / 2]) { g = boxG(0.22, 0.22, AL); put(g, x, y, 0); carry(lattice, g, A); }
+                const x = -15 + i * 5, y = yAt(x);
+                g = boxG(0.26, 0.26, 23.4); put(g, x, y, 0); carry(dark, g, E);
+                for (const z of [-11.7, 11.7]) {
+                    g = boxG(0.22, y - 3.2, 0.22); put(g, x, (3.2 + y) / 2, z); carry(dark, g, E);
+                }
             }
-            for (let i = 0; i < 9; i++) {
-                const gz = -AL / 2 + 2.3 + i * 4.6;
-                g = prismG(AW + 0.6, 2.4, 4.4); put(g, 0, AH, gz); carry(glassy, g, A);
-                g = boxG(0.18, 0.18, 4.6); put(g, 0, AH + 2.4, gz); carry(lattice, g, A);
-                for (const s of [-1, 1]) { g = boxG(0.16, 6.4, 0.16); put(g, s * 3, AH + 1.2, gz, 0, 0, -s * 0.9); carry(lattice, g, A); }
+            for (let i = 0; i < 6; i++) {
+                const xa = -15 + i * 5, xb = xa + 5, yb = yAt(xb);
+                const L = Math.hypot(xb - xa, yb - 3.2), an = Math.atan2(yb - 3.2, xb - xa);
+                for (const z of [-11.7, 11.7]) {
+                    g = boxG(L, 0.20, 0.20); put(g, (xa + xb) / 2, (3.2 + yb) / 2, z, 0, 0, an); carry(dark, g, E);
+                }
             }
+            g = boxG(0.36, 0.36, 23.6); put(g, -15, 3.2 + 16, 0); carry(dark, g, E);
+            g = boxG(0.30, 0.30, 23.6); put(g, 15, 3.2 + 5, 0); carry(dark, g, E);
+            // the amphitheatre steps it sits behind, facing back into the plaza
+            for (let i = 0; i < 5; i++) { g = boxG(26, 0.45, 1.8); put(g, 0, 0.22 + i * 0.45, -11.5 - i * 1.8); carry(sandy, g, E); }
         }
 
-        /* --- Deakin Edge: the glass amphitheatre sitting on the plaza --- */
+        /* --- the plaza: Kimberley sandstone laid in radiating bands that fan
+               out of the Flinders Street corner, falling away south towards
+               the river. --- */
         {
-            const E = MX(103, 0, 107, 0, -0.10, 0);
-            let g = boxG(26, 3.0, 22); put(g, 0, 1.5, 0); carry(cores, g, E);
-            g = boxG(24, 8.5, 20); put(g, 0, 7.2, 0); carry(glassy, g, E);
-            g = boxG(27, 0.5, 22); put(g, 0, 12.2, 0, -0.13); carry(lattice, g, E);
-            for (let i = 0; i <= 6; i++) { g = boxG(0.22, 0.22, 22); put(g, -12 + i * 4, 12.4, 0, -0.13); carry(lattice, g, E); }
-            for (let i = 0; i < 5; i++) { g = boxG(24, 0.45, 1.8); put(g, 0, 0.22 + i * 0.45, -9 + i * 1.8); carry(sandy, g, E); }
-        }
-
-        /* --- the plaza itself: Kimberley sandstone laid in radiating bands,
-               falling away south towards the river --- */
-        {
-            let g = boxG(68, 0.7, 60); put(g, 79, 0.15, 93, 0.030); plazaG.push(g);
-            for (let i = 0; i < 9; i++) { g = boxG(62, 0.28, 1.7); put(g, 78, 0.14 + i * 0.28, 51.5 + i * 1.7); sandy.push(g); }
-            g = boxG(20, 0.5, 22); put(g, 30, 0.25 + KERB_H, 32); sandy.push(g);
-            for (let i = 0; i < 5; i++) { g = boxG(20, 0.26, 1.5); put(g, 30, 0.13 + i * 0.26, 21.5 + i * 1.5); sandy.push(g); }
-            for (let i = 0; i < 7; i++) { g = boxG(74, 0.45, 2.0); put(g, 80, -0.2 - i * 0.45, 126 + i * 2.0); sandy.push(g); }
+            let g = boxG(74, 0.7, 64); put(g, 80, 0.15, 92, 0.030); plazaG.push(g);
+            for (let i = 0; i < 9; i++) { g = boxG(66, 0.28, 1.7); put(g, 79, 0.14 + i * 0.28, 51.5 + i * 1.7); sandy.push(g); }
+            g = boxG(22, 0.5, 24); put(g, 31, 0.25 + KERB_H, 32); sandy.push(g);
+            for (let i = 0; i < 5; i++) { g = boxG(22, 0.26, 1.5); put(g, 31, 0.13 + i * 0.26, 21.5 + i * 1.5); sandy.push(g); }
+            for (let i = 0; i < 7; i++) { g = boxG(78, 0.45, 2.0); put(g, 80, -0.2 - i * 0.45, 126 + i * 2.0); sandy.push(g); }
             g = boxG(0.7, 0.95, 26); put(g, 21.4, 0.48 + KERB_H, 46); sandy.push(g);      // the low seating wall on Swanston
         }
 
-        // market umbrellas and the timber benches under them
-        const brolly = [], benches = [];
+        // Market umbrellas and the timber benches under them. The canopies go
+        // in with the sandstone rather than with the steel they stand on: in
+        // the dark bucket two dozen of them read as black lily pads lying on a
+        // pale plaza, which is the one thing on this square nobody has ever
+        // seen there.
+        const brolly = [], canopies = [], benches = [];
         for (let i = 0; i < 24; i++) {
-            const ux = rr(50, 106), uz = rr(72, 116);
+            const ux = rr(52, 106), uz = rr(74, 116);
             let g = cylG(0.06, 0.07, 2.3, 6); put(g, ux, 1.4, uz); brolly.push(g);
-            g = cylG(1.55, 0.25, 0.35, 10); put(g, ux, 2.65, uz); brolly.push(g);
+            g = cylG(1.55, 0.25, 0.35, 10); put(g, ux, 2.65, uz); canopies.push(g);
         }
         for (let i = 0; i < 10; i++) {
-            const g = boxG(2.6, 0.45, 0.7); put(g, rr(48, 106), 0.9, rr(72, 118), 0, rr(0, 3.1), 0); benches.push(g);
+            const g = boxG(2.6, 0.45, 0.7); put(g, rr(50, 106), 0.9, rr(74, 118), 0, rr(0, 3.1), 0); benches.push(g);
         }
 
         // the big screen, facing back into the plaza
         const screenMat = emissive(0x1b2733, 0x3f6a94, 1.15, { roughness: 0.36 });
         const screen = mesh(new THREE.PlaneGeometry(13, 7.4), screenMat, 74, 8.4, 51.6);
         {
-            let g = boxG(14, 8.8, 0.6); put(g, 74, 8.4, 51.2); lattice.push(g);
-            for (const x of [68, 80]) { g = boxG(0.5, 4.4, 0.5); put(g, x, 2.2, 51.2); lattice.push(g); }
+            let g = boxG(14, 8.8, 0.6); put(g, 74, 8.4, 51.2); dark.push(g);
+            for (const x of [68, 80]) { g = boxG(0.5, 4.4, 0.5); put(g, x, 2.2, 51.2); dark.push(g); }
         }
 
         const fracGeo = new THREE.BufferGeometry();
@@ -2396,15 +2584,21 @@ export default function build(world) {
 
         const fed = new THREE.Group();
         fed.add(
-            merged(cores.concat(roofs), stdMat(0x60635f, { roughness: 0.68 })),
             mesh(fracGeo, new THREE.MeshStandardMaterial({
-                vertexColors: true, roughness: 0.48, metalness: 0.32, side: THREE.DoubleSide,
+                vertexColors: true, roughness: 0.52, metalness: 0.28, side: THREE.DoubleSide,
             })),
-            merged(glassy, stdMat(0x8fb0c6, {
-                roughness: 0.08, metalness: 0.34, transparent: true, opacity: 0.34, side: THREE.DoubleSide,
+            /* Written pale because `srgb` reads it twice (see the helper at the
+               top): 0xb9c1c9 lands where a paint chip of about 0x8e9299 would
+               if it were read once, and a paint chip of 0x8e9299 is what the
+               real standing-seam roofs are — the palest large surface on the
+               site, and the reason the complex reads as roofs at all from the
+               bridge. */
+            merged(zinc, stdMat(0xb9c1c9, { roughness: 0.44, metalness: 0.46 })),
+            merged(glassy, stdMat(0x9dbcd2, {
+                roughness: 0.07, metalness: 0.36, transparent: true, opacity: 0.40, side: THREE.DoubleSide,
             })),
-            merged(lattice.concat(brolly), stdMat(0x343a40, { roughness: 0.40, metalness: 0.55 })),
-            merged(sandy.concat(benches), stdMat(0xbb9f7a, { roughness: 0.72 })),
+            merged(dark.concat(brolly), stdMat(0x343a40, { roughness: 0.40, metalness: 0.55 })),
+            merged(sandy.concat(benches, canopies), stdMat(0xbb9f7a, { roughness: 0.72 })),
             screen);
         const plaza = merged(plazaG, stdMat(0xffffff, { map: plazaTex, roughness: 0.70 }));
         fed.add(plaza);
