@@ -304,6 +304,13 @@ export default function build(world) {
         diff = vec3(0.0); spec = vec3(0.0);
         vec2 c = cp.xz;
         float H = max(cp.y - wp.y, 0.25);
+        // The same Fresnel weight skyMirror uses, and for the same reason: what
+        // standing water hands back is strong at a grazing angle and next to
+        // nothing straight down. Without it every smear ran at full strength in
+        // the metre in front of the camera — which is exactly where the road
+        // fills most of the screen — so ten accents drowned the sky they were
+        // supposed to be laid on top of.
+        float fres = pow(1.0 - clamp(normalize(cp - wp).y, 0.0, 1.0), 3.4);
         for (int i = 0; i < NL; i++) {
           vec3  lp = uLPos[i];
           vec3  lc = uLCol[i];
@@ -328,9 +335,13 @@ export default function build(world) {
           float lat = exp(-min((pe * pe) / (w * w), 40.0));
           float lon = al > 0.0 ? exp(-min(al / (0.60 + h * 0.30), 40.0))
                                : exp(-min(-al / (1.9 + h * 1.6), 40.0));
-          spec += lc * ls * lat * lon / (1.0 + dd / (lr * lr * 18.0));
+          // Eighteen gave a source a specular reach of four times its own
+          // radius, which let the two thirty-metre billboards lay saturated
+          // colour over a hundred metres of Swanston Street. Six is still two
+          // and a half radii — a long streak, but one that ends.
+          spec += lc * ls * lat * lon / (1.0 + dd / (lr * lr * 6.0));
         }
-        spec *= gloss;
+        spec *= gloss * fres;
       }
     `;
 
@@ -1183,7 +1194,13 @@ export default function build(world) {
           // The street layout beyond the baked square, as a set of bands. Two
           // numbers come back: how much of this point is carriageway, and how
           // much is footpath; whatever is left is the ground buildings stand on.
-          void layout(vec2 p, out float road, out float path){
+          //
+          // Not called "layout". That was its name on the r128 page, where the
+          // shader compiled as GLSL ES 1.00 and the word was free; three builds
+          // this as GLSL ES 3.00 on any WebGL2 context, and there "layout" is a
+          // reserved qualifier keyword — so the whole road program failed to
+          // compile on the iPad and the ground drew with whatever was bound last.
+          void streetBands(vec2 p, out float road, out float path){
             float ax = abs(p.x);
             // Swanston Street, carried north past three cross streets and south
             // over the bridge
@@ -1193,7 +1210,10 @@ export default function build(world) {
             for (int i = 0; i < 3; i++) {
               float cz = i == 0 ? ${NST[0].z.toFixed(1)} : (i == 1 ? ${NST[1].z.toFixed(1)} : ${NST[2].z.toFixed(1)});
               float h  = i == 0 ? ${NST[0].h.toFixed(1)} : (i == 1 ? ${NST[1].h.toFixed(1)} : ${NST[2].h.toFixed(1)});
-              float dz = abs(p.z - cz);
+              // p.y, because p is the ground point flattened to (world x, world
+              // z). The r128 source said p.z, which was right when this took a
+              // vec3 and is the second reason the program never compiled.
+              float dz = abs(p.y - cz);
               float within = smoothstep(${(NX + 2.0).toFixed(1)}, ${(NX - 2.0).toFixed(1)}, ax);
               road = max(road, smoothstep(h + 0.35, h - 0.35, dz) * within);
               path = max(path, smoothstep(h - 0.2, h + 0.3, dz)
@@ -1211,7 +1231,7 @@ export default function build(world) {
             float n2 = fbm(wp.xz * 0.34 + 11.0);
 
             float road, path;
-            layout(wp.xz, road, path);
+            streetBands(wp.xz, road, path);
 
             vec3 cRoad = vec3(0.0175, 0.0185, 0.0205) * (0.72 + 0.70 * n1);
             vec3 cPath = vec3(0.114, 0.110, 0.101) * (0.78 + 0.44 * n1);
@@ -1243,9 +1263,19 @@ export default function build(world) {
             // On an overcast afternoon the road is mostly a photograph of the
             // cloud, so the sky term leads and the ten sources are the accents
             // laid on top of it.
+            //
+            // These two weights were the ones tuned blind, against a program
+            // that never compiled, and they had the balance exactly backwards:
+            // the mirror was contributing about three greylevels where the
+            // smears were clipping. The sky now carries roughly four fifths of
+            // the road's brightness at a grazing angle and the sources ride on
+            // it, which is the split the paragraph above describes. Together
+            // with the Fresnel weight in wetLight they also keep the road under
+            // the 0.80 bloom threshold, so the street stops feeding the bloom
+            // pass that is meant for the signals and the destination boxes.
             vec3 col = albedo * (uSkyLo * 0.55 + diff);
-            col += skyMirror(wp, uCamPos, rip) * gloss * (0.16 + 0.10 * n1);
-            col += spec * (0.85 + 0.30 * n1);
+            col += skyMirror(wp, uCamPos, rip) * gloss * (0.52 + 0.22 * n1);
+            col += spec * (0.16 + 0.07 * n1);
             col += vec3(0.60, 0.66, 0.74) * max(rip, 0.0) * 0.045;
 
             gl_FragColor = vec4(applyFog(col, dist), 1.0);
@@ -3072,7 +3102,16 @@ export default function build(world) {
             // The windscreen rides with the skirt and the bogies. On a day like
             // this they are all the same wet dark grey, and four cars is four meshes.
             merged(dark.concat(glass), stdMat(0x232a30, { roughness: 0.22, metalness: 0.44 })),
-            merged(inside, emissive(0xd7cdb2, 0xfff0d0, 1.25, { roughness: 0.70 })),
+            // 1.25 was a night-time number. Under ACES at twenty to five the
+            // saloon it lit clipped to a white hole, and because that sat at
+            // roughly twice the 0.80 bloom threshold the hole then bled out over
+            // the livery around it — a lit tram read as a blank one. 0.85 keeps
+            // the warm box the comment above asks for, with the seats and the
+            // standing passengers still legible against it, and keeps the saloon
+            // just under the threshold so the bloom pass is left for the things
+            // that are actually meant to flare: the destination box, the
+            // headlights, the signals and the billboards.
+            merged(inside, emissive(0xd7cdb2, 0xfff0d0, 0.85, { roughness: 0.70 })),
             mesh(merge(lamps), emissive(0xffffff, 0xffffff, 2.8, {
                 map: lampCellTex, emissiveMap: lampCellTex, roughness: 0.3,
             })),
