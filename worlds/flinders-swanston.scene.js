@@ -2726,7 +2726,210 @@ export default function build(world) {
     }
 
     /* ============================================================
-       14 · the Yarra, and Princes Bridge
+       14 · Melbourne Town Hall — the whole east side of Swanston Street
+            between Collins and Little Collins, four hundred metres north
+
+       Reed and Barnes, 1870, rebuilt behind its own facade after the 1925
+       fire: Second Empire, a giant Corinthian order in Barrabool sandstone
+       over a rusticated bluestone base, a mansard roof behind a balustraded
+       parapet, the long colonnaded elevation down Swanston Street, the
+       pedimented portico with its arched entrance in the middle of it, and
+       the clock tower standing on the Collins Street corner.
+
+       Built for the range it is seen at rather than for its own sake. From
+       Flinders Street this is three hundred metres up a wet street and the
+       fog has three fifths of it, so what has to survive that is the
+       silhouette — the tower, the parapet line, the shadow rhythm of a
+       colonnade — and the colour, which is the one honey-coloured building on
+       a grey street. A carved capital at this distance is a carved capital
+       nobody will ever see, so there are none. The column count is right
+       instead, because the count is what makes the rhythm read, and the
+       rhythm is what makes it the Town Hall rather than a sandstone box.
+
+       Three meshes: the sandstone, the dark (bluestone, slate and the reveals
+       behind the order) and the lit clock dials. They were paid for out of
+       the two litter bins, whose lids are now the same galvanised grey as
+       their drums, and out of the tree pits, which went in with the trunks.
+       ============================================================ */
+    {
+        const sand = [], dk = [], glow = [];
+
+        /* The block, off the same simplified Hoddle Grid as everything else
+           up this street: the building line east of Swanston, the north kerb
+           of Collins and the south kerb of Little Collins. */
+        const HX = BX, HZS = -(230 + 13.5 + FP), HZN = -(345 - 5.6 - FP);
+        const HW = 66, HD = HZS - HZN;                 // 66 m along Collins, 81.9 along Swanston
+        const HCX = HX + HW / 2, HCZ = (HZS + HZN) / 2;
+        const H0 = 5.0;            // top of the bluestone base
+        const H1 = 20.4;           // top of the giant order
+        const H2 = 23.6;           // top of the cornice
+        const H3 = 26.0;           // top of the balustrade
+        let g, i;
+
+        // the bluestone base, and the four rusticated courses in it that give
+        // it its weight from the far end of the street
+        g = boxG(HW + 0.7, H0, HD + 0.7); put(g, HCX, H0 / 2, HCZ); dk.push(g);
+        for (i = 0; i < 4; i++) {
+            const y = 1.15 + i * 1.05;
+            g = boxG(0.16, 0.13, HD + 1.0); put(g, HX - 0.45, y, HCZ); dk.push(g);
+            g = boxG(HW + 1.0, 0.13, 0.16); put(g, HCX, y, HZS + 0.45); dk.push(g);
+        }
+
+        // the wall behind the order, and the entablature and cornice over it
+        g = boxG(HW, H1 - H0, HD); put(g, HCX, (H0 + H1) / 2, HCZ); sand.push(g);
+        g = boxG(HW + 1.0, 2.2, HD + 1.0); put(g, HCX, H1 + 1.1, HCZ); sand.push(g);
+        g = boxG(HW + 2.3, 1.0, HD + 2.3); put(g, HCX, H1 + 2.7, HCZ); sand.push(g);
+
+        /* The giant order. One column every four and a half metres, standing
+           on the bluestone and running the full two storeys to the
+           entablature, with a plinth and an abacus and nothing between them —
+           at this distance a flute is a wasted triangle and a capital is a
+           lie you cannot see. Two elevations only: Swanston and Collins are
+           the two anybody in this world will ever look at. */
+        const bay = 4.55;
+        const column = (x, z, ry) => {
+            let q = boxG(1.75, 0.55, 1.75); put(q, x, H0 + 0.28, z, 0, ry, 0); sand.push(q);
+            q = cylG(0.62, 0.72, H1 - H0 - 1.3, 10); put(q, x, (H0 + H1) / 2 + 0.1, z); sand.push(q);
+            q = boxG(1.65, 0.75, 1.65); put(q, x, H1 - 0.38, z, 0, ry, 0); sand.push(q);
+        };
+        // the reveal behind a bay: two tiers of window, the lower one arched
+        const bayLight = (x, z, ry) => {
+            let q = shapeG(archShape(2.5, 5.2)); put(q, x, H0 + 1.4, z, 0, ry, 0); dk.push(q);
+            q = new THREE.PlaneGeometry(2.4, 3.6); put(q, x, H0 + 10.2, z, 0, ry, 0); dk.push(q);
+        };
+
+        const nW = Math.floor((HD - 6) / bay);
+        for (i = 0; i <= nW; i++) {
+            const z = HZN + 3 + i * bay + (HD - 6 - nW * bay) / 2;
+            column(HX - 0.5, z, 0);
+            if (i < nW) bayLight(HX + 0.06, z + bay / 2, -Math.PI / 2);
+        }
+        const nS = Math.floor((HW - 6) / bay);
+        for (i = 0; i <= nS; i++) {
+            const x = HX + 3 + i * bay + (HW - 6 - nS * bay) / 2;
+            column(x, HZS + 0.5, 0);
+            if (i < nS) bayLight(x + bay / 2, HZS - 0.06, 0);
+        }
+
+        /* The balustrade, as a rim rather than a lid: a plinth, a row of
+           balusters and a coping, on the two elevations that face the city.
+           Written as four rails rather than one slab because a slab across
+           the footprint is a flat roof, which is the thing the mansard behind
+           it exists to not be. */
+        for (const r of [[HCX, HZS + 1.15, HW + 2.3, 0.5], [HCX, HZN - 1.15, HW + 2.3, 0.5],
+                         [HX - 1.15, HCZ, 0.5, HD + 2.3], [HX + HW + 1.15, HCZ, 0.5, HD + 2.3]]) {
+            g = boxG(r[2], 0.4, r[3]); put(g, r[0], H2 + 0.2, r[1]); sand.push(g);
+            g = boxG(r[2], 0.35, r[3]); put(g, r[0], H3 - 0.18, r[1]); sand.push(g);
+        }
+        for (const e of [['z', HZS + 1.15, HX + 1.2, HW - 2.4], ['x', HX - 1.15, HZN + 1.2, HD - 2.4]]) {
+            const n = Math.round(e[3] / 2.3);
+            for (i = 0; i <= n; i++) {
+                const t = e[2] + e[3] * (i / n);
+                g = cylG(0.17, 0.21, 1.45, 6);
+                put(g, e[0] === 'z' ? t : e[1], H2 + 1.12, e[0] === 'z' ? e[1] : t); sand.push(g);
+            }
+        }
+
+        /* The mansard, in slate, behind the parapet: four slopes leaning in
+           to a flat deck. It reads for about four metres of its height and
+           that is all it has to do — it is the difference between a Second
+           Empire roof and a parapet with the sky behind it. */
+        const MR = 5.2, MIN = 4.2;                     // rise, and how far it leans in
+        const mLen = Math.hypot(MIN, MR), mA = Math.atan2(MIN, MR);
+        g = boxG(HW - 2 * MIN, 0.6, HD - 2 * MIN); put(g, HCX, H2 + MR, HCZ); dk.push(g);
+        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + MIN / 2 + 0.4, H2 + MR / 2, HCZ, 0, 0, -mA); dk.push(g);
+        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + HW - MIN / 2 - 0.4, H2 + MR / 2, HCZ, 0, 0, mA); dk.push(g);
+        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, H2 + MR / 2, HZS - MIN / 2 - 0.4, -mA); dk.push(g);
+        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, H2 + MR / 2, HZN + MIN / 2 + 0.4, mA); dk.push(g);
+
+        /* --- the portico on Swanston Street: six free-standing columns on a
+               bluestone podium, three arches under them, and the pediment
+               over. This is the one piece of the building anybody photographs
+               and it is the one piece that has to project, because a portico
+               flush with its wall is a pilaster. --- */
+        {
+            const PZ = HCZ + 2, PW = 21.0, PX = HX - 3.2;
+            g = boxG(4.0, H0, PW + 2.0); put(g, PX + 1.6, H0 / 2, PZ); dk.push(g);
+            for (i = 0; i < 3; i++) {                                  // the steps up off the footpath
+                g = boxG(1.2, 0.42, PW - 1.0); put(g, PX - 0.6 - i * 1.2, 0.21 + i * 0.42 - 0.9, PZ); dk.push(g);
+            }
+            for (i = 0; i < 3; i++) {                                  // the three arches behind the columns
+                g = shapeG(archShape(3.4, 4.4));
+                put(g, PX + 1.9, 0.5, PZ - 6.4 + i * 6.4, 0, -Math.PI / 2, 0); dk.push(g);
+            }
+            for (i = 0; i < 6; i++) {
+                const z = PZ - PW / 2 + 1.6 + i * ((PW - 3.2) / 5);
+                column(PX + 1.0, z, 0);
+            }
+            g = boxG(4.6, 2.4, PW + 2.4); put(g, PX + 1.5, H1 + 1.2, PZ); sand.push(g);
+            g = boxG(5.2, 1.0, PW + 3.4); put(g, PX + 1.4, H1 + 2.9, PZ); sand.push(g);
+            // the pediment, its gable turned to face down Swanston Street
+            g = prismG(PW + 3.4, 4.4, 4.6); put(g, PX + 1.5, H2 + 0.4, PZ, 0, Math.PI / 2, 0); sand.push(g);
+            g = boxG(5.0, 0.4, PW + 4.2); put(g, PX + 1.4, H2 + 0.2, PZ); sand.push(g);
+        }
+
+        /* --- the clock tower, on the Collins Street corner. Fifty-one metres
+               to the finial, which at this range is the only part of the
+               building tall enough to stand above the fog line and the only
+               part anybody navigates by. --- */
+        {
+            const TX = HX + 8.5, TZ = HZS - 8.5;
+            const T0 = 30.0, T1 = 39.4, T2 = 40.8;     // shaft, clock stage, cornice
+            g = boxG(16.0, T0, 16.0); put(g, TX, T0 / 2, TZ); sand.push(g);
+            g = boxG(16.8, H0, 16.8); put(g, TX, H0 / 2, TZ); dk.push(g);
+            for (const c of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {   // the corner pilasters
+                g = boxG(1.5, T0 - H0, 1.5); put(g, TX + c[0] * 7.4, (H0 + T0) / 2, TZ + c[1] * 7.4); sand.push(g);
+            }
+            g = boxG(17.6, 1.0, 17.6); put(g, TX, 22.6, TZ); sand.push(g);
+            g = boxG(17.4, 1.3, 17.4); put(g, TX, T0 + 0.65, TZ); sand.push(g);
+
+            // the clock stage and its four dials, which are lit — at twenty to
+            // five in November rain the Town Hall clock is on, and from the
+            // bottom of Swanston Street it is the only thing up here you can
+            // actually read
+            g = boxG(14.4, T1 - T0 - 1.3, 14.4); put(g, TX, (T0 + 1.3 + T1) / 2, TZ); sand.push(g);
+            const dialY = 35.4;
+            for (const f of [[0, 0, 7.3], [0, Math.PI, -7.3], [1, Math.PI / 2, 7.3], [1, -Math.PI / 2, -7.3]]) {
+                const dx = f[0] ? f[2] : 0, dz = f[0] ? 0 : f[2];
+                g = new THREE.CircleGeometry(2.35, 20); put(g, TX + dx * 1.02, dialY, TZ + dz * 1.02, 0, f[1], 0); dk.push(g);
+                g = new THREE.CircleGeometry(1.95, 20); put(g, TX + dx * 1.05, dialY, TZ + dz * 1.05, 0, f[1], 0); glow.push(g);
+            }
+            g = boxG(16.6, 1.4, 16.6); put(g, TX, T1 + 0.7, TZ); sand.push(g);
+            g = boxG(15.4, 0.5, 15.4); put(g, TX, T2 + 0.25, TZ); sand.push(g);
+
+            // the mansard cap, the lantern, and the little slate cupola over
+            // it. Four radial segments turned a quarter-bay so the flat faces
+            // land on the axes rather than the diagonals.
+            g = cylG(4.8 / 0.7071, 7.6 / 0.7071, 5.0, 4); put(g, TX, T2 + 3.0, TZ, 0, Math.PI / 4, 0); dk.push(g);
+            g = boxG(6.6, 0.4, 6.6); put(g, TX, T2 + 5.6, TZ); sand.push(g);
+            g = boxG(5.6, 2.9, 5.6); put(g, TX, T2 + 7.2, TZ); sand.push(g);
+            for (const f of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                g = new THREE.PlaneGeometry(3.0, 1.9);
+                put(g, TX + f[0] * 2.9, T2 + 7.3, TZ + f[1] * 2.9, 0, Math.atan2(f[0], f[1]), 0); glow.push(g);
+            }
+            g = boxG(6.4, 0.45, 6.4); put(g, TX, T2 + 8.85, TZ); sand.push(g);
+            g = cylG(0.5 / 0.7071, 3.2 / 0.7071, 2.6, 4); put(g, TX, T2 + 10.4, TZ, 0, Math.PI / 4, 0); dk.push(g);
+            g = sphG(0.55, 8, 6); put(g, TX, T2 + 11.9, TZ); sand.push(g);
+            g = cylG(0.10, 0.13, 5.4, 6); put(g, TX, T2 + 14.9, TZ); dk.push(g);
+        }
+
+        const hall = new THREE.Group();
+        hall.add(
+            merged(sand, stdMat(0xdccdaf, { roughness: 0.86 })),
+            merged(dk, stdMat(0x5d636b, { roughness: 0.74 })),
+            /* One emissive level for the dials and the lantern together, and it
+               is set by the dials: at 2.2 they clipped to flat white discs a
+               hundred metres away and the hands nobody has drawn would not
+               have shown anyway. 1.7 keeps them above the 0.80 bloom
+               threshold, so from the bottom of Swanston Street they are still
+               the two lit things up here — which is the entire job. */
+            merged(glow, emissive(0xf4ecd6, 0xffe6ae, 1.7, { side: THREE.DoubleSide, roughness: 0.5 })));
+        scene.add(hall);
+        world.part('townhall_00', hall);
+    }
+
+    /* ============================================================
+       15 · the Yarra, and Princes Bridge
 
        Swanston Street runs on across the river and becomes St Kilda Road. The
        bridge is the 1888 one: three shallow segmental spans in red ironwork on
@@ -2895,7 +3098,7 @@ export default function build(world) {
     }
 
     /* ============================================================
-       15 · what stands on the footpath
+       16 · what stands on the footpath
 
        Plane trees, tram poles and their overhead, the signals, and the bollards
        and bins that make a Melbourne kerb look like one. Everything that
@@ -2927,16 +3130,21 @@ export default function build(world) {
             put(g, Math.cos(a) * 0.9, 5.2, Math.sin(a) * 0.9, Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55);
             trunk.push(g);
         }
+        // The tree pit goes into the trunk's own geometry rather than into a
+        // second instanced mesh of its own. It is a one-point-eight-metre
+        // square of wet soil seen at a grazing angle from the far side of a
+        // road, and the difference between 0x4a4238 and the trunk's brown at
+        // that angle is nothing; a whole mesh for it, out of a hundred and
+        // fifty, is not nothing.
+        g = boxG(1.8, 0.06, 1.8); put(g, 0, 0.03, 0); trunk.push(g);
         const trunkIM = new THREE.InstancedMesh(merge(trunk), stdMat(C.trunk, { roughness: 0.80 }), spots.length);
         const leafIM = new THREE.InstancedMesh(sphG(1, 9, 6), stdMat(C.leaf, { roughness: 0.78 }), spots.length * 4);
-        const pitIM = new THREE.InstancedMesh(boxG(1.8, 0.06, 1.8), stdMat(0x4a4238, { roughness: 0.86 }), spots.length);
         const tint = new THREE.Color();
         let k = 0;
         spots.forEach((p, i) => {
             const h = rr(10.5, 14), s = h / 11.6;
             const x = p[0] + rr(-0.5, 0.5), z = p[1] + rr(-0.5, 0.5);
             trunkIM.setMatrixAt(i, MX(x, KERB_H, z, 0, rr(0, 6.28), 0, s, s, s));
-            pitIM.setMatrixAt(i, MX(p[0], KERB_H + 0.03, p[1]));
             for (let b = 0; b < 4; b++) {
                 const r = rr(2.6, 4.3) * s;
                 leafIM.setMatrixAt(k, MX(x + rr(-2.6, 2.6), KERB_H + h * 0.42 + rr(1.0, h * 0.34), z + rr(-2.6, 2.6),
@@ -2949,11 +3157,9 @@ export default function build(world) {
         });
         trunkIM.instanceMatrix.needsUpdate = true;
         leafIM.instanceMatrix.needsUpdate = true;
-        pitIM.instanceMatrix.needsUpdate = true;
         if (leafIM.instanceColor) leafIM.instanceColor.needsUpdate = true;
-        scene.add(trunkIM, leafIM, pitIM);
+        scene.add(trunkIM, leafIM);
         world.ghost(leafIM);       // a canopy is not something to walk into
-        world.ghost(pitIM);
     }
 
     // ---- tram poles, their mast-arm lamps and the overhead
@@ -3178,9 +3384,13 @@ export default function build(world) {
             const drum = [], lid = [];
             let q = cylG(0.34, 0.30, 1.0, 10); put(q, 0, 0.5, 0); drum.push(q);
             q = cylG(0.34, 0.34, 0.06, 10); put(q, 0, 0.02, 0); drum.push(q);
-            q = cylG(0.38, 0.36, 0.12, 10); put(q, 0, 1.05, 0); lid.push(q);
-            q = new THREE.TorusGeometry(0.22, 0.03, 5, 12); put(q, 0, 1.12, 0, Math.PI / 2, 0, 0); lid.push(q);
-            B.add(merged(drum, bm), merged(lid, stdMat(0x4d5459, { roughness: 0.40, metalness: 0.42 })));
+            q = cylG(0.38, 0.36, 0.12, 10); put(q, 0, 1.05, 0); drum.push(q);
+            q = new THREE.TorusGeometry(0.22, 0.03, 5, 12); put(q, 0, 1.12, 0, Math.PI / 2, 0, 0); drum.push(q);
+            // The lid used to be a second mesh for a second grey. On a street
+            // bin a metre tall the drum and the lid are the same galvanised
+            // steel anyway, and two meshes each, twice over, is a clock tower.
+            void lid;
+            B.add(merged(drum, bm));
             B.position.set(p[0], KERB_H, p[1]);
             scene.add(B);
             world.part('bin_0' + i, B);
@@ -3188,7 +3398,7 @@ export default function build(world) {
     }
 
     /* ============================================================
-       16 · the trams
+       17 · the trams
 
        A-class (Comeng, Dandenong, 1984–87): a single-ended four-axle bogie car,
        16.64 m over the body, 2.67 m wide, roof 3.22 m above rail, three
@@ -3385,7 +3595,7 @@ export default function build(world) {
     }
 
     /* ============================================================
-       17 · the traffic and the crowd
+       18 · the traffic and the crowd
 
        Twenty-odd vehicles and a hundred people, in seven meshes. Everything
        here is an InstancedMesh whose matrices are rewritten in the frame
@@ -3553,7 +3763,7 @@ export default function build(world) {
     }
 
     /* ============================================================
-       18 · the rain
+       19 · the rain
 
        One instanced draw per layer, wrapping around the camera so it never runs
        out and never needs more drops than the eye can hold. Each streak
@@ -3656,7 +3866,7 @@ export default function build(world) {
     makeRain(1600, 15, 20, 0.019, 1.45, 24.0, 0.26, srgb(0xc9d1d6));
 
     /* ============================================================
-       19 · what moves
+       20 · what moves
 
        One eight-phase cycle drives the whole intersection: Swanston green,
        amber, all-red, Flinders green, amber, all-red, then the scramble and its
