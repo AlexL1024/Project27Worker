@@ -1,0 +1,31 @@
+{
+  "hidden" : [
+    "fedsquare_00"
+  ],
+  "parts" : {
+    "fedsquare_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 6.618
+    },
+    "station_00" : {
+      "position" : [
+        15.3687,
+        171.1429,
+        -6.1239
+      ],
+      "rotationY" : 2.544
+    },
+    "tower_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 0
+    }
+  }
+}
