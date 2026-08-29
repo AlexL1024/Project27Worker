@@ -2226,14 +2226,12 @@ export default function build(world) {
     /* ---- the block behind it, and the two LED panels ---- */
     const billboards = [];
     {
-        const ot = officeTex(10, 9, '#cfc7ba', '#4c5a66', 0.34);
-        const host = stdMat(0xffffff, {
-            map: ot.map, emissive: 0xffffff, emissiveMap: ot.emis, emissiveIntensity: 1.05, roughness: 0.62,
-        });
+        // The two masses this part used to carry — a textured box and a plain
+        // stone one — went into the street wall below, which is what they
+        // always were: the first two buildings of the block. What is left here
+        // is the two panels and the steel holding them up, which is what the
+        // part is named after.
         const G = new THREE.Group();
-        G.add(mesh(boxG(28, 26, 22), host, -32.6, 13, -53));
-        G.add(mesh(boxG(20, 30, 22), MATS.stone, -58, 15, -54));
-
         const frames = [];
         const panel = (x, y, z, w, h, rotY, i) => {
             const t = adTex(i);
@@ -2255,6 +2253,158 @@ export default function build(world) {
         scene.add(G);
         world.part('billboard_00', G);
     }
+
+    /* ---- Swanston Street carried north, and the shopfronts under it ----
+
+       Everything between the back of Young & Jackson and Little Collins was
+       bare ground with tram poles standing in it, so the street ran out of the
+       world about eighty metres up and the Town Hall stood at the end of
+       nothing. Melbourne's mid-block frontage is one thing before it is
+       anything else: a cantilevered awning at four metres with a lit shopfront
+       under it, running the whole block, under whatever the upper storeys
+       happen to be that year.
+
+       One mesh for all of it, including the two blocks behind the hotel that
+       used to be a textured box and a plain stone one. The variety is in the
+       sheet rather than in the materials — four whole facades drawn side by
+       side on one texture, each with its own render, its own window rhythm and
+       its own shopfront, and every building's UVs pointed at one of the four.
+       The awnings and the parapets sample the flat cornice band along the top
+       of the first facade, so they come out of the same sheet and cost
+       nothing. And the lit shopfront is the emissive map's job, exactly as the
+       lit offices above it already are: at twenty to five the ground floor is
+       the brightest thing on the block, which is the entire reason the awning
+       over it is in shadow. ---- */
+    {
+        /* UVs remapped into a sub-rectangle rather than merely scaled. Scaling
+           alone picks the facade's grain; it cannot pick which of the four
+           facades, and it cannot point an awning at a patch of flat grey. */
+        const uvRect = (g, u0, v0, u1, v1) => {
+            const uv = g.attributes.uv;
+            for (let i = 0; i < uv.count; i++) {
+                uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+            }
+            return g;
+        };
+
+        const streetSheet = (emis) => tex(2048, 1024, (g, W, H) => {
+            const walls = ['#c9c2b4', '#9c6c58', '#767d85', '#ddd3bc'];
+            const wins = ['#3d4750', '#2c343c', '#28343f', '#424c55'];
+            const VW = W / 4;
+            for (let k = 0; k < 4; k++) {
+                const x0 = k * VW;
+                g.fillStyle = emis ? '#000' : walls[k];
+                g.fillRect(x0, 0, VW, H);
+
+                // the cornice, along the top of the sheet — which is also the
+                // flat grey the awnings and the parapets are pointed at
+                if (!emis) { g.fillStyle = '#3b3f44'; g.fillRect(x0, 0, VW, H * 0.055); }
+
+                // twelve floors between the cornice and the awning line
+                const y0 = H * 0.055, y1 = H * 0.855, rows = 12, cols = 7;
+                const rh = (y1 - y0) / rows, cw = VW / cols;
+                for (let r = 0; r < rows; r++) for (let i = 0; i < cols; i++) {
+                    const wx = x0 + i * cw + cw * 0.16, wy = y0 + r * rh + rh * 0.18;
+                    const ww = cw * 0.68, wh = rh * 0.62;
+                    // the same hash on both passes, so a lit window is lit in both
+                    const n = Math.sin((i * 12.9898 + r * 78.233 + k * 41.13) * 43758.5453);
+                    const on = (n - Math.floor(n)) < 0.32;
+                    if (emis) {
+                        if (!on) continue;
+                        g.fillStyle = ['#ffd9a0', '#ffe7c4', '#e8f0ff', '#fff3d6'][(i + r * 3) % 4];
+                        g.globalAlpha = 0.40 + 0.5 * (((i * 7 + r * 3) % 5) / 5);
+                        g.fillRect(wx, wy, ww, wh); g.globalAlpha = 1;
+                    } else {
+                        g.fillStyle = wins[k]; g.fillRect(wx, wy, ww, wh);
+                        g.fillStyle = 'rgba(255,255,255,.06)'; g.fillRect(wx, wy, ww, wh * 0.30);
+                        g.fillStyle = 'rgba(0,0,0,.13)'; g.fillRect(x0, y0 + r * rh + rh - 2, VW, 2);
+                    }
+                }
+
+                // what the awning does to the wall it is bolted to
+                if (!emis) { g.fillStyle = 'rgba(0,0,0,.44)'; g.fillRect(x0, H * 0.855, VW, H * 0.058); }
+
+                // the shopfront: five bays of glazing on a dark stallriser,
+                // and at this hour every one of them is on
+                const sy = H * 0.913, sh = H * 0.070;
+                if (!emis) { g.fillStyle = '#22262b'; g.fillRect(x0, sy - H * 0.006, VW, H * 0.093); }
+                for (let b = 0; b < 5; b++) {
+                    const bx = x0 + VW * (b + 0.06) / 5, bw = VW * 0.88 / 5;
+                    g.fillStyle = emis ? ['#ffd7a2', '#ffe9c8', '#ffdcb0', '#ffeed4', '#ffd39a'][b]
+                                       : ['#c9b184', '#d8c49b', '#cbb88f', '#e0cfa8', '#c6ad80'][b];
+                    g.fillRect(bx, sy, bw, sh);
+                    if (!emis) { g.fillStyle = 'rgba(0,0,0,.32)'; g.fillRect(bx, sy + sh * 0.60, bw, sh * 0.40); }
+                }
+                // and the signs on the fascia, which on a wet footpath are the
+                // other thing you actually see
+                for (let b = 0; b < 3; b++) {
+                    const bx = x0 + VW * (0.06 + b * 0.31), bw = VW * 0.24;
+                    g.fillStyle = emis ? ['#ffb27a', '#9fd8ff', '#ffe08a'][b] : '#2a2f34';
+                    g.fillRect(bx, H * 0.870, bw, H * 0.030);
+                }
+            }
+        });
+
+        const CORN = [0.03, 0.958, 0.22, 0.992];        // the flat grey, in uv
+        const parts = [];
+        const flat = (g) => uvRect(g, CORN[0], CORN[1], CORN[2], CORN[3]);
+
+        /* cx, cz, w (back from the street), d (frontage), h, which facade, and
+           which way the awning faces — 0 for the two masses behind the hotel
+           that do not front Swanston at all. Written out rather than seeded:
+           this is a block of a real city and the heights in it are not random,
+           they are what got built when. */
+        const BLOCKS = [
+            [-32.6, -53.0, 28, 22, 26, 3, 1],           // behind Young & Jackson, under the billboards
+            [-58.0, -54.0, 20, 22, 30, 1, 0],           // and the one behind that
+            [-33.5, -75.5, 30, 19, 34, 0, 1],
+            [-33.5, -93.9, 30, 17.8, 22, 1, 1],
+            [-33.5, -138.6, 30, 22.8, 46, 2, 1],
+            [-33.5, -161.0, 30, 22, 26, 3, 1],
+            [-33.5, -181.0, 30, 18, 31, 1, 1],
+            [-33.5, -199.7, 30, 19.5, 38, 0, 1],
+            [-33.5, -269.2, 30, 37.5, 28, 3, 1],        // opposite the Town Hall
+            [-33.5, -310.0, 30, 44, 44, 2, 1],
+            /* The east side, north of Flinders Lane, and deliberately the low
+               side of the street. Anything much over thirty-five metres here
+               stands between the corner and the Town Hall tower, and the tower
+               is the one thing three hundred metres up this street that has to
+               read from the crossing. Melbourne's east side is genuinely the
+               shorter one along this stretch, so this costs nothing but a
+               choice about which real buildings to believe. */
+            [33.5, -139.6, 30, 24.8, 27, 1, -1],
+            [33.5, -165.0, 30, 26, 34, 2, -1],
+            [33.5, -193.7, 30, 31.5, 22, 0, -1],
+        ];
+
+        for (const b of BLOCKS) {
+            const [cx, cz, w, d, h, k, awn] = b;
+            const u0 = k / 4 + 0.004, u1 = (k + 1) / 4 - 0.004;
+            parts.push(uvRect(put(boxG(w, h, d), cx, h / 2, cz), u0, 0, u1, 1));
+            parts.push(flat(put(boxG(w + 0.7, 0.6, d + 0.7), cx, h + 0.3, cz)));
+            if (!awn) continue;
+            // the awning: three metres of cantilever at four and a bit, with
+            // the fascia hanging off its edge. No posts — a Melbourne verandah
+            // has not been propped on the footpath since about 1920.
+            const fx = cx + awn * w / 2;
+            parts.push(flat(put(boxG(3.0, 0.22, d * 0.97), fx + awn * 1.5, 4.35, cz)));
+            parts.push(flat(put(boxG(0.16, 0.9, d * 0.97), fx + awn * 2.96, 3.95, cz)));
+        }
+        // a little roof plant, so the parapet line is not a run of clean edges
+        for (const p of [[-33.5, -138.6, 46], [33.5, -165.0, 52], [-33.5, -310.0, 44]]) {
+            parts.push(flat(put(boxG(7, 2.6, 6), p[0] + 4, p[2] + 1.9, p[1] - 3)));
+            parts.push(flat(put(boxG(4, 1.6, 4), p[0] - 6, p[2] + 1.4, p[1] + 4)));
+        }
+
+        const sheet = streetSheet(false), sheetE = streetSheet(true);
+        const walls = merged(parts, stdMat(0xffffff, {
+            map: sheet, emissive: 0xffffff, emissiveMap: sheetE, emissiveIntensity: 1.0,
+            roughness: 0.66,
+        }));
+        scene.add(walls);
+        world.part('swanstonwall_00', walls);
+    }
+
 
     /* ============================================================
        12 · Federation Square — the south-east quadrant
