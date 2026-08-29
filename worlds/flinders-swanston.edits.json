@@ -1,0 +1,15 @@
+{
+  "hidden" : [
+    "fedsquare_00"
+  ],
+  "parts" : {
+    "fedsquare_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 6.618
+    }
+  }
+}
