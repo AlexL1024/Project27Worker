@@ -1,0 +1,41 @@
+{
+  "added" : [
+    {
+      "id" : "student_00",
+      "position" : [
+        2.092,
+        0.3578,
+        -3.7959
+      ],
+      "prop" : "student",
+      "rotationY" : 0,
+      "scale" : 1
+    }
+  ],
+  "parts" : {
+    "gull_05" : {
+      "position" : [
+        2.4462,
+        2.665,
+        2.1581
+      ],
+      "rotationY" : 0
+    },
+    "parcel_00" : {
+      "position" : [
+        -1.6012,
+        0.44,
+        -0.2804
+      ],
+      "rotationY" : -0.42
+    },
+    "tinnie_00" : {
+      "position" : [
+        2.6356,
+        -0.0747,
+        -3.3705
+      ],
+      "rotationY" : 0.0512
+    }
+  }
+}

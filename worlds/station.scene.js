@@ -180,12 +180,13 @@ export default function build(world) {
     /* ============================================================
        3 · vault, floor, ceiling bands
        ============================================================ */
+    const roofVault = new THREE.Group(); scene.add(roofVault);
     const vaultGeo = new THREE.CylinderGeometry(R, R, LEN, 64, 1, true, 1.782, 2.72);
     vaultGeo.rotateX(Math.PI / 2);
     const vault = new THREE.Mesh(vaultGeo, new THREE.MeshStandardMaterial({
         map: concreteTex, roughness: 0.94, side: THREE.BackSide }));
     vault.position.y = CY;
-    scene.add(vault);
+    roofVault.add(vault);
 
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(23.4, LEN), floorMat);
     floor.rotation.x = -Math.PI / 2;
@@ -212,7 +213,7 @@ export default function build(world) {
             }
         };
         band(66, 87); band(93, 114);
-        scene.add(new THREE.Mesh(mergeGeos(items), slatMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(items), slatMat));
 
         // dark timber vault bands over each platform (backing + batten ribs)
         const darkBack = new THREE.MeshStandardMaterial({ color: 0x15100c, roughness: 0.95 });
@@ -230,15 +231,15 @@ export default function build(world) {
                 ribs.push({ geo: ribG, m: M(Math.cos(phi) * (R - 0.3), CY + Math.sin(phi) * (R - 0.3), 0, 0, 0, phi) });
             }
         }
-        scene.add(new THREE.Mesh(mergeGeos(backs), darkBack));
-        scene.add(new THREE.Mesh(mergeGeos(ribs), darkRib));
+        roofVault.add(new THREE.Mesh(mergeGeos(backs), darkBack));
+        roofVault.add(new THREE.Mesh(mergeGeos(ribs), darkRib));
 
         // crown services: red conduit + steel pipes
         const conduit = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, LEN), redMat);
-        conduit.position.set(0, CY + R - 0.16, 0); scene.add(conduit);
+        conduit.position.set(0, CY + R - 0.16, 0); roofVault.add(conduit);
         const pipeG = new THREE.CylinderGeometry(0.045, 0.045, LEN, 8); pipeG.rotateX(Math.PI / 2);
-        const p1 = new THREE.Mesh(pipeG, steelMat); p1.position.set(-0.55, CY + R - 0.2, 0); scene.add(p1);
-        const p2 = p1.clone(); p2.position.x = 0.55; scene.add(p2);
+        const p1 = new THREE.Mesh(pipeG, steelMat); p1.position.set(-0.55, CY + R - 0.2, 0); roofVault.add(p1);
+        const p2 = p1.clone(); p2.position.x = 0.55; roofVault.add(p2);
 
         // magenta art panels on the vault flanks above the mezzanine
         const mag = [];
@@ -247,7 +248,7 @@ export default function build(world) {
             const phi = (s > 0 ? a : 180 - a) * Math.PI / 180;
             mag.push({ geo: magG, m: M(Math.cos(phi) * (R - 0.34), CY + Math.sin(phi) * (R - 0.34), 0, 0, 0, phi) });
         }
-        scene.add(new THREE.Mesh(mergeGeos(mag), magentaMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(mag), magentaMat));
     }
 
     /* ============================================================
@@ -283,9 +284,9 @@ export default function build(world) {
             steelItems.push({ geo: brktG, m: M(-ARCH_X - 0.1, BEAM_Y + BEAM_H / 2 + 0.25, z) });
             steelItems.push({ geo: brktG, m: M(ARCH_X + 0.1, BEAM_Y + BEAM_H / 2 + 0.25, z) });
         }
-        scene.add(new THREE.Mesh(mergeGeos(archItems), orangeMat));
-        scene.add(new THREE.Mesh(mergeGeos(steelItems), steelMat));
-        scene.add(new THREE.Mesh(mergeGeos(rodItems), steelMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(archItems), orangeMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(steelItems), steelMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(rodItems), steelMat));
     }
     {   // pendant lanterns at every crossing
         const amber = [], cores = [], fins = [], rods = [];
@@ -298,6 +299,7 @@ export default function build(world) {
         for (let z0 = -HALF + 1; z0 + BAY <= HALF - 0.99; z0 += BAY) {
             const zc = z0 + BAY / 2;
             if (zc < -43.5) continue;
+            if (zc > -6 && zc < 10) continue;      // the Exit 2 escalator rises here
             rods.push({ geo: rodG, m: M(0, 10.1, zc) });
             amber.push({ geo: capG, m: M(0, 8.68, zc) });
             for (let j = 0; j < 7; j++) {
@@ -308,10 +310,10 @@ export default function build(world) {
             amber.push({ geo: botG, m: M(0, 6.16, zc) });
             cores.push({ geo: dotG, m: M(0, 5.95, zc) });
         }
-        scene.add(new THREE.Mesh(mergeGeos(rods), steelMat));
-        scene.add(new THREE.Mesh(mergeGeos(amber), amberMat));
-        scene.add(new THREE.Mesh(mergeGeos(cores), coreMat));
-        scene.add(new THREE.Mesh(mergeGeos(fins), finMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(rods), steelMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(amber), amberMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(cores), coreMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(fins), finMat));
     }
 
     /* ============================================================
@@ -342,23 +344,23 @@ export default function build(world) {
                 lensItems.push({ geo: lensG, m: M(x + s * 0.55, BEAM_Y - BEAM_H / 2 - 0.57, z + 2.8, 0, 0, 0) });
             }
         }
-        scene.add(new THREE.Mesh(mergeGeos(colItems), columnMat));
-        scene.add(new THREE.Mesh(mergeGeos(plinthItems), blackMat));
-        scene.add(new THREE.Mesh(mergeGeos(steelItems), steelMat));
-        scene.add(new THREE.Mesh(mergeGeos(lensItems), lensMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(colItems), columnMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(plinthItems), blackMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(steelItems), steelMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(lensItems), lensMat));
 
         // longitudinal beams the arches spring from
         for (const s of [-1, 1]) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(1.05, BEAM_H, LEN), columnMat);
             beam.position.set(s * COL_X, BEAM_Y, 0);
-            scene.add(beam);
+            roofVault.add(beam);
         }
         // the beam itself continues as a solid wall all the way up to the vault
         for (const s2 of [-1, 1]) {
             const upH = 8.0;
             const up = new THREE.Mesh(new THREE.BoxGeometry(0.9, upH, LEN), concreteMat);
             up.position.set(s2 * COL_X, BEAM_Y + BEAM_H / 2 + upH / 2, 0);
-            scene.add(up);
+            roofVault.add(up);
         }
 
         // orange cone lamps over the platforms
@@ -375,9 +377,9 @@ export default function build(world) {
                 glowItems.push({ geo: glowG, m: M(x, 7.29, z) });
             }
         }
-        scene.add(new THREE.Mesh(mergeGeos(stemItems), darkMetal));
-        scene.add(new THREE.Mesh(mergeGeos(coneItems), coneMat));
-        scene.add(new THREE.Mesh(mergeGeos(glowItems), coneGlowMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(stemItems), darkMetal));
+        roofVault.add(new THREE.Mesh(mergeGeos(coneItems), coneMat));
+        roofVault.add(new THREE.Mesh(mergeGeos(glowItems), coneGlowMat));
     }
 
     /* ============================================================
@@ -456,7 +458,7 @@ export default function build(world) {
                 }
                 tileGeos.push({ geo: tileG, m: M(sd * (PSD_X + 0.02), 3.5, dz, 0, rotY, 0) });
             }
-            const edges = [-HALF + 0.4, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 0.4];
+            const edges = [-HALF + 3.1, ...sorted.flatMap(z => [z - 1.05, z + 1.05]), HALF - 3.1];
             for (let i = 0; i < edges.length; i += 2) {
                 const a = edges[i], b = edges[i + 1];
                 if (b - a < 0.35) continue;
@@ -735,10 +737,11 @@ export default function build(world) {
         hungSign(2.6, 0.62, fn, x, 4.6, z, 10.4, 0.9, { edge: 0xd9d9d6 });
     }
     // station name signs on the blade columns, facing the platforms
-    let nameMat, nameTexSL, nameTexTH;
+    let nameMat, nameTexSL, nameTexTH, nameTexAN;
     {
         nameTexSL = tex(640, 420, drawNameFor('State Library', 'Swanston St', 'Franklin St'));
         nameTexTH = tex(640, 420, drawNameFor('Town Hall', 'Collins St', 'City Square'));
+        nameTexAN = tex(640, 420, drawNameFor('Anzac', 'St Kilda Rd', 'Domain Rd'));
         const t = nameTexSL;
         const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.55 });
         nameMat = m;
@@ -748,7 +751,7 @@ export default function build(world) {
                 const p = new THREE.Mesh(g, m);
                 p.position.set(s * (COL_X + 0.45), 3.0, z);
                 p.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2;
-                scene.add(p);
+                roofVault.add(p);
             }
         }
     }
@@ -761,10 +764,10 @@ export default function build(world) {
                 const m = new THREE.MeshStandardMaterial({ map: s > 0 ? t1 : t2, roughness: 0.6 });
                 const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.05), [e, e, e, e, m, m]);
                 p.position.set(s * (COL_X - 0.2), BEAM_Y - BEAM_H / 2 - 0.45, z + 3);
-                scene.add(p);
+                roofVault.add(p);
                 const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.25, 6), darkMetal);
                 stem.position.set(s * (COL_X - 0.2), BEAM_Y - BEAM_H / 2 - 0.12, z + 3);
-                scene.add(stem);
+                roofVault.add(stem);
             }
         }
     }
@@ -787,10 +790,10 @@ export default function build(world) {
             s.rotation.z = side > 0 ? -0.08 : 0.08;
             const grp = new THREE.Group(); grp.add(s);
             world.part(`screen_pid_${idx}`, grp);
-            scene.add(grp);
-            pids.push({ canvas, t, side, offset: idx * 2 });
+            roofVault.add(grp);
+            pids.push({ canvas, t, side, z, offset: idx * 2 });
         };
-        mk(1, -75, 0); mk(-1, -30, 1); mk(1, 26, 2); mk(-1, 75, 3);
+        mk(1, -104, 0); mk(-1, -30, 1); mk(1, 26, 2); mk(-1, 104, 3);
     }
     function drawPIDNow(p, tSec) {
         const ctx = p.canvas.getContext('2d'), w = p.canvas.width, h = p.canvas.height;
@@ -951,10 +954,289 @@ export default function build(world) {
     /* ============================================================
        11 · end walls
        ============================================================ */
-    for (const s of [-1, 1]) {
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(20, 14.5, 0.6), concreteMat);
-        wall.position.set(0, 6.5, s * (HALF + 0.3));
-        scene.add(wall);
+    {
+        // concourse end walls (the lift wall handles most of the -z end)
+        for (const s2 of [-1, 1]) {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(11.8, 14.5, 0.6), concreteMat);
+            wall.position.set(0, 6.5, s2 * (HALF + 0.3));
+            scene.add(wall);
+        }
+        // fire-door texture for the platform end walls
+        const fireDoorTex = tex(384, 480, (ctx, w, h) => {
+            ctx.fillStyle = '#9A9DA0'; ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = '#6E7174'; ctx.lineWidth = 8;
+            ctx.strokeRect(6, 6, w - 12, h - 12);
+            ctx.beginPath(); ctx.moveTo(w / 2, 10); ctx.lineTo(w / 2, h - 10); ctx.stroke();
+            ctx.fillStyle = '#7E8184';                                  // push bars + kick plates
+            ctx.fillRect(30, h * 0.52, w / 2 - 45, 14); ctx.fillRect(w / 2 + 15, h * 0.52, w / 2 - 45, 14);
+            ctx.fillStyle = '#8A8D90'; ctx.fillRect(14, h - 70, w - 28, 56);
+            ctx.fillStyle = '#F5C400'; ctx.fillRect(w * 0.1, h * 0.16, w * 0.34, h * 0.11);   // alarm warning
+            ctx.fillStyle = '#111'; ctx.font = '600 15px Arial';
+            ctx.fillText('WARNING', w * 0.13, h * 0.21);
+            ctx.fillText('DOOR ALARMED', w * 0.11, h * 0.245);
+            ctx.fillStyle = '#EDEEEA'; ctx.fillRect(w * 0.56, h * 0.15, w * 0.32, h * 0.14);  // notice sheets
+            ctx.fillStyle = '#2E7D46'; ctx.fillRect(w * 0.56, h * 0.33, w * 0.2, h * 0.06);
+        });
+        const fireDoorMat = new THREE.MeshStandardMaterial({ map: fireDoorTex, roughness: 0.6, metalness: 0.2 });
+        const exitMat = new THREE.MeshStandardMaterial({ color: 0x2AA05A, emissive: 0x2AE07A, emissiveIntensity: 0.9 });
+        const staffTex = tex(256, 96, (ctx, w, h) => {
+            ctx.fillStyle = '#F2F2EF'; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#333'; ctx.font = '600 22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('Authorised staff only', w / 2, h / 2);
+        });
+        const staffMat = new THREE.MeshBasicMaterial({ map: staffTex });
+        const endGlass = new THREE.MeshStandardMaterial({ color: 0x8FA0A8, roughness: 0.08, metalness: 0.4,
+            transparent: true, opacity: 0.35 });
+        const endBand = new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.5, metalness: 0.4 });
+        const psSteel2 = new THREE.MeshStandardMaterial({ color: 0xC9CCCE, roughness: 0.3, metalness: 0.6 });
+        const gridTex = tex(256, 256, (ctx, w, h) => {
+            ctx.fillStyle = '#0E1013'; ctx.fillRect(0, 0, w, h);
+            const g = ctx.createLinearGradient(0, 0, w, h);
+            g.addColorStop(0, 'rgba(70,76,82,0.18)'); g.addColorStop(0.5, 'rgba(20,22,24,0)'); g.addColorStop(1, 'rgba(60,66,72,0.12)');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = '#2A2D31'; ctx.lineWidth = 4;
+            for (let i = 0; i <= 4; i++) {
+                ctx.beginPath(); ctx.moveTo(i * w / 4, 0); ctx.lineTo(i * w / 4, h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i * h / 4); ctx.lineTo(w, i * h / 4); ctx.stroke();
+            }
+        }, 1.5, 1.6);
+        const darkWallMat = new THREE.MeshStandardMaterial({ map: gridTex, roughness: 0.16, metalness: 0.55 });
+        const redSignMat = new THREE.MeshStandardMaterial({ color: 0xB02020, emissive: 0x701010, emissiveIntensity: 0.5 });
+        // clear corner glazing — the tunnel is meant to read through it
+        const cornerGlass = new THREE.MeshStandardMaterial({
+            color: 0xAFC0C8, roughness: 0.04, metalness: 0.35,
+            transparent: true, opacity: 0.17, depthWrite: false });
+        const portalMat = new THREE.MeshStandardMaterial({ color: 0x17181A, roughness: 0.95 });
+        const signalMat = new THREE.MeshStandardMaterial({ color: 0x400808, emissive: 0xD82020, emissiveIntensity: 2.2 });
+
+        function platformEnd(zs, xs) {
+            const zw = zs * (HALF - 0.35);          // end wall plane
+            const faceRot = zs > 0 ? Math.PI : 0;   // face back down the platform
+            const inner = 5.65, glassStart = 8.7;   // wall runs from the beam line to the corner
+            const wallW = glassStart - inner, wallCx = xs * (inner + wallW / 2);
+            const glassW = 11.7 - glassStart, glassCx = xs * (glassStart + glassW / 2);
+
+            // --- lower solid wall with the fire door ---
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(wallW, 3.15, 0.45), concreteMat);
+            wall.position.set(wallCx, 1.575, zw); scene.add(wall);
+            const door = new THREE.Mesh(new THREE.PlaneGeometry(2.05, 2.3), fireDoorMat);
+            door.rotation.y = faceRot;
+            door.position.set(wallCx, 1.16, zw - zs * 0.25); scene.add(door);
+            const ex = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.24, 0.08), exitMat);
+            ex.position.set(wallCx, 3.42, zw - zs * 0.26); scene.add(ex);
+
+            // --- corner glazing: end plane + return along the PSD line ---
+            const gEnd = new THREE.Mesh(new THREE.PlaneGeometry(glassW, 3.15), cornerGlass);
+            gEnd.rotation.y = faceRot;
+            gEnd.position.set(glassCx, 1.575, zw - zs * 0.2); scene.add(gEnd);
+            const retLen = 2.4;
+            const gRet = new THREE.Mesh(new THREE.PlaneGeometry(retLen, 3.15), cornerGlass);
+            gRet.rotation.y = xs > 0 ? -Math.PI / 2 : Math.PI / 2;
+            gRet.position.set(xs * PSD_X, 1.575, zw - zs * retLen / 2); scene.add(gRet);
+
+            // black frames around both panes
+            const fr = [];
+            const vG = new THREE.BoxGeometry(0.09, 3.15, 0.09);
+            for (const px of [glassStart, glassStart + glassW / 2, 11.66]) {
+                fr.push({ geo: vG, m: M(xs * px, 1.575, zw - zs * 0.2) });
+            }
+            fr.push({ geo: new THREE.BoxGeometry(glassW, 0.1, 0.12), m: M(glassCx, 3.12, zw - zs * 0.2) });
+            fr.push({ geo: new THREE.BoxGeometry(glassW, 0.07, 0.1), m: M(glassCx, 1.42, zw - zs * 0.2) });
+            const vG2 = new THREE.BoxGeometry(0.09, 3.15, 0.09);
+            for (const pz of [0.25, retLen - 0.1]) fr.push({ geo: vG2, m: M(xs * PSD_X, 1.575, zw - zs * pz) });
+            fr.push({ geo: new THREE.BoxGeometry(0.12, 0.1, retLen), m: M(xs * PSD_X, 3.12, zw - zs * retLen / 2) });
+            fr.push({ geo: new THREE.BoxGeometry(0.1, 0.07, retLen), m: M(xs * PSD_X, 1.42, zw - zs * retLen / 2) });
+            scene.add(new THREE.Mesh(mergeGeos(fr), blackMat));
+
+            const staff = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.28), staffMat);
+            staff.rotation.y = faceRot;
+            staff.position.set(glassCx, 2.05, zw - zs * 0.27); scene.add(staff);
+
+            // --- dark glazed wall filling everything above ---
+            const upW = 11.7 - inner;
+            const upper = new THREE.Mesh(new THREE.BoxGeometry(upW, 6.5, 0.3), darkWallMat);
+            upper.position.set(xs * (inner + upW / 2), 6.4, zw); scene.add(upper);
+            const red = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.3, 0.06), redSignMat);
+            red.position.set(xs * 9.0, 4.4, zw - zs * 0.2); scene.add(red);
+
+            // --- what you actually see through the glass: tunnel portal + signal ---
+            const jamb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 5.6, 7), portalMat);
+            jamb.position.set(xs * 9.1, 2.2, zs * (HALF + 3.4)); scene.add(jamb);
+            const lintel = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.4, 7), portalMat);
+            lintel.position.set(xs * 11.5, 5.2, zs * (HALF + 3.4)); scene.add(lintel);
+            const sig = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.1), signalMat);
+            sig.position.set(xs * 10.4, 3.1, zs * (HALF + 5)); scene.add(sig);
+            const glow = new THREE.PointLight(0xE08A46, 30, 19, 2);
+            glow.position.set(xs * 12.6, 2.4, zs * (HALF + 8)); scene.add(glow);
+
+            // tactile strip before the end
+            const tact = new THREE.Mesh(new THREE.PlaneGeometry(5.9, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x8f8c86, roughness: 0.85 }));
+            tact.rotation.x = -Math.PI / 2;
+            tact.position.set(xs * (inner + upW / 2), 0.014, zw - zs * 2.3);
+            scene.add(world.ghost(tact));
+        }
+        for (const zs of [-1, 1]) for (const xs of [-1, 1]) platformEnd(zs, xs);
+    }
+
+    /* ============================================================
+       11b · Exit 2 escalator bank (State Library / Town Hall only)
+             Four lanes of real moving steps, a solid clad mass beneath,
+             and the Information / Help Point box on the far side.
+       ============================================================ */
+    const escBanks = [];
+    {
+        const ZB = 7.0, H = 5.2, RUN = 9.0;          // bottom z, rise, horizontal run
+        const ZT = ZB - RUN;                          // top of the incline
+        const A = Math.atan2(H, RUN);                 // 30 degrees
+        const SLOPE = Math.sqrt(RUN * RUN + H * H);
+        const LANES = 4, LW = 1.02, LG = 0.07;
+        const TOT = LANES * LW + (LANES - 1) * LG;
+        const laneX = [];
+        for (let i = 0; i < LANES; i++) laneX.push(-TOT / 2 + LW / 2 + i * (LW + LG));
+
+        const cladMat2 = new THREE.MeshStandardMaterial({ color: 0x8E8983, roughness: 0.2, metalness: 0.78 });
+        const steelBright = new THREE.MeshStandardMaterial({ color: 0xC9CCCE, roughness: 0.3, metalness: 0.6 });
+        const escGlass = new THREE.MeshStandardMaterial({ color: 0xBFC8CC, roughness: 0.05, metalness: 0.2,
+            transparent: true, opacity: 0.22, depthWrite: false });
+        const combMat = new THREE.MeshStandardMaterial({ color: 0xC8A93C, roughness: 0.5, metalness: 0.4 });
+
+        // --- moving steps: one InstancedMesh for every lane and tread ---
+        const treadTex = tex(64, 64, (ctx, w, h) => {
+            ctx.fillStyle = '#9DA0A2'; ctx.fillRect(0, 0, w, h);
+            for (let x = 2; x < w; x += 5) { ctx.fillStyle = '#8A8D8F'; ctx.fillRect(x, 0, 2, h); }
+            ctx.fillStyle = '#D8B43A'; ctx.fillRect(0, h - 7, w, 7);
+        });
+        const riserTex = tex(64, 64, (ctx, w, h) => {
+            ctx.fillStyle = '#6E7173'; ctx.fillRect(0, 0, w, h);
+            for (let x = 2; x < w; x += 5) { ctx.fillStyle = '#5C5F61'; ctx.fillRect(x, 0, 2, h); }
+        });
+        const sideM = new THREE.MeshStandardMaterial({ color: 0x8A8D8F, roughness: 0.45, metalness: 0.45 });
+        const treadM = new THREE.MeshStandardMaterial({ map: treadTex, roughness: 0.55, metalness: 0.35 });
+        const riserM = new THREE.MeshStandardMaterial({ map: riserTex, roughness: 0.6, metalness: 0.35 });
+        const P = 0.40;                               // horizontal advance per step
+        const perLane = Math.ceil(RUN / P) + 1;
+        const stepGeo = new THREE.BoxGeometry(LW, 0.26, P);
+        const steps = new THREE.InstancedMesh(stepGeo,
+            [sideM, sideM, treadM, sideM, riserM, sideM], LANES * perLane);
+        steps.frustumCulled = false;
+        roofVault.add(steps);
+        escBanks.push({ mesh: steps, laneX, perLane, P, RUN, ZB, H,
+                        tanA: Math.tan(A), dummy: new THREE.Object3D(), off: 0 });
+
+        // --- balustrades, handrails, LED strips, skirts ---
+        const zc = (ZB + ZT) / 2, yc = H / 2;
+        for (const bx of [-TOT / 2 - 0.16, TOT / 2 + 0.16]) {
+            const bal = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.0, SLOPE * 0.99), escGlass);
+            bal.position.set(bx, yc + 0.76, zc); bal.rotation.x = A;
+            roofVault.add(bal);
+            const hr = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.09, SLOPE), blackMat);
+            hr.position.set(bx, yc + 1.3, zc); hr.rotation.x = A;
+            roofVault.add(hr);
+            for (const o of [-0.05, 0.05]) {
+                const led = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, SLOPE * 0.98), ledMat);
+                led.position.set(bx + o, yc + 1.12, zc); led.rotation.x = A;
+                roofVault.add(led);
+            }
+            const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.75, SLOPE * 0.99), steelBright);
+            skirt.position.set(bx, yc + 0.12, zc); skirt.rotation.x = A;
+            roofVault.add(skirt);
+        }
+        // inner lane dividers
+        for (let i = 1; i < LANES; i++) {
+            const dx = laneX[i] - (LW + LG) / 2;
+            const bal = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, SLOPE * 0.99), escGlass);
+            bal.position.set(dx, yc + 0.76, zc); bal.rotation.x = A; roofVault.add(bal);
+            const hr = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.09, SLOPE), blackMat);
+            hr.position.set(dx, yc + 1.3, zc); hr.rotation.x = A; roofVault.add(hr);
+            const deck = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.06, SLOPE), steelBright);
+            deck.position.set(dx, yc + 0.2, zc); deck.rotation.x = A; roofVault.add(deck);
+        }
+        // comb plates and landings, which also hide the step wrap-around
+        const combB = new THREE.Mesh(new THREE.BoxGeometry(TOT, 0.07, 1.5), combMat);
+        combB.position.set(0, 0.035, ZB + 0.7); roofVault.add(combB);
+        const combT = new THREE.Mesh(new THREE.BoxGeometry(TOT, 0.07, 1.5), combMat);
+        combT.position.set(0, H + 0.035, ZT - 0.7); roofVault.add(combT);
+        const plateB = new THREE.Mesh(new THREE.BoxGeometry(TOT + 0.9, 0.06, 2.2), steelBright);
+        plateB.position.set(0, 0.03, ZB + 2.2); roofVault.add(world.ground(plateB));
+
+        // --- the solid clad mass under the escalator ---
+        // Its top edge follows the step line exactly, so nothing pokes through;
+        // the underside slopes down and meets the floor ahead of the bottom comb.
+        {
+            const tanA = Math.tan(A);
+            const yStep = (z) => (ZB - z) * tanA;
+            const TH = 1.3;                                   // truss depth
+            const zFront = ZB + 0.9, zBack = ZT - 0.9;
+            const zToe = ZB - TH / tanA;                      // where the underside meets the floor
+            const prof = new THREE.Shape();
+            prof.moveTo(zFront, yStep(zFront));
+            prof.lineTo(zBack, yStep(zBack));
+            prof.lineTo(zBack, yStep(zBack) - TH);
+            prof.lineTo(zToe, 0);
+            prof.lineTo(zFront, yStep(zFront) - 0.05);
+            prof.closePath();
+            const g = new THREE.ExtrudeGeometry(prof, { depth: TOT + 0.95, bevelEnabled: false });
+            g.rotateY(-Math.PI / 2); g.translate((TOT + 0.95) / 2, 0, 0);
+            const soff = new THREE.Mesh(g, cladMat2);
+            roofVault.add(soff);                              // its own side faces are the clad walls
+        }
+
+        // --- upper landing slab, and the Information box beneath its far side ---
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(TOT + 1.2, 0.34, 8.4), concreteMat);
+        slab.position.set(0, H - 0.17, ZT - 1.5 - 4.2);
+        roofVault.add(world.ground(slab));
+        {
+            const panelTex2 = tex(256, 256, (ctx, w, h) => {
+                ctx.fillStyle = '#CFD1D0'; ctx.fillRect(0, 0, w, h);
+                ctx.strokeStyle = 'rgba(90,92,92,0.55)'; ctx.lineWidth = 3;
+                for (let i = 0; i <= 4; i++) {
+                    ctx.beginPath(); ctx.moveTo(i * w / 4, 0); ctx.lineTo(i * w / 4, h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i * h / 4); ctx.lineTo(w, i * h / 4); ctx.stroke();
+                }
+            }, 3, 4);
+            const ceil2 = new THREE.Mesh(new THREE.PlaneGeometry(TOT + 1.2, 8.4),
+                new THREE.MeshStandardMaterial({ map: panelTex2, roughness: 0.6, metalness: 0.15 }));
+            ceil2.rotation.x = Math.PI / 2;
+            ceil2.position.set(0, H - 0.38, ZT - 1.5 - 4.2);
+            roofVault.add(ceil2);
+
+            const infoTex2 = tex(1024, 640, (ctx, w, h) => {
+                ctx.fillStyle = '#F0F1EE'; ctx.fillRect(0, 0, w, h);
+                const g2 = ctx.createLinearGradient(0, 0, 0, h);
+                g2.addColorStop(0, 'rgba(255,255,255,0.5)'); g2.addColorStop(1, 'rgba(200,203,200,0.3)');
+                ctx.fillStyle = g2; ctx.fillRect(0, 0, w, h);
+                ctx.strokeStyle = '#17181A'; ctx.lineWidth = 7;
+                for (const x of [0, 0.28, 0.5, 0.72, 1]) { ctx.beginPath(); ctx.moveTo(x * w, 0); ctx.lineTo(x * w, h); ctx.stroke(); }
+                for (const y of [0, 0.26, 0.42, 0.78, 1]) { ctx.beginPath(); ctx.moveTo(0, y * h); ctx.lineTo(w, y * h); ctx.stroke(); }
+                ctx.fillStyle = '#2A2F49'; ctx.fillRect(w * 0.28, h * 0.26, w * 0.44, h * 0.16);
+                ctx.fillStyle = '#fff'; ctx.font = '600 32px Arial'; ctx.textBaseline = 'middle';
+                ctx.fillText('i  Information', w * 0.30, h * 0.34);
+                ctx.fillText('Help Point', w * 0.55, h * 0.34);
+                ctx.fillStyle = '#DCE8F2'; ctx.fillRect(w * 0.30, h * 0.5, w * 0.16, h * 0.24);
+                ctx.fillStyle = '#C8DCE8'; ctx.fillRect(w * 0.475, h * 0.5, w * 0.03, h * 0.24);
+                ctx.fillStyle = '#9EA3A7'; ctx.fillRect(w * 0.53, h * 0.5, w * 0.1, h * 0.26);
+                ctx.fillStyle = '#1D3E6E'; ctx.fillRect(w * 0.545, h * 0.54, w * 0.07, h * 0.07);
+            });
+            const infoFace = new THREE.MeshStandardMaterial({ map: infoTex2, roughness: 0.35,
+                emissive: 0xBFC2BD, emissiveMap: infoTex2, emissiveIntensity: 0.3 });
+            const infoSide = new THREE.MeshStandardMaterial({ color: 0xE7E8E4, roughness: 0.35,
+                emissive: 0xA8ABA6, emissiveIntensity: 0.22 });
+            const box = new THREE.Mesh(new THREE.BoxGeometry(4.6, 3.4, 3.6),
+                [infoSide, infoSide, infoSide, infoSide, infoSide, infoFace]);
+            box.position.set(0, 1.7, ZT - 8.6);
+            roofVault.add(box);
+            const bl = new THREE.PointLight(0xF2F0E6, 20, 12, 2);
+            bl.position.set(0, 3.4, ZT - 10.6); roofVault.add(bl);
+        }
+
+        // --- Exit 2 signs flanking the escalator, and its lighting ---
+        hungSign(2.2, 0.62, mkExit('Exit 2', 'Franklin Street'), -3.4, 4.35, ZB + 1.0, 8.6, 0.7);
+        hungSign(2.2, 0.62, mkExit('Exit 2', 'Franklin Street'), 3.4, 4.35, ZB + 1.0, 8.6, 0.7);
+        for (const [ez, ei] of [[ZB + 1.5, 16], [zc, 18], [ZT - 2.5, 16]]) {
+            const el = new THREE.PointLight(0xFFF0DA, ei, 15, 2);
+            el.position.set(0, 6.8, ez); roofVault.add(el);
+        }
     }
 
     /* ============================================================
@@ -993,9 +1275,10 @@ export default function build(world) {
         const zc = -HALF + 1 + bi * BAY + BAY / 2;
         if (zc > HALF - 2) break;
         if (zc < -103.5) continue;
+        if (zc > -6 && zc < 10) continue;
         const pl = new THREE.PointLight(0xFFDFAE, 40, 16, 2);
         pl.position.set(0, 6.9, zc);
-        scene.add(pl);
+        roofVault.add(pl);
     }
     for (const [z, i] of [[-70, 95], [0, 95], [70, 95]]) {           // concourse fill
         const fill = new THREE.PointLight(0xFFF0DC, i, 52, 2);
@@ -1007,7 +1290,7 @@ export default function build(world) {
         for (let z = -84; z <= 96; z += 56) {
             const o = new THREE.PointLight(0xFF9F45, 16, 10, 2);
             o.position.set(flip * 8.55, 6.9, z);
-            scene.add(o);
+            roofVault.add(o);
             flip = -flip;
         }
     }
@@ -1027,6 +1310,188 @@ export default function build(world) {
     scene.add(liftHigh);
 
     /* ============================================================
+       12b · the Anzac roof — flat soffit, crossing orange ribbon
+             beams, gold-drum domes with a glowing rim
+       ============================================================ */
+    const roofAnzac = new THREE.Group();
+    roofAnzac.visible = false;
+    scene.add(roofAnzac);
+    {
+        const CEIL = 7.8;
+        const ribTex = tex(128, 128, (ctx, w, h) => {
+            ctx.fillStyle = '#2B2C2E'; ctx.fillRect(0, 0, w, h);
+            for (let x = 0; x < w; x += 8) { ctx.fillStyle = '#161719'; ctx.fillRect(x, 0, 4, h); }
+        }, 70, 2);
+        const beamTex = tex(64, 128, (ctx, w, h) => {
+            ctx.fillStyle = '#C4491C'; ctx.fillRect(0, 0, w, h);
+            for (let x = 0; x < w; x += 6) {
+                ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(x, 0, 3, h);
+                ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(x + 3, 0, 3, h);
+            }
+        }, 1, 26);
+        const slabMat = new THREE.MeshStandardMaterial({ color: 0x5B5C60, roughness: 0.92 });
+        const soffitMat = new THREE.MeshStandardMaterial({ map: ribTex, roughness: 0.85 });
+        const beamMat = new THREE.MeshStandardMaterial({ map: beamTex, roughness: 0.62 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xB2842F, roughness: 0.45, metalness: 0.45,
+            side: THREE.DoubleSide });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xF0EADA, emissive: 0xFFF6E4, emissiveIntensity: 2.6 });
+        const domeMat = new THREE.MeshStandardMaterial({ color: 0xF4F5F7, emissive: 0xD8DEE6,
+            emissiveIntensity: 0.75, side: THREE.DoubleSide });
+        const ribMat2 = new THREE.MeshStandardMaterial({ color: 0xDDE0E4, roughness: 0.5 });
+        const potMat = new THREE.MeshStandardMaterial({ color: 0xF2F1EC, emissive: 0xEFE6D2,
+            emissiveIntensity: 0.9, side: THREE.DoubleSide });
+
+        // structural slab + ribbed black soffits over the platforms
+        const slab = new THREE.Mesh(new THREE.PlaneGeometry(24, LEN), slabMat);
+        slab.rotation.x = Math.PI / 2; slab.position.y = CEIL + 0.5;
+        roofAnzac.add(slab);
+        for (const s2 of [-1, 1]) {
+            const sf = new THREE.Mesh(new THREE.PlaneGeometry(6.4, LEN), soffitMat);
+            sf.rotation.x = Math.PI / 2; sf.position.set(s2 * 8.5, CEIL - 0.15, 0);
+            roofAnzac.add(sf);
+        }
+        // --- diamond lattice of orange ribbon beams ---
+        // Two families of parallel beams crossing on the centreline every S,
+        // so the cells between them are diamonds centred at (n + 1/2)·S.
+        const DS = 16, DHW = 12.2, DZH = 17.7;
+        const beamAng = Math.atan2(DZH, DHW);
+        const beamLen = 2 * Math.sqrt(DHW * DHW + DZH * DZH);
+        // The diagonals stop at the diamond's left/right vertices; from there a
+        // single straight arm carries on out over each platform, rather than the
+        // two beams crossing and splitting apart again.
+        const XD = DS * DHW / (2 * DZH);                       // diamond half-width
+        const diagLen = 2 * Math.sqrt(XD * XD + (DS / 2) * (DS / 2));
+        const armLen = 11.9 - XD;
+        {
+            const items = [];
+            const bg = new THREE.BoxGeometry(diagLen, 0.46, 0.72);
+            const arm = new THREE.BoxGeometry(armLen, 0.46, 0.72);
+            for (let n = -9; n <= 9; n++) {
+                const z0 = n * DS;
+                if (z0 < -HALF - DS || z0 > HALF + DS) continue;
+                items.push({ geo: bg, m: M(0, CEIL - 0.45, z0, 0, -beamAng, 0) });
+                items.push({ geo: bg, m: M(0, CEIL - 0.45, z0, 0, beamAng, 0) });
+            }
+            for (let n = -9; n <= 8; n++) {
+                const cz = (n + 0.5) * DS;
+                if (Math.abs(cz) > HALF - 1) continue;
+                for (const sx of [-1, 1]) {
+                    items.push({ geo: arm, m: M(sx * (XD + armLen / 2), CEIL - 0.45, cz) });
+                }
+            }
+            roofAnzac.add(new THREE.Mesh(mergeGeos(items), beamMat));
+        }
+
+        // --- what sits in the middle of each diamond: light, pillar, light, pillar ---
+        const domeZ = [], pillarZ = [];
+        {
+            let i = 0;
+            for (let n = -9; n <= 8; n++) {
+                const cz = (n + 0.5) * DS;
+                if (Math.abs(cz) > HALF - 12) continue;
+                (i % 2 === 0 ? domeZ : pillarZ).push(cz);
+                i++;
+            }
+        }
+
+        // gold drum domes with the bright rim
+        for (const dz of domeZ) {
+            const drum = new THREE.Mesh(new THREE.CylinderGeometry(3.05, 3.05, 1.35, 36, 1, true), goldMat);
+            drum.position.set(0, CEIL - 1.15, dz); roofAnzac.add(drum);
+            const cap = new THREE.Mesh(new THREE.CircleGeometry(3.05, 36), goldMat);
+            cap.rotation.x = -Math.PI / 2; cap.position.set(0, CEIL - 0.48, dz); roofAnzac.add(cap);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(2.95, 0.13, 8, 44), rimMat);
+            rim.rotation.x = Math.PI / 2; rim.position.set(0, CEIL - 1.82, dz); roofAnzac.add(rim);
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 10, 0, Math.PI * 2, 0, 0.5), domeMat);
+            dome.position.set(0, CEIL - 1.82 - 6 * Math.cos(0.5), dz);
+            roofAnzac.add(dome);
+            const ribs = [];
+            const rg = new THREE.BoxGeometry(2.5, 0.04, 0.07);
+            for (let i = 0; i < 10; i++) {
+                const a = i * Math.PI / 5;
+                ribs.push({ geo: rg, m: M(Math.cos(a) * 1.52, CEIL - 1.48, dz + Math.sin(a) * 1.52, 0, -a, 0) });
+            }
+            roofAnzac.add(new THREE.Mesh(mergeGeos(ribs), ribMat2));
+            const boss = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.2, 20), ribMat2);
+            boss.position.set(0, CEIL - 1.34, dz); roofAnzac.add(boss);
+            const bossRing = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 6, 20), goldMat);
+            bossRing.rotation.x = Math.PI / 2; bossRing.position.set(0, CEIL - 1.45, dz);
+            roofAnzac.add(bossRing);
+            const dl = new THREE.PointLight(0xFFF0D6, 62, 30, 2);
+            dl.position.set(0, CEIL - 2.3, dz); roofAnzac.add(dl);
+        }
+
+        // big round concrete columns on the centreline — the only columns here
+        for (const cz of pillarZ) {
+            const H = CEIL + 0.5;
+            const col = new THREE.Mesh(new THREE.CylinderGeometry(0.84, 0.9, H, 24), columnMat);
+            col.position.set(0, H / 2, cz); roofAnzac.add(col);
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.99, 0.99, 0.22, 24), blackMat);
+            base.position.set(0, 0.11, cz); roofAnzac.add(base);
+            for (const sx of [-1, 1]) {          // station name plates facing each platform
+                const p = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.92), nameMat);
+                p.position.set(sx * 0.88, 3.0, cz);
+                p.rotation.y = sx > 0 ? Math.PI / 2 : -Math.PI / 2;
+                roofAnzac.add(p);
+            }
+        }
+
+        // departure screens hung from the soffit over each platform
+        for (const p of pids) {
+            const face = new THREE.MeshStandardMaterial({ map: p.t, emissive: 0xffffff,
+                emissiveMap: p.t, emissiveIntensity: 0.85, roughness: 0.6 });
+            const edge = new THREE.MeshStandardMaterial({ color: 0x1a1b1c, roughness: 0.6 });
+            const bg2 = new THREE.BoxGeometry(1.3, 0.78, 0.1);
+            bg2.clearGroups(); bg2.addGroup(0, 24, 0); bg2.addGroup(24, 12, 1);
+            const scr = new THREE.Mesh(bg2, [edge, face]);
+            scr.position.set(p.side * 6.4, 4.05, p.z);
+            scr.rotation.y = p.side > 0 ? -Math.PI / 2 : Math.PI / 2;
+            roofAnzac.add(scr);
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.1, 6), darkMetal);
+            rod.position.set(p.side * 6.4, 5.9, p.z); roofAnzac.add(rod);
+        }
+
+        // white saucer pendants along the platform edges + soffit downlights
+        {
+            const stems = [], pots = [], dots = [];
+            const stemG = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6);
+            const potG = new THREE.CylinderGeometry(0.36, 0.26, 0.14, 16);
+            const dotG = new THREE.CylinderGeometry(0.22, 0.22, 0.03, 12);
+            for (let z = -HALF + 6; z <= HALF - 6; z += 7) {
+                for (const s2 of [-1, 1]) {
+                    stems.push({ geo: stemG, m: M(s2 * 8.5, CEIL - 0.55, z) });
+                    pots.push({ geo: potG, m: M(s2 * 8.5, CEIL - 0.87, z) });
+                    dots.push({ geo: dotG, m: M(s2 * 8.5, CEIL - 0.95, z) });
+                }
+            }
+            roofAnzac.add(new THREE.Mesh(mergeGeos(stems), darkMetal));
+            roofAnzac.add(new THREE.Mesh(mergeGeos(pots), potMat));
+            roofAnzac.add(new THREE.Mesh(mergeGeos(dots), rimMat));
+        }
+        for (const s2 of [-1, 1]) for (let z = -72; z <= 72; z += 48) {
+            const pw = new THREE.PointLight(0xF3EADA, 22, 13, 2);
+            pw.position.set(s2 * 8.5, CEIL - 1.1, z); roofAnzac.add(pw);
+        }
+    }
+
+    // which station we are standing in
+    const STATIONS = [
+        { tex: () => nameTexSL, roof: 'vault' },
+        { tex: () => nameTexAN, roof: 'anzac' },
+        { tex: () => nameTexTH, roof: 'vault' },
+    ];
+    let stationIdx = 0;
+    function applyStation(i) {
+        const st = STATIONS[i];
+        nameMat.map = st.tex();
+        nameMat.needsUpdate = true;
+        roofVault.visible = st.roof === 'vault';
+        roofAnzac.visible = st.roof === 'anzac';
+    }
+    applyStation(0);
+    scene.userData.applyStation = applyStation;   // handy for previews/tests
+
+    /* ============================================================
        13 · what moves: the ride loop
        ------------------------------------------------------------
        One hero train. If you are aboard when the doors close, the
@@ -1038,7 +1503,7 @@ export default function build(world) {
     let pidClock = 0, pidLast = -1;
     const STOPZ = 35.5, FAR = 260;
     const RIDE_D = 640, JUMP_AT = 320, VMAX = 24, ACC = 1.15;
-    let phase = 'approach', pt = 0, traveled = 0, atTownHall = false, riding = false;
+    let phase = 'approach', pt = 0, traveled = 0, riding = false;
     heroTrain.position.z = -FAR;
 
     function playerAboard() {
@@ -1060,6 +1525,23 @@ export default function build(world) {
 
     world.frame((dt) => {
         pidClock += dt;
+        if (roofVault.visible) {
+            for (const e of escBanks) {
+                e.off = (e.off + dt * 0.62) % e.P;
+                let i = 0;
+                for (const lx of e.laneX) {
+                    for (let k = 0; k < e.perLane; k++) {
+                        let u = k * e.P + e.off;
+                        if (u > e.RUN) u -= e.RUN + e.P;
+                        const yTop = Math.max(0, u) * e.tanA;
+                        e.dummy.position.set(lx, yTop - 0.13, e.ZB - u);
+                        e.dummy.updateMatrix();
+                        e.mesh.setMatrixAt(i++, e.dummy.matrix);
+                    }
+                }
+                e.mesh.instanceMatrix.needsUpdate = true;
+            }
+        }
         const step = Math.floor(pidClock / 45);
         if (step !== pidLast) {
             pidLast = step;
@@ -1091,9 +1573,8 @@ export default function build(world) {
             const before = traveled;
             traveled += v * dt;
             if (before < JUMP_AT && traveled >= JUMP_AT) {
-                atTownHall = !atTownHall;          // arrive somewhere new each ride
-                nameMat.map = atTownHall ? nameTexTH : nameTexSL;
-                nameMat.needsUpdate = true;
+                stationIdx = (stationIdx + 1) % STATIONS.length;   // next stop down the line
+                applyStation(stationIdx);
             }
             worldG.position.z = traveled < JUMP_AT ? -traveled : (RIDE_D - traveled);
             if (traveled >= RIDE_D) { worldG.position.z = 0; phase = 'dwell'; pt = 0; }

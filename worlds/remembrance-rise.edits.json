@@ -1,0 +1,134 @@
+{
+  "added" : [
+    {
+      "id" : "waste-bin_00",
+      "position" : [
+        25.5538,
+        0,
+        131.6152
+      ],
+      "prop" : "waste-bin",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "projector_00",
+      "position" : [
+        24.5578,
+        0,
+        123.156
+      ],
+      "prop" : "projector",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "projector_01",
+      "position" : [
+        24.5578,
+        0,
+        123.156
+      ],
+      "prop" : "projector",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "school-desk_00",
+      "position" : [
+        25.4616,
+        0,
+        122.4146
+      ],
+      "prop" : "school-desk",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "poppy-wreath_00",
+      "position" : [
+        20.9237,
+        0,
+        152.5197
+      ],
+      "prop" : "poppy-wreath",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "poppy-wreath_01",
+      "position" : [
+        20.9237,
+        0,
+        152.5197
+      ],
+      "prop" : "poppy-wreath",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "park-lamp_00",
+      "position" : [
+        164.3645,
+        -77.842,
+        98.7129
+      ],
+      "prop" : "park-lamp",
+      "rotationY" : 0,
+      "scale" : 1
+    },
+    {
+      "id" : "stone-urn_00",
+      "position" : [
+        -15.5037,
+        0,
+        151.0948
+      ],
+      "prop" : "stone-urn",
+      "rotationY" : 0,
+      "scale" : 1
+    }
+  ],
+  "parts" : {
+    "cenotaph_00" : {
+      "position" : [
+        61.4072,
+        0,
+        116.3552
+      ],
+      "rotationY" : 0
+    },
+    "flagpole_02" : {
+      "position" : [
+        40.2614,
+        0,
+        130.254
+      ],
+      "rotationY" : 0
+    },
+    "flame_00" : {
+      "position" : [
+        38.0868,
+        0,
+        118.0458
+      ],
+      "rotationY" : -0.018
+    },
+    "shrine_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 6.282
+    },
+    "wreath_01" : {
+      "position" : [
+        4.1349,
+        0.07,
+        68.9802
+      ],
+      "rotationY" : -0.5
+    }
+  }
+}

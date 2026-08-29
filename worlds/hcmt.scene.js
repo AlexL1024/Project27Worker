@@ -208,26 +208,77 @@ function makeSideTex(canvasTexture, layout, mirror, seed) {
             ctx.restore();
         }
 
-        // doorways — yellow painted surround on the body; the leaf area is CUT
-        // OUT of the wall (alpha 0) and real light-blue sliding meshes sit behind
-        const dw = layout.doorW;
-        for (const dx of layout.doors) {
-            const x0 = X(dx), x1 = X(dx + dw);
-            // yellow frame surround
-            ctx.fillStyle = C.yellow;
-            ctx.fillRect(x0 - 3, Y(2.92), (x1 - x0) + 6, Y(0.86) - Y(2.92));
-            // thin darker-gold sill strip under the doorway
-            ctx.fillStyle = '#b0954e';
-            ctx.fillRect(x0 - 3, Y(0.95), (x1 - x0) + 6, Y(0.86) - Y(0.95));
-            // real opening (slight frame reveal kept at both jambs + head)
-            const hx0 = x0 + (X(0.07) - X(0)), hx1 = x1 - (X(0.07) - X(0));
-            ctx.clearRect(hx0, Y(DOOR_TOP), hx1 - hx0, Y(0.98) - Y(DOOR_TOP));
+        // subtle horizontal panel seams on the silver body (UNDER the door frame)
+        ctx.strokeStyle = 'rgba(60,58,52,0.30)'; ctx.lineWidth = 1;
+        for (const sy of [1.20, 1.98, 2.90]) {
+            ctx.beginPath(); ctx.moveTo(0, Y(sy) + 0.5); ctx.lineTo(W, Y(sy) + 0.5); ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        for (const sy of [1.20, 1.98, 2.90]) {
+            ctx.beginPath(); ctx.moveTo(0, Y(sy) + 1.5); ctx.lineTo(W, Y(sy) + 1.5); ctx.stroke();
         }
 
-        // subtle horizontal panel seams on the silver body
-        ctx.strokeStyle = 'rgba(60,58,52,0.28)'; ctx.lineWidth = 1;
-        for (const sy of [1.55, 2.9]) {
-            ctx.beginPath(); ctx.moveTo(0, Y(sy)); ctx.lineTo(W, Y(sy)); ctx.stroke();
+        // doorways — a thick rounded-rect GOLDEN-YELLOW painted frame on the
+        // body, a thin dark reveal inside it, then a real hole (alpha 0) with
+        // steel blue-grey sliding leaf meshes behind. A black ribbed comb and a
+        // bright metal sill lip close the gap under the leaves.
+        const dw = layout.doorW;
+        const P = m => X(m) - X(0);              // metres -> px (horizontal)
+        for (const dx of layout.doors) {
+            const x0 = X(dx), x1 = X(dx + dw);
+            const fw = P(0.125);                 // frame band width
+            // --- yellow frame, brighter at the top, weathered toward the base
+            const fyT = Y(2.96), fyB = Y(0.86);
+            const fg = ctx.createLinearGradient(0, fyT, 0, fyB);
+            fg.addColorStop(0.00, '#FFD630');
+            fg.addColorStop(0.16, '#FBC81C');
+            fg.addColorStop(0.60, '#EFB714');
+            fg.addColorStop(0.88, '#D8A312');
+            fg.addColorStop(1.00, '#BC8D14');
+            roundRect(ctx, x0 - fw, fyT, (x1 - x0) + 2 * fw, fyB - fyT, P(0.20));
+            ctx.fillStyle = fg; ctx.fill();
+            // faint vertical grime streaks on the lower half of the frame
+            ctx.save();
+            roundRect(ctx, x0 - fw, fyT, (x1 - x0) + 2 * fw, fyB - fyT, P(0.20));
+            ctx.clip();
+            const rnd = mulberry(seed + Math.round(dx * 31));
+            for (let i = 0; i < 14; i++) {
+                ctx.fillStyle = 'rgba(90,70,20,' + (0.05 + rnd() * 0.09).toFixed(3) + ')';
+                const sx = x0 - fw + rnd() * ((x1 - x0) + 2 * fw);
+                ctx.fillRect(sx, Y(1.9), 1 + rnd() * 3, Y(0.86) - Y(1.9));
+            }
+            ctx.restore();
+
+            // --- dark reveal / shadow gap just inside the frame
+            roundRect(ctx, x0 - P(0.014), Y(2.836), (x1 - x0) + P(0.028),
+                Y(0.94) - Y(2.836), P(0.132));
+            ctx.fillStyle = '#22262a'; ctx.fill();
+
+            // --- cut the real opening (rounded, so the frame hides leaf corners)
+            ctx.save();
+            roundRect(ctx, x0 + P(0.016), Y(2.796), (x1 - x0) - P(0.032),
+                Y(1.045) - Y(2.796), P(0.118));
+            ctx.clip();
+            ctx.clearRect(x0 - 4, Y(2.80) - 4, (x1 - x0) + 8, Y(1.04) - Y(2.80) + 8);
+            ctx.restore();
+
+            // --- black ribbed comb threshold (fine vertical teeth)
+            const cy0 = Y(1.055), cy1 = Y(0.945);
+            ctx.fillStyle = '#111315';
+            ctx.fillRect(x0 - P(0.015), cy0, (x1 - x0) + P(0.03), cy1 - cy0);
+            const step = Math.max(2, P(0.012));
+            for (let tx = x0 - P(0.01); tx < x1 + P(0.01); tx += step) {
+                ctx.fillStyle = 'rgba(186,184,172,0.82)';
+                ctx.fillRect(tx, cy0 + 1, Math.max(1, step * 0.42), (cy1 - cy0) - 2);
+            }
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(x0 - P(0.015), cy0, (x1 - x0) + P(0.03), 2);
+
+            // --- bright metal sill lip below the comb
+            const sg = ctx.createLinearGradient(0, Y(0.945), 0, Y(0.900));
+            sg.addColorStop(0, '#d6d9db'); sg.addColorStop(0.55, '#a9adb0'); sg.addColorStop(1, '#7c8083');
+            ctx.fillStyle = sg;
+            ctx.fillRect(x0 - P(0.008), Y(0.945), (x1 - x0) + P(0.016), Y(0.900) - Y(0.945));
         }
 
         ctx.restore();
@@ -785,65 +836,178 @@ function uvR(x0, y0, x1, y1) {
     return [[x0 / N, 1 - y1 / N], [x1 / N, 1 - y1 / N], [x1 / N, 1 - y0 / N], [x0 / N, 1 - y0 / N]];
 }
 
-// door leaf atlas: columns [extN | extP | intN | intP] (N = leaf left of centre)
+// door leaf atlas: columns [extN | extP | intN | intP].  extN = the leaf whose
+// meeting edge is on its RIGHT (the left-hand leaf of a pair).
+const LEAF_CW = 512, LEAF_TH = 1024;
 function makeLeafTex(canvasTexture) {
-    const W = 512, H = 512;
-    // leaf is LEAF_W wide, LEAF_H tall; column width 128
+    const W = LEAF_CW * 4, H = LEAF_TH;
+    // leaf spans y 0.88..2.98 and LEAF_W across
+    const ly = m => (2.98 - m) / LEAF_H * H;             // metres -> canvas y
+    const lx = (cx0, m) => cx0 + m / LEAF_W * LEAF_CW;   // metres from leaf left edge
+    const PH = m => m / LEAF_W * LEAF_CW;                // metres -> px horizontally
+    const PV = m => m / LEAF_H * H;                      // metres -> px vertically
+    // window geometry: ONE tall rounded pane in the upper part of each leaf
+    // measured off the reference close-up: the pane is ~0.48 x 0.87 and sits
+    // essentially CENTRED across the leaf, high in the doorway
+    const WIN_H0 = 1.790, WIN_H1 = 2.655, WIN_W = 0.480, WIN_INSET = (LEAF_W - 0.480) / 2;
     return canvasTexture(W, H, (ctx) => {
+        ctx.textBaseline = 'alphabetic';
+
+        // ---- exterior base: muted steel blue-grey with a soft vertical sheen
         function extBase(cx0) {
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#8ecdee'); g.addColorStop(0.35, C.doorBlue);
-            g.addColorStop(0.8, '#69b2da'); g.addColorStop(1, '#5da5cd');
-            ctx.fillStyle = g; ctx.fillRect(cx0, 0, 128, H);
+            const g = ctx.createLinearGradient(cx0, 0, cx0 + LEAF_CW, 0);
+            g.addColorStop(0.00, '#6B8296');
+            g.addColorStop(0.14, '#7B96AE');
+            g.addColorStop(0.46, '#89A4BA');
+            g.addColorStop(0.74, '#7E99B0');
+            g.addColorStop(1.00, '#6A8195');
+            ctx.fillStyle = g; ctx.fillRect(cx0, 0, LEAF_CW, H);
+            const v = ctx.createLinearGradient(0, 0, 0, H);
+            v.addColorStop(0.00, 'rgba(255,255,255,0.07)');
+            v.addColorStop(0.45, 'rgba(255,255,255,0.01)');
+            v.addColorStop(1.00, 'rgba(0,0,0,0.10)');
+            ctx.fillStyle = v; ctx.fillRect(cx0, 0, LEAF_CW, H);
         }
         function intBase(cx0) {
-            const g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, '#d6d9dc'); g.addColorStop(1, '#bfc3c6');
-            ctx.fillStyle = g; ctx.fillRect(cx0, 0, 128, H);
-            ctx.strokeStyle = '#a7abae'; ctx.lineWidth = 2;
-            ctx.strokeRect(cx0 + 6, 6, 116, H - 12);
+            const g = ctx.createLinearGradient(cx0, 0, cx0 + LEAF_CW, 0);
+            g.addColorStop(0, '#d8dbde'); g.addColorStop(0.5, '#cdd1d4'); g.addColorStop(1, '#bec2c5');
+            ctx.fillStyle = g; ctx.fillRect(cx0, 0, LEAF_CW, H);
+            ctx.strokeStyle = '#a7abae'; ctx.lineWidth = 4;
+            ctx.strokeRect(cx0 + 18, 18, LEAF_CW - 36, H - 36);
         }
-        // y mapping: leaf spans y 0.88..2.98 -> canvas 512..0
-        const ly = m => (2.98 - m) / LEAF_H * H;
-        const lx = (cx0, m) => cx0 + m / LEAF_W * 128; // m from leaf left edge
-        function leafWindow(cx0, nearRight) {
-            // window 0.36 wide, 0.07 from the centre-meeting edge, y 1.45..2.72
-            const wx0 = nearRight ? lx(cx0, LEAF_W - 0.07 - 0.36) : lx(cx0, 0.07);
-            const wx1 = nearRight ? lx(cx0, LEAF_W - 0.07) : lx(cx0, 0.07 + 0.36);
-            roundRect(ctx, wx0 - 3, ly(2.75) - 3, (wx1 - wx0) + 6, ly(1.42) - ly(2.75) + 6, 8);
-            ctx.fillStyle = '#1a1c1e'; ctx.fill();
-            const dg = ctx.createLinearGradient(0, ly(2.72), 0, ly(1.45));
-            dg.addColorStop(0, '#39434c'); dg.addColorStop(0.4, '#15191d'); dg.addColorStop(1, '#0c0e10');
-            ctx.fillStyle = dg;
-            roundRect(ctx, wx0, ly(2.72), wx1 - wx0, ly(1.45) - ly(2.72), 6); ctx.fill();
-            ctx.fillStyle = 'rgba(180,205,225,0.13)';
-            ctx.fillRect(wx0 + 2, ly(2.72), (wx1 - wx0) * 0.3, ly(1.45) - ly(2.72));
+        function winSpan(nearRight) {
+            return nearRight
+                ? [LEAF_W - WIN_INSET - WIN_W, LEAF_W - WIN_INSET]
+                : [WIN_INSET, WIN_INSET + WIN_W];
         }
-        function extLeaf(cx0, nearRight) {
+        // thick black rubber gasket + pane
+        function leafWindow(cx0, nearRight, ext) {
+            const sp = winSpan(nearRight);
+            const wx0 = lx(cx0, sp[0]), wx1 = lx(cx0, sp[1]);
+            const gy0 = ly(WIN_H1), gy1 = ly(WIN_H0);
+            const gk = PH(0.046), gkv = PV(0.046);       // gasket thickness
+            roundRect(ctx, wx0 - gk, gy0 - gkv, (wx1 - wx0) + 2 * gk, (gy1 - gy0) + 2 * gkv, PH(0.135));
+            ctx.fillStyle = '#0d0f10'; ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 3; ctx.stroke();
+            ctx.save();
+            roundRect(ctx, wx0, gy0, wx1 - wx0, gy1 - gy0, PH(0.10));
+            ctx.clip();
+            if (ext) {
+                // bright, lit saloon seen through the glass
+                const pg = ctx.createLinearGradient(0, gy0, 0, gy1);
+                pg.addColorStop(0.00, '#f2f5f7');
+                pg.addColorStop(0.42, '#dfe5e9');
+                pg.addColorStop(0.78, '#c6ced4');
+                pg.addColorStop(1.00, '#aeb7bd');
+                ctx.fillStyle = pg; ctx.fillRect(wx0, gy0, wx1 - wx0, gy1 - gy0);
+                // hint of the saloon behind: ceiling / wall / seat backs / floor
+                const pw = wx1 - wx0, ph = gy1 - gy0;
+                ctx.fillStyle = 'rgba(196,203,209,0.55)';
+                ctx.fillRect(wx0, gy0 + ph * 0.60, pw, ph * 0.06);      // wall-to-seat line
+                ctx.fillStyle = 'rgba(146,155,163,0.60)';               // seat backs
+                roundRect(ctx, wx0 + pw * 0.04, gy0 + ph * 0.63, pw * 0.52, ph * 0.30, pw * 0.08);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(120,131,142,0.50)';               // floor band
+                ctx.fillRect(wx0, gy0 + ph * 0.92, pw, ph * 0.08);
+                ctx.fillStyle = 'rgba(178,186,193,0.45)';               // far pillar
+                ctx.fillRect(wx0 + pw * 0.78, gy0, pw * 0.13, ph * 0.62);
+                ctx.fillStyle = 'rgba(226,178,40,0.88)';                // yellow grab pole
+                ctx.fillRect(wx0 + pw * 0.58, gy0 + ph * 0.02, PH(0.026), ph * 0.94);
+                // faint outside reflection streak
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.beginPath();
+                ctx.moveTo(wx0 + (wx1 - wx0) * 0.05, gy0);
+                ctx.lineTo(wx0 + (wx1 - wx0) * 0.34, gy0);
+                ctx.lineTo(wx0 + (wx1 - wx0) * 0.12, gy1);
+                ctx.lineTo(wx0, gy1);
+                ctx.closePath(); ctx.fill();
+            } else {
+                // from inside: darker view out to the platform
+                const pg = ctx.createLinearGradient(0, gy0, 0, gy1);
+                pg.addColorStop(0, '#4a5259'); pg.addColorStop(0.5, '#2c3339'); pg.addColorStop(1, '#1b2126');
+                ctx.fillStyle = pg; ctx.fillRect(wx0, gy0, wx1 - wx0, gy1 - gy0);
+                ctx.fillStyle = 'rgba(190,210,228,0.12)';
+                ctx.fillRect(wx0, gy0, (wx1 - wx0) * 0.35, gy1 - gy0);
+            }
+            ctx.restore();
+        }
+        // --- decals at window-sill height, clustered near the seam
+        function pressSigns(cx0, nearRight) {
+            const gy = 1.688, gh = 0.094;
+            const wGreen = 0.152, wWait = 0.094, gapS = 0.012;
+            const total = wGreen + gapS + wWait;
+            const right = nearRight ? LEAF_W - 0.070 : WIN_INSET + WIN_W - 0.004;
+            const m0 = right - total;
+            const y1 = ly(gy), y0 = ly(gy + gh);
+            const gx0 = lx(cx0, m0), gx1 = lx(cx0, m0 + wGreen);
+            roundRect(ctx, gx0, y0, gx1 - gx0, y1 - y0, PH(0.008));
+            ctx.fillStyle = '#0e5c34'; ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+            ctx.font = 'bold ' + Math.round(PV(0.030)) + 'px Arial';
+            ctx.fillText('Press to', (gx0 + gx1) / 2, y0 + (y1 - y0) * 0.44);
+            ctx.fillText('Open Door', (gx0 + gx1) / 2, y0 + (y1 - y0) * 0.84);
+            const bx0 = lx(cx0, m0 + wGreen + gapS), bx1 = lx(cx0, right);
+            roundRect(ctx, bx0, y0, bx1 - bx0, y1 - y0, PH(0.008));
+            ctx.fillStyle = '#c9d21f'; ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.stroke();
+            ctx.fillStyle = '#16321a';
+            ctx.font = 'bold ' + Math.round(PV(0.026)) + 'px Arial';
+            ctx.fillText('Wait for', (bx0 + bx1) / 2, y0 + (y1 - y0) * 0.34);
+            ctx.fillText('green', (bx0 + bx1) / 2, y0 + (y1 - y0) * 0.62);
+            ctx.fillText('light', (bx0 + bx1) / 2, y0 + (y1 - y0) * 0.90);
+        }
+        function pushButton(cx0, nearRight) {
+            const cm = nearRight ? LEAF_W - 0.088 : 0.088;
+            const cx = lx(cx0, cm), cy = ly(1.735);
+            const R = 0.048;
+            function disc(rr, fill) {
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, PH(rr), PV(rr), 0, 0, Math.PI * 2);
+                ctx.fillStyle = fill; ctx.fill();
+            }
+            disc(R, '#6d6a2a');            // darker outer ring
+            disc(R * 0.82, '#c9bf3a');     // olive/yellow disc
+            disc(R * 0.55, '#a89e2c');
+            disc(R * 0.24, '#2fbe52');     // green centre lamp
+            ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.ellipse(cx, cy, PH(R), PV(R), 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        // --- crisp centre seam with a subtle highlight either side
+        function seam(cx0, nearRight) {
+            const ex = nearRight ? cx0 + LEAF_CW : cx0;
+            const w = Math.max(2, Math.round(PH(0.010)));
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.fillRect(nearRight ? ex - w * 3 : ex + w, 0, w * 2, H);
+            ctx.fillStyle = '#1d2830';
+            ctx.fillRect(nearRight ? ex - w : ex, 0, w, H);
+        }
+        function extLeaf(cx0, nearRight, withButton) {
             extBase(cx0);
-            leafWindow(cx0, nearRight);
-            // small green press-to-open sticker under the window
-            const stx = nearRight ? lx(cx0, LEAF_W - 0.32) : lx(cx0, 0.18);
-            ctx.fillStyle = '#1f7a3c';
-            ctx.fillRect(stx, ly(1.32), 18, 10);
-            // meeting-edge dark rubber
-            const ex = nearRight ? cx0 + 124 : cx0;
-            ctx.fillStyle = '#2a4c60'; ctx.fillRect(ex, 0, 4, H);
+            leafWindow(cx0, nearRight, true);
+            if (withButton) pushButton(cx0, nearRight); else pressSigns(cx0, nearRight);
+            seam(cx0, nearRight);
         }
         function intLeaf(cx0, nearRight) {
             intBase(cx0);
-            leafWindow(cx0, nearRight);
-            // yellow edge highlight at meeting edge (interior)
-            const ex = nearRight ? cx0 + 120 : cx0 + 2;
-            ctx.fillStyle = '#f0b421'; ctx.fillRect(ex, ly(2.4), 6, ly(1.1) - ly(2.4));
+            leafWindow(cx0, nearRight, false);
+            const ex = nearRight ? cx0 + LEAF_CW - 22 : cx0 + 8;
+            ctx.fillStyle = '#f0b421'; ctx.fillRect(ex, ly(2.45), 14, ly(1.1) - ly(2.45));
         }
-        extLeaf(0, true);      // extN: leaf left of centre, meeting edge on its right
-        extLeaf(128, false);   // extP
-        intLeaf(256, true);    // intN
-        intLeaf(384, false);   // intP
+        // extN = left-hand leaf (meeting edge on its right) -> carries the signs
+        // extP = right-hand leaf (meeting edge on its left) -> carries the button
+        extLeaf(0, true, false);
+        extLeaf(LEAF_CW, false, true);
+        intLeaf(LEAF_CW * 2, true);
+        intLeaf(LEAF_CW * 3, false);
+        // dark rubber sliver at the very left of column 0, sampled by EDGE_UV
+        // for each leaf's meeting-edge face quad
+        ctx.fillStyle = '#141b21'; ctx.fillRect(0, 0, 14, H);
     });
 }
 const LEAF_COL = { extN: [0, 0.25], extP: [0.25, 0.5], intN: [0.5, 0.75], intP: [0.75, 1.0] };
+// thin dark slice used for the leaf's meeting-edge face
+const EDGE_UV = [[0.0012, 0], [0.0055, 0], [0.0055, 1], [0.0012, 1]];
 function leafUV(col, mirrorU) {
     const [u0, u1] = LEAF_COL[col];
     return mirrorU
@@ -862,6 +1026,7 @@ function buildInterior(THREE, mats, P) {
     const doorHoles = doorZ.map(z => [z - DOOR_W / 2, z + DOOR_W / 2]);
 
     const wall = [], grey = [], yellow = [], steel = [], seatGrey = [], cushion = [], decal = [], lights = [];
+    const reveal = [];   // dark door-jamb / head reveals (read as shadow from outside)
     const M = () => new THREE.Matrix4();
 
     // ---- floor & ceiling
@@ -895,13 +1060,14 @@ function buildInterior(THREE, mats, P) {
         }
         // top band solid
         wall.push({ geo: xRect(THREE, x, DOOR_TOP, CEIL_Y, zMin, zMax, face), m: M() });
-        // door jamb reveals (wall thickness)
+        // door jamb + head reveals (wall thickness) — dark, so any sliver seen
+        // past a leaf edge reads as shadow rather than a bright white line
         for (const dz of doorZ) {
             const jx0 = Math.min(s * wallX, s * SIDE_X), jx1 = Math.max(s * wallX, s * SIDE_X);
             for (const e of [-1, 1]) {
-                wall.push({ geo: zRect(THREE, dz + e * DOOR_W / 2, jx0, jx1, FLOOR_Y, DOOR_TOP, -e), m: M() });
+                reveal.push({ geo: zRect(THREE, dz + e * DOOR_W / 2, jx0, jx1, FLOOR_Y, DOOR_TOP, -e), m: M() });
             }
-            wall.push({ geo: yRect(THREE, DOOR_TOP, jx0, jx1, dz - DOOR_W / 2, dz + DOOR_W / 2, -1), m: M() });
+            reveal.push({ geo: yRect(THREE, DOOR_TOP, jx0, jx1, dz - DOOR_W / 2, dz + DOOR_W / 2, -1), m: M() });
         }
         // window reveals (top/bottom sills)
         for (const wz of winZ) {
@@ -1072,28 +1238,31 @@ function buildInterior(THREE, mats, P) {
     addMerged(cushion, mats.cushion);
     addMerged(decal, mats.decal);
     addMerged(lights, mats.light);
+    addMerged(reveal, mats.reveal);
 
     // ---- sliding door leaves: 4 mover meshes (side x dir), merged ----------
     for (const s of [-1, 1]) {
         for (const dir of [-1, 1]) {
             const items = [];
-            const xo = s * 1.47, xi = s * 1.44;
+            const xo = s * 1.505, xi = s * 1.478;
             for (const dz of doorZ) {
                 const z0 = dir > 0 ? dz : dz - LEAF_W;
                 const z1 = dir > 0 ? dz + LEAF_W : dz;
                 const y0 = 0.88, y1 = 0.88 + LEAF_H;
-                // near meeting edge is at dz. ext texture column: leaf left-of-centre = N
-                // for s=+1 (right side, u toward -z when seen from +x): choose by geometry
-                const extCol = dir > 0 ? 'extP' : 'extN';
+                // The leaf's meeting edge is at dz. Pick the atlas column so the
+                // painted meeting edge lands there AND the artwork is never
+                // mirrored on screen (the decals carry text).
+                //   s=+1 seen from +x: screen-right is -z  -> u grows toward -z
+                //   s=-1 seen from -x: screen-right is +z  -> u grows toward +z
+                const extCol = ((dir > 0) === (s > 0)) ? 'extN' : 'extP';
                 const intCol = dir > 0 ? 'intP' : 'intN';
-                // outer face seen from +s: for s=1, z decreases left-to-right in view.
-                items.push({ geo: xRect(THREE, xo, y0, y1, z0, z1, s, leafUV(extCol, s > 0)), m: M() });
+                items.push({ geo: xRect(THREE, xo, y0, y1, z0, z1, s, leafUV(extCol, false)), m: M() });
                 items.push({ geo: xRect(THREE, xi, y0, y1, z0, z1, -s, leafUV(intCol, s < 0)), m: M() });
-                // meeting-edge strip
+                // meeting-edge face: a thin dark rubber slice from the atlas
                 items.push({ geo: quadGeo(THREE,
                     [Math.min(xo, xi), y0, dz], [Math.max(xo, xi), y0, dz],
                     [Math.max(xo, xi), y1, dz], [Math.min(xo, xi), y1, dz],
-                    leafUV(extCol, false)), m: M() });
+                    EDGE_UV), m: M() });
             }
             const mesh = new THREE.Mesh(mergeGeoms(THREE, items), mats.leaf);
             mesh.name = 'leaf';
@@ -1208,7 +1377,8 @@ export function buildHCMT(THREE, canvasTexture) {
         cushion: new THREE.MeshStandardMaterial({ map: cushTex, roughness: 0.95, emissive: '#ffffff', emissiveMap: cushTex, emissiveIntensity: 0.3 }),
         decal: new THREE.MeshStandardMaterial({ map: decalTex, roughness: 0.7, emissive: '#ffffff', emissiveMap: decalTex, emissiveIntensity: 0.55 }),
         light: new THREE.MeshBasicMaterial({ color: '#f7fbff' }),
-        leaf: new THREE.MeshStandardMaterial({ map: leafTex, roughness: 0.55, metalness: 0.1, emissive: '#ffffff', emissiveMap: leafTex, emissiveIntensity: 0.22 })
+        reveal: new THREE.MeshStandardMaterial({ color: '#24282b', roughness: 0.85, emissive: '#101214', emissiveIntensity: 0.5 }),
+        leaf: new THREE.MeshStandardMaterial({ map: leafTex, roughness: 0.74, metalness: 0.02, emissive: '#ffffff', emissiveMap: leafTex, emissiveIntensity: 0.18 })
     };
     matFloorMid.emissive = new THREE.Color('#ffffff');
     matFloorMid.emissiveMap = floorTexMid; matFloorMid.emissiveIntensity = 0.35;
