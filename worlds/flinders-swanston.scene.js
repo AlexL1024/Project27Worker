@@ -320,7 +320,22 @@ export default function build(world) {
           vec3  dv = lp - wp;
           float dd = dot(dv, dv);
           float dl = sqrt(dd) + 1e-4;
-          diff += lc * (ls / (1.0 + dd / (lr * lr))) * clamp(dv.y / dl, 0.0, 1.0);
+          // The lesson the specular streak below already learned, and about the
+          // same two panels. A rational falloff never actually reaches zero, so
+          // a source with a thirty-metre radius was still laying an eighth of
+          // its colour on the road a hundred metres off — while the sky term
+          // this is all supposed to be an accent on sits at about 0.06. One
+          // billboard is red and the other is blue, both of them are thirty
+          // metres up, and the two floods overlapped along the whole run of
+          // Swanston Street: red and blue over a pale surface is lilac, and
+          // that is what the footpaths and the carriageway had gone.
+          //
+          // 1.9 radii is fifty metres for a billboard and seventeen for the
+          // pub's ground floor. It keeps the pool of colour directly under a
+          // source — which is the whole reason the source is in this list —
+          // and ends it at the next kerb rather than at the cathedral.
+          float reach = 1.0 - smoothstep(lr * 0.9, lr * 1.9, dl);
+          diff += lc * (ls / (1.0 + dd / (lr * lr))) * clamp(dv.y / dl, 0.0, 1.0) * reach;
 
           vec2  g  = lp.xz - c;
           float gl = max(length(g), 1e-3);
@@ -339,7 +354,15 @@ export default function build(world) {
           // radius, which let the two thirty-metre billboards lay saturated
           // colour over a hundred metres of Swanston Street. Six is still two
           // and a half radii — a long streak, but one that ends.
-          spec += lc * ls * lat * lon / (1.0 + dd / (lr * lr * 6.0));
+          //
+          // It ended sixty-five metres out, though, and the middle of the
+          // scramble crossing is fifty-seven metres from the billboards: the
+          // smear was still arriving at the corner, and arriving there as red
+          // laid over blue. The same window the diffuse pool uses closes it at
+          // 1.9 radii instead, which is fifty metres — long enough to still
+          // read as a smear down the wet street, short enough that it stops
+          // before the crossing it was tinting lilac.
+          spec += lc * ls * lat * lon * reach / (1.0 + dd / (lr * lr * 6.0));
         }
         spec *= gloss * fres;
       }
@@ -3384,7 +3407,16 @@ export default function build(world) {
                 for (int i = 0; i < NL; i++) {
                   vec3 d = uLPos[i] - P;
                   float dd = dot(d, d);
-                  lit += uLCol[i] * (uLStr[i] / (1.0 + dd / (uLRad[i] * uLRad[i] * 2.4)));
+                  float dl = sqrt(dd) + 1e-4;
+                  // Bounded exactly as the road's diffuse pool now is, because
+                  // this reads the same ten sources and had the fault twice
+                  // over: 2.4 radii of falloff, and no end to it. Rain is drawn
+                  // in front of everything, so where the road could only tint
+                  // the ground, this was carrying the billboards' red and blue
+                  // across the pale facades as well — the one surface in the
+                  // scene the road shader can never reach.
+                  float reach = 1.0 - smoothstep(uLRad[i] * 0.9, uLRad[i] * 1.9, dl);
+                  lit += uLCol[i] * (uLStr[i] / (1.0 + dd / (uLRad[i] * uLRad[i] * 2.4))) * reach;
                 }
                 vLit = lit;
 
