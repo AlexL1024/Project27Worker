@@ -19,6 +19,14 @@
       ],
       "rotationY" : 2.544
     },
+    "swanstonwall_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 0
+    },
     "tower_00" : {
       "position" : [
         0,
