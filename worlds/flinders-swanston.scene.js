@@ -201,7 +201,28 @@ export default function build(world) {
 
     const RIV_N = 138, RIV_S = 232;    // the Yarra's two banks
     const WATER = -8.2;                // water level below street
-    const BR_W = 30, BR_Y = 0.45;      // Princes Bridge deck
+    /* Princes Bridge. The deck used to sit at 0.45, which is a step of nearly
+       half a metre onto the carriageway and most of one onto the footway, at
+       both ends, with nothing to climb it by — and the tram wire over the deck
+       ran forty-five centimetres higher than the tram wire over the street it
+       is spliced to. Carried at street level instead, the walk on and off the
+       bridge is a centimetre, the rails line up and the overhead is one wire. */
+    const BR_W = 30, BR_Y = 0.0;
+    const QUAY = -6.15;                // the promenade at river level, two metres over the water
+
+    /* Where the two road sheets stop and the riverbanks take over.
+
+       They did not stop anywhere, and that was the largest thing wrong with
+       this end of the world: `sheet()` in section 7 lays a solid plane at
+       y = 0 from z = −210 to z = 250, which is straight over the Yarra. Seen
+       from anywhere above the water the river was a strip of dark ground with
+       a bridge over it, and the water — which is lit, rippled and mirroring
+       the whole sunset — was only ever visible from below the sheet, which is
+       to say from nowhere a person can stand. Both sheets now have the channel
+       cut out of them, and everything inside the cut — the water, the bridge
+       deck that carries the street over it, the two bank walls, the river-level
+       promenades and the steps down to them — is built in sections 15 and 27. */
+    const CUT_N = 132, CUT_S = 238;
 
     // Swanston Street carried north, measured from the Flinders kerb line.
     const NST = [
@@ -218,8 +239,21 @@ export default function build(world) {
        of Flinders Lane, so it never meets Collins Street's lantern or Little
        Collins', and the offsets that make this a coordinated corridor rather
        than four separate intersections are a thing nobody in the world ever
-       experiences. Half a kilometre of Swanston is four lanterns in a row. */
-    const RUN_Z0 = -368, RUN_Z1 = 152, RUN_X = 148;
+       experiences. Half a kilometre of Swanston is four lanterns in a row.
+
+       The southern end used to be 152, which is fourteen metres onto Princes
+       Bridge: every southbound vehicle in the world vanished a car's length
+       past the north abutment and no vehicle at all ever crossed the river.
+       It now runs the whole bridge and out onto St Kilda Road, past the fifth
+       lantern at Alexandra Avenue, which is what puts traffic on the deck. */
+    const RUN_Z0 = -368, RUN_Z1 = 300, RUN_X = 148;
+
+    /* St Kilda Road at Alexandra Avenue, the intersection at the south end of
+       the bridge. Not one of `NST`: those three are cut into the road shader
+       and this one is not, so the carriageway across it is laid as geometry in
+       section 27 instead. Everything else about it — the lanterns, the phases,
+       the crossings — is exactly the other four. */
+    const SKR = { z: 268, h: 9.0 };
 
     // 101 Collins Street, on this scene's simplified Hoddle Grid.
     const C101 = { x: 345, z: -146, W: 47, D: 40, H: 188, H2: 200, TIP: 260 };
@@ -1594,6 +1628,15 @@ export default function build(world) {
             const shaft = new THREE.Path();
             ring(shaft, SQ.VX0, SQ.VZ0, SQ.VX1, SQ.VZ1);
             shape.holes.push(shaft);
+            /* And the river, for the same reason said about a different hole:
+               a sheet over water is a lid over water. The whole width of it
+               goes, not the channel with a strip left in under the bridge —
+               a strip left in is a grey floor between the piers that hides
+               every arch from anybody standing on the bank. The bridge brings
+               its own deck across the gap and section 27 brings the banks. */
+            const channel = new THREE.Path();
+            ring(channel, x0, CUT_N, x1, CUT_S);
+            shape.holes.push(channel);
             const g = new THREE.ShapeGeometry(shape);
             g.rotateX(-Math.PI / 2);
             return g;
@@ -1709,7 +1752,12 @@ export default function build(world) {
         const parts = [];
         const runZ = (off, z0, z1) => { for (const r of [-RAIL, RAIL]) { const g = boxG(0.075, 0.05, z1 - z0); put(g, off + r, 0.025, (z0 + z1) / 2); parts.push(g); } };
         const runX = (off, x0, x1) => { for (const r of [-RAIL, RAIL]) { const g = boxG(x1 - x0, 0.05, 0.075); put(g, (x0 + x1) / 2, 0.025, off + r); parts.push(g); } };
-        runZ(-TRS, NZ_END, 250); runZ(TRS, NZ_END, 250);
+        // Stopped at the bridge and picked up again beyond it: between 130 and
+        // 240 the rails belong to the deck, which is a metre and a half of
+        // ironwork over a hole in the road sheet, and a rail run straight
+        // through would hang in the air over the water.
+        runZ(-TRS, NZ_END, 130); runZ(TRS, NZ_END, 130);
+        runZ(-TRS, 240, RUN_Z1 + 12); runZ(TRS, 240, RUN_Z1 + 12);
         runX(-TRF, -NX, NX); runX(TRF, -NX, NX);
         runX(-230 - TRF, -NX, NX); runX(-230 + TRF, -NX, NX);
         // the four connecting curves, Swanston to Flinders, as short chords
@@ -6594,166 +6642,380 @@ export default function build(world) {
     /* ============================================================
        15 · the Yarra, and Princes Bridge
 
-       Swanston Street runs on across the river and becomes St Kilda Road. The
-       bridge is the 1888 one: three shallow segmental spans in red ironwork on
-       bluestone piers, cream spandrels and an arcaded parapet, with ornamental
-       lamp standards over every pier.
+       The water first, then the 1888 bridge standing in it.
+
+       Three shallow segmental spans of cast iron on rusticated bluestone
+       piers, a pale balustrade with a solid pedestal and an ornamental
+       standard over every pier, and under the deck the thing that makes this
+       bridge itself: the arch ribs and the fan of radiating spandrel bracing
+       between them and the soffit, the whole underside painted oxide red.
+       That red is what you see from the bank and from the water, and it was
+       the one thing the roughed-in version had no depth in — a flat plate
+       where there should be seven ribs and eighty struts.
+
+       Everything on the banks is section 27. This section is the water and
+       the structure, and nothing else.
        ============================================================ */
     {
         const water = new THREE.ShaderMaterial({
             uniforms: pick('uTime', 'uCamPos', 'uWind', 'uFogCol', 'uFogNear', 'uFogFar', 'uSkyLo', 'uSkyHi',
-                           'uLPos', 'uLCol', 'uLStr', 'uLRad'),
+                           'uSun', 'uLPos', 'uLCol', 'uLStr', 'uLRad'),
             vertexShader: WORLD_VS,
             fragmentShader: NOISE_GLSL + RIPPLE_GLSL + WET_GLSL + FOG_GLSL + /* glsl */`
-              uniform float uTime; uniform vec3 uCamPos; uniform vec2 uWind;
+              uniform float uTime; uniform vec3 uCamPos; uniform vec2 uWind; uniform vec3 uSun;
               varying vec3 vWorld;
               void main(){
                 float dist = length(uCamPos - vWorld);
                 // The Yarra is not blue and never has been: it is the colour of
-                // the silt it carries, and in the rain it is darker still.
+                // the silt it carries, and into a low sun it is mostly a
+                // picture of the sky with the silt showing through the chop.
                 vec2 p = vWorld.xz;
                 float w1 = fbm(p * 0.36 + vec2(uTime * 0.10, uTime * 0.045) * 6.0 * uWind.x);
                 float w2 = fbm(p * 1.15 - vec2(uTime * 0.16, 0.0));
+                float w3 = fbm(p * 0.045 + vec2(uTime * 0.02, 0.0));
+                /* The one thing that says river rather than ground at any
+                   distance, including from three hundred feet where there is
+                   no ripple left to resolve: the streaks. A current draws the
+                   surface out along itself, so the noise that breaks the sky
+                   up is sampled eighteen times wider across the channel than
+                   along it, and what comes back is long bright and dark bands
+                   running with the flow. This is a much bigger part of reading
+                   as water than the colour is. */
+                float streak = fbm(vec2(p.x * 0.055, p.y * 0.62) + vec2(uTime * 0.075, 0.0));
                 float chop = (w1 - 0.5) * 0.7 + (w2 - 0.5) * 0.35;
-                vec3 body = mix(vec3(0.0135, 0.0175, 0.0130), vec3(0.030, 0.036, 0.026), w1);
+                /* Silt, and it leads. Everything under this heading used to be
+                   sky: the body colour was two hundredths of a unit and the
+                   mirror was weighted at a third, which into a low sun made the
+                   whole channel one flat sheet of gold — a sandbank with a
+                   bridge over it rather than a river. The Yarra is the colour of
+                   what it carries first and a picture of the sky second, and the
+                   long wave w3 is what stops the second half being one value
+                   from bank to bank. */
+                vec3 body = mix(vec3(0.0205, 0.0290, 0.0175), vec3(0.042, 0.058, 0.033), w1);
+                body *= 0.44 + 0.50 * w3 + 0.82 * streak;
 
                 float rip = ripple(p * 0.55, uTime) * (1.0 - smoothstep(20.0, 90.0, dist));
                 vec3 diff, spec;
                 wetLight(vWorld, uCamPos, rip + chop * 0.8, 1.0, diff, spec);
 
-                vec3 col = body * (uSkyLo * 0.5 + diff * 0.5);
-                col += skyMirror(vWorld, uCamPos, rip * 0.7 + chop) * (0.34 + 0.16 * w2);
-                col += spec * 1.15;
+                vec3 col = body * (0.34 + uSkyLo * 0.17 + uSkyHi * 0.40 + diff * 0.32);
+                float mir = (0.040 + 0.036 * w2)
+                          * (0.30 + 1.55 * streak)
+                          * (0.66 + 0.62 * smoothstep(-0.22, 0.26, chop + (w3 - 0.5) * 0.9));
+                col += skyMirror(vWorld, uCamPos, rip * 0.7 + chop) * mir;
+                col += spec * 0.55;
+                /* And the one thing that says water rather than mud from
+                   directly overhead, where there is no grazing angle left for
+                   the sky to come back off: the sun's own track. The normal is
+                   tilted by the chop, so the track breaks up into the long
+                   scatter of glitter a river actually shows into a low sun
+                   instead of one clean highlight. */
+                vec3 V = normalize(uCamPos - vWorld);
+                vec3 Hf = normalize(V + uSun);
+                vec3 N = normalize(vec3(chop * 0.42 + (w2 - 0.5) * 0.55, 1.0, chop * 0.30));
+                col += vec3(1.00, 0.56, 0.24) * pow(max(dot(N, Hf), 0.0), 22.0) * 0.90;
                 col += vec3(0.55, 0.60, 0.66) * max(rip, 0.0) * 0.05;
                 gl_FragColor = vec4(applyFog(col, dist), 1.0);
               }`,
         });
-        const wg = new THREE.PlaneGeometry(420, RIV_S - RIV_N, 6, 6);
+        /* Wide enough to fill the cut in both road sheets and then run out to
+           the fog. The old plane stopped at 210 metres either side, which was
+           further than the near sheet reached and nowhere near as far as the
+           distance one — so with the channel opened up the river used to end
+           in mid-air on both sides of the city. */
+        const wg = new THREE.PlaneGeometry(1240, CUT_S - CUT_N + 10, 10, 4);
         wg.rotateX(-Math.PI / 2);
-        const river = mesh(wg, water, 0, WATER, (RIV_N + RIV_S) / 2);
+        const river = mesh(wg, water, 0, WATER, (CUT_N + CUT_S) / 2);
         scene.add(river);
 
-        const blue = [], prom = [], rails = [], boats = [], bank = [];
-        let g = boxG(420, 4, RIV_S - RIV_N); put(g, 0, WATER - 2.2, (RIV_N + RIV_S) / 2); bank.push(g);
-        for (const b of [[RIV_N, 1], [RIV_S, -1]]) {
-            const zw = b[0], s = b[1];
-            g = boxG(420, 8.6, 2.4); put(g, 0, WATER + 4.3, zw - s * 1.18); blue.push(g);
-            g = boxG(420, 0.5, 3.0); put(g, 0, 0.05, zw - s * 1.4); prom.push(g);
-            g = boxG(420, 0.7, 8.0); put(g, 0, WATER + 1.7, zw + s * 4.0); prom.push(g);
-            g = boxG(420, 0.9, 0.5); put(g, 0, WATER + 2.5, zw + s * 8.0); blue.push(g);
-            for (let r = 0; r < 34; r++) { g = cylG(0.05, 0.06, 1.1, 6); put(g, -130 + r * 7.0, 0.55, zw - s * 0.2); rails.push(g); }
-            g = boxG(460, 0.09, 0.09); put(g, 0, 1.08, zw - s * 0.2); rails.push(g);
-            g = boxG(460, 0.07, 0.07); put(g, 0, 0.62, zw - s * 0.2); rails.push(g);
-        }
-        for (const bp of [[-52, RIV_N + 12], [64, RIV_S - 13]]) {     // two moored river boats
-            const M0 = MX(bp[0], WATER, bp[1]);
-            g = boxG(22, 1.4, 4.6); put(g, 0, 0.5, 0); carry(boats, g, M0);
-            g = boxG(15, 1.8, 4.0); put(g, -1, 2.0, 0); carry(boats, g, M0);
-            g = boxG(14, 0.9, 4.2); put(g, -1, 2.2, 0); carry(blue, g, M0);
-            g = boxG(2.4, 1.2, 2.4); put(g, 6, 3.4, 0); carry(boats, g, M0);
-        }
-        // Southbank: Hamer Hall's drum and the low arts-centre podium
-        g = cylG(21, 22, 12, 22); put(g, -6, 6, RIV_S + 46); bank.push(g);
-        g = cylG(22.5, 21.5, 1.6, 22); put(g, -6, 12.6, RIV_S + 46); prom.push(g);
-        g = boxG(110, 8, 26); put(g, 40, 4, RIV_S + 20); bank.push(g);
-        g = boxG(70, 14, 30); put(g, -110, 7, RIV_S + 34); bank.push(g);
+        /* ---- Princes Bridge -------------------------------------------
 
-        const yarra = new THREE.Group();
-        yarra.add(
-            merged(blue, stdMat(0x555a55, { roughness: 0.62 })),
-            merged(prom.concat(boats, rails), stdMat(0x8e8b84, { roughness: 0.50, metalness: 0.14 })),
-            merged(bank, stdMat(0x9a938a, { roughness: 0.68 })));
-        scene.add(yarra);
+           One vertex-coloured mesh for the whole structure. Six materials was
+           six draws for one bridge and, worse, six palettes: the piers had to
+           be the same grey as the lamp standards because they shared a merge.
+           Painted per vertex the bluestone can be bluestone, the ironwork can
+           be oxide red, the balustrade can be warm cream and the standards
+           can be dark bronze-green, and it is still one draw. */
+        const _bt = new Map();
+        const bc = (hex) => { let c = _bt.get(hex); if (!c) { c = srgb(hex); _bt.set(hex, c); } return c; };
+        // Every geometry that goes into these merges is painted here, without
+        // exception: mergeGeometries answers null the moment one member of the
+        // array has a colour attribute and another does not, and a null
+        // geometry is a mesh with no position, which is the viewport.
+        const col = (g, hex) => {
+            const c = bc(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+        const PG = (arr, hex, g) => { arr.push(col(g, hex)); return g; };
+        const PB = (arr, hex, w, h, d, x, y, z, rx, ry, rz) =>
+            PG(arr, hex, put(boxG(w, h, d), x, y, z, rx, ry, rz));
 
-        /* ---- the bridge ---- */
-        const ironR = [], cream = [], stone = [], deck = [], lampI = [], lampG = [], parapets = [];
-        const DK = BR_Y, UND = DK - 1.5;
-        const piers = [RIV_N, RIV_N + 31.3, RIV_N + 62.6, RIV_S];
+        /* The paint chips, read off the photograph. Written a shade brighter
+           than the eye wants because `srgb` reads every hex in this file
+           twice — see section 0 — and a dark one comes out of that a great
+           deal darker than it went in. */
+        const IRON = 0xbe5236;        // the archivolts and the medallions, into the sun
+        const IRON_D = 0x9c412a;      // the same paint on the soffit, which is never in it
+        const BLUE = 0x929ca7;        // rusticated bluestone
+        const BLUE_D = 0x808b96;      // and the alternate course, so the rustication reads
+        const CREAM = 0xe4dfd0;       // the parapet, the spandrel panels, the pedestals
+        const CREAM_D = 0xcdc6b4;
+        const BAND = 0x9fadba;        // the blue-grey line that runs through the moulding
+        const BRONZE = 0x5e7d6a;      // the lamp standards, dark green bronze
+        const GOLD = 0xd6c089;        // the arms in the middle of each medallion
+        const ASPH = 0x8a8e95;        // the carriageway, and a shade up from the street's
+        const LINE = 0xdad5c2;
+        const IRONW = 0x35393c;       // wire, and the poles that hold it
+        const POLE = 0x7a8083;
+
+        const body = [], deck = [], balus = [], glow = [];
+
+        const DK = BR_Y;                          // the carriageway top, level with the street
+        const FWY = DK + KERB_H + 0.02;           // the footways, up one kerb from it
+        /* 1.30 under the carriageway rather than 1.50, and the twenty
+           centimetres are the walk's rather than the eye's: `ground.js` reads
+           two surfaces more than 1.4 m apart as two solids, so a deck exactly
+           1.52 thick registered as a floor with an unrelated ceiling a metre
+           and a half under it instead of as one slab. */
+        const UND = DK - 1.30;                    // the deck soffit
+        const SPRING = DK - 4.30;                 // where every arch springs off its pier
+        const BZ0 = 130, BZ1 = 240;               // the deck, running two metres past the cut
+        const BL = BZ1 - BZ0, BC = (BZ0 + BZ1) / 2;
+        const HW = BR_W / 2;                      // 15 — the outer face of the structure
+        const FW_W = 5.0, FW_X = 12.35;           // the footways: 9.85 to 14.85 either side
+        const PIER = [RIV_N, RIV_N + 31.3, RIV_N + 62.6, RIV_S];
+        const PED_D = 3.6;                        // the pedestal over each pier, in z
+
+        // A segmental arch: very flat and very broad, which is the whole look
+        // of this bridge. Given a span and a rise it answers the circle that
+        // passes through both springings and the crown.
         const segArc = (zc, span, y0, rise) => {
             const R = (span * span / 4 + rise * rise) / (2 * rise);
             return { R, cy: y0 + rise - R, half: Math.asin(clamp(span / 2 / R, 0, 1)), zc };
         };
+
+        /* ---- the three spans, from the soffit up ---------------------- */
+        const RIBX = [-13.1, -8.7, -4.35, 0, 4.35, 8.7, 13.1];
         for (let sp = 0; sp < 3; sp++) {
-            const z0 = piers[sp], z1 = piers[sp + 1];
-            const zc = (z0 + z1) / 2, span = z1 - z0 - 4.6;
-            const A = segArc(zc, span, -4.4, 3.6);
-            const N = 11;
+            const z0 = PIER[sp], z1 = PIER[sp + 1];
+            const zc = (z0 + z1) / 2, span = z1 - z0 - 5.4;
+            const A = segArc(zc, span, SPRING, 2.50);
+            const N = 14;
+
             for (let i = 0; i < N; i++) {
                 const a0 = -A.half + 2 * A.half * i / N, a1 = -A.half + 2 * A.half * (i + 1) / N;
                 const pz0 = zc + Math.sin(a0) * A.R, py0 = A.cy + Math.cos(a0) * A.R;
                 const pz1 = zc + Math.sin(a1) * A.R, py1 = A.cy + Math.cos(a1) * A.R;
-                const len = Math.hypot(pz1 - pz0, py1 - py0) * 1.05;
+                const len = Math.hypot(pz1 - pz0, py1 - py0) * 1.06;
                 const tilt = -Math.atan2(py1 - py0, pz1 - pz0);
-                let q = boxG(BR_W - 1.0, 0.85, len); put(q, 0, (py0 + py1) / 2, (pz0 + pz1) / 2, tilt); ironR.push(q);
-                for (let rb = -3; rb <= 3; rb++) {                  // the fan of ribs on the soffit
-                    q = boxG(0.62, 0.30, len); put(q, rb * 4.2, (py0 + py1) / 2 - 0.5, (pz0 + pz1) / 2, tilt); ironR.push(q);
+                const my = (py0 + py1) / 2, mz = (pz0 + pz1) / 2;
+
+                // the ribs — seven of them, following the curve, and the only
+                // thing actually carrying the deck
+                for (const rx of RIBX) PB(body, IRON_D, 0.62, 0.55, len, rx, my, mz, tilt);
+
+                // the archivolt on each face, which is the arc a photograph of
+                // this bridge is mostly made of
+                for (const sx of [-1, 1]) {
+                    PB(body, IRON, 0.60, 1.05, len, sx * (HW + 0.10), my + 0.12, mz, tilt);
                 }
-                const yTop = (py0 + py1) / 2 + 0.45, h = UND - yTop;
-                if (h > 0.15) { q = boxG(BR_W, h, Math.abs(pz1 - pz0) + 0.15); put(q, 0, yTop + h / 2, (pz0 + pz1) / 2); cream.push(q); }
-                for (const sx of [-1, 1]) {                          // the red archivolt on both faces
-                    q = boxG(0.55, 1.15, len); put(q, sx * (BR_W / 2 + 0.2), (py0 + py1) / 2 + 0.15, (pz0 + pz1) / 2, tilt); ironR.push(q);
+
+                /* and the cream spandrel over it, on the two outer faces only.
+                   The roughed-in version filled the whole width with it, which
+                   from below walled the fan in behind a solid sheet — on an
+                   iron bridge there is nothing up there but air and bracing. */
+                const yT = my + 0.62, h = UND - yT;
+                if (h > 0.12) {
+                    for (const sx of [-1, 1]) {
+                        PB(body, sx * SUN.x > 0 ? CREAM : CREAM_D, 0.62, h,
+                           Math.abs(pz1 - pz0) + 0.12, sx * (HW - 0.30), yT + h / 2, mz);
+                    }
+                }
+            }
+
+            /* The fan. Radiating struts standing on the extrados of every rib
+               and reaching the soffit, spreading out of the springing at each
+               pier — which is why the underside of this bridge looks like a
+               pair of open hands and not like a beam. */
+            const NF = 15;
+            for (let i = 0; i <= NF; i++) {
+                const a = -A.half + 2 * A.half * i / NF;
+                const pz = zc + Math.sin(a) * A.R, py = A.cy + Math.cos(a) * A.R;
+                const h = (UND - py - 0.34) / Math.cos(a);
+                if (h < 0.30) continue;
+                const mid = 0.34 + h / 2;
+                for (const rx of RIBX) {
+                    PB(body, IRON_D, 0.24, h, 0.20, rx,
+                       py + Math.cos(a) * mid, pz + Math.sin(a) * mid, a);
                 }
             }
         }
-        piers.forEach((pz, k) => {
-            const isEnd = (k === 0 || k === piers.length - 1);
-            const pd = isEnd ? 6.5 : 5.0;
-            let q = boxG(BR_W + 1.4, 14.0, pd); put(q, 0, WATER + 2.6, pz); stone.push(q);
-            q = boxG(BR_W + 2.6, 1.1, pd + 1.4); put(q, 0, -4.4, pz); stone.push(q);
-            q = boxG(BR_W + 2.2, 0.9, pd + 1.0); put(q, 0, WATER + 0.6, pz); stone.push(q);
-            if (!isEnd) for (const sz of [-1, 1]) {                  // cutwaters
-                q = prismG(pd + 1.0, 3.2, 13.0);
-                put(q, sz * (BR_W / 2 + 3.0), WATER + 2.6, pz, 0, Math.PI / 2, Math.PI / 2); stone.push(q);
+
+        /* ---- the piers, and the two abutments ------------------------ */
+        PIER.forEach((pz, k) => {
+            const isEnd = (k === 0 || k === PIER.length - 1);
+            /* Eight metres at the abutments rather than twelve, and the
+               difference is the whole of whether a person can walk under this
+               bridge: the river-level promenade comes in at 144 on one bank
+               and 226 on the other, and a mass that deep pushed its capping
+               course up through the quay and closed the way through. */
+            const pd = isEnd ? 8.0 : 5.2;
+            const y0 = WATER - 3.2, y1 = SPRING - 1.05;
+
+            /* Battered and rusticated: eight courses, each a little narrower
+               than the one under it and each a shade off its neighbour, so a
+               pier reads as coursed rough-faced stone from the water without
+               a texture and without a second material. */
+            const NCO = 8;
+            for (let c = 0; c < NCO; c++) {
+                const a = y0 + (y1 - y0) * c / NCO, b = y0 + (y1 - y0) * (c + 1) / NCO;
+                const t = (c + 0.5) / NCO;
+                PB(body, c % 2 ? BLUE : BLUE_D,
+                   BR_W + 3.2 - t * 2.2, b - a, pd + 2.2 - t * 1.5, 0, (a + b) / 2, pz);
             }
-            if (k === 0) return;
+            // the moulded cap the arch springs off, in two projections
+            PB(body, BLUE, BR_W + 2.4, 0.45, pd + 1.7, 0, y1 + 0.22, pz);
+            PB(body, BLUE, BR_W + 3.0, 0.55, pd + 2.3, 0, y1 + 0.72, pz);
+
+            // cutwaters, at the two piers that actually stand in the stream.
+            // A three-sided prism standing on end is a nose upstream and a
+            // nose down, for two geometries and no thought.
+            if (!isEnd) for (const sx of [-1, 1]) {
+                PG(body, BLUE_D, put(cylG(3.2, 4.4, y1 + 0.5 - y0, 3),
+                   sx * (HW - 0.9), (y0 + y1 + 0.5) / 2, pz, 0, sx > 0 ? Math.PI / 2 : -Math.PI / 2, 0));
+            }
+
+            /* The spandrel over the pier, and on it the medallion: a red
+               roundel with the arms in cream and gold inside a moulded ring,
+               and a small panel either side of it. */
             for (const sx of [-1, 1]) {
-                const px = sx * (BR_W / 2 - 0.6);
-                q = boxG(2.6, 2.5, 3.4); put(q, px, DK + 1.25, pz); stone.push(q);
-                q = boxG(3.0, 0.35, 3.8); put(q, px, DK + 2.6, pz); cream.push(q);
-                const L = MX(px, DK + 2.75, pz);
-                q = boxG(1.5, 0.5, 1.5); put(q, 0, 0.25, 0); carry(lampI, q, L);
-                q = cylG(0.30, 0.42, 3.4, 10); put(q, 0, 2.2, 0); carry(lampI, q, L);
-                q = cylG(0.44, 0.36, 0.5, 10); put(q, 0, 4.1, 0); carry(lampI, q, L);
-                q = boxG(0.85, 1.25, 0.85); put(q, 0, 5.0, 0); carry(lampG, q, L);
-                q = cylG(0.30, 0.52, 0.55, 8); put(q, 0, 5.8, 0); carry(lampI, q, L);
-                q = cylG(0.05, 0.05, 0.6, 6); put(q, 0, 6.3, 0); carry(lampI, q, L);
+                const fx = sx * (HW - 0.30);
+                PB(body, sx * SUN.x > 0 ? CREAM : CREAM_D, 0.62, UND - (SPRING + 0.4), pd + 1.2,
+                   fx, (UND + SPRING + 0.4) / 2, pz);
+                const ry = sx > 0 ? Math.PI / 2 : -Math.PI / 2;
+                const mx = sx * (HW + 0.02), my = (UND + SPRING) / 2 + 0.22;
+                PG(body, IRON, put(new THREE.CircleGeometry(1.16, 20), mx + sx * 0.06, my, pz, 0, ry, 0));
+                PG(body, GOLD, put(new THREE.CircleGeometry(0.60, 14), mx + sx * 0.13, my, pz, 0, ry, 0));
+                PG(body, CREAM, put(new THREE.TorusGeometry(1.24, 0.15, 6, 18), mx + sx * 0.08, my, pz, 0, ry, 0));
+                for (const dz of [-2.35, 2.35]) {
+                    PB(body, IRON, 0.16, 1.30, 0.72, mx + sx * 0.06, my, pz + dz);
+                    PB(body, CREAM, 0.14, 1.46, 0.90, mx + sx * 0.04, my, pz + dz);
+                }
             }
         });
-        const BL = RIV_S - RIV_N + 22, BC = (RIV_N + RIV_S) / 2;
-        let q = boxG(BR_W, 1.5, BL); put(q, 0, DK - 0.75, BC); deck.push(q);
-        // the raised footways go in with the carriageway: both are wet grey today
-        for (const sx of [-1, 1]) { const f = boxG(5.5, 0.28, BL); put(f, sx * 12.0, DK + 0.15, BC); deck.push(f); }
-        q = boxG(BR_W - 11, 0.10, BL); put(q, 0, DK + 0.06, BC); deck.push(q);
-        q = boxG(BR_W, 0.3, 40); put(q, 0, 0.12, 120); deck.push(q);
-        q = boxG(BR_W, 0.3, 60); put(q, 0, 0.12, RIV_S + 30); deck.push(q);
-        for (const sx of [-1, 1]) {
-            q = uvScale(boxG(0.55, 1.35, BL), 1, 1); parapets.push(put(q, sx * (BR_W / 2 - 0.3), DK + 0.95, BC));
-            q = boxG(0.95, 0.28, BL); put(q, sx * (BR_W / 2 - 0.3), DK + 1.72, BC); cream.push(q);
-            q = boxG(0.22, 0.16, BL); put(q, sx * (BR_W / 2 - 0.3), DK + 1.9, BC); ironR.push(q);
-            q = boxG(0.9, 1.65, BL); put(q, sx * (BR_W / 2 + 0.05), DK - 0.55, BC); cream.push(q);
-            q = boxG(1.15, 0.30, BL); put(q, sx * (BR_W / 2 + 0.1), DK + 0.20, BC); cream.push(q);
-            for (const pz of piers) {                                // red roundels over every pier
-                q = new THREE.CircleGeometry(1.15, 18);
-                put(q, sx * (BR_W / 2 + 1.5), DK - 2.5, pz, 0, sx > 0 ? Math.PI / 2 : -Math.PI / 2, 0); ironR.push(q);
-                q = new THREE.TorusGeometry(1.32, 0.16, 6, 16);
-                put(q, sx * (BR_W / 2 + 1.5), DK - 2.5, pz, 0, sx > 0 ? Math.PI / 2 : -Math.PI / 2, 0); cream.push(q);
-            }
+
+        /* ---- the deck ------------------------------------------------ */
+        // The carriageway. Two millimetres of it stand over the road sheets it
+        // overlaps at each end rather than sharing their plane, because two
+        // surfaces at exactly one height is a seam that flickers.
+        PB(deck, ASPH, BR_W - 0.3, 1.32, BL, 0, DK - 0.64, BC);
+        // and the lane lines, which are the only marking out here: the road
+        // texture is a 240 m square around Flinders Street and stops long
+        // before the river.
+        for (const sx of [-1, 1]) for (const lx of [6.35, 9.45]) {
+            PB(deck, LINE, 0.17, 0.04, BL, sx * lx, DK + 0.018, BC);
         }
-        // rails and the trolley wire carried across
+        // the raised footways, and the kerb face under them
+        for (const sx of [-1, 1]) {
+            PB(deck, 0xb6b2a6, FW_W, KERB_H + 0.02, BL, sx * FW_X, DK + (KERB_H + 0.02) / 2, BC);
+            PB(deck, 0x8f8d89, 0.20, KERB_H + 0.02, BL, sx * (FW_X - FW_W / 2 - 0.06), DK + (KERB_H + 0.02) / 2, BC);
+        }
+
+        /* ---- the fascia, the parapet and its pedestals ---------------- */
+        for (const sx of [-1, 1]) {
+            const lit = sx * SUN.x > 0;                 // which face the sun is on
+            const face = lit ? CREAM : CREAM_D;
+            PB(body, face, 0.90, 1.20, BL, sx * (HW - 0.05), UND + 0.60, BC);        // the girder face
+            PB(body, face, 1.22, 0.32, BL, sx * (HW + 0.03), UND + 1.36, BC);        // and its cornice
+            PB(body, BAND, 1.26, 0.10, BL, sx * (HW + 0.05), DK + 0.24, BC);         // the blue-grey line
+            PB(body, face, 1.04, 0.24, BL, sx * (HW - 0.20), DK + 0.11, BC);         // the plinth
+
+            /* The balustrade, broken at every pedestal rather than run through
+               behind them. Its UVs are scaled by the length of each run so a
+               baluster stays the same width whether the run is four metres or
+               twenty-eight. */
+            const stops = [BZ0, ...PIER.flatMap((p) => [p - PED_D / 2, p + PED_D / 2]), BZ1];
+            for (let i = 0; i < stops.length; i += 2) {
+                const d = stops[i + 1] - stops[i];
+                if (d < 0.4) continue;
+                const g = uvScale(boxG(0.55, 1.02, d), d / BL, 1);
+                balus.push(put(g, sx * (HW - 0.32), DK + 0.78, (stops[i] + stops[i + 1]) / 2));
+            }
+            PB(body, face, 0.98, 0.24, BL, sx * (HW - 0.32), DK + 1.41, BC);         // the handrail over it
+        }
+
+        /* ---- the pedestals, and the standards that stand on them ------ */
+        for (const pz of PIER) for (const sx of [-1, 1]) {
+            const px = sx * (HW - 0.32);
+            PB(body, sx * SUN.x > 0 ? CREAM : CREAM_D, 0.98, 1.31, PED_D, px, DK + 0.895, pz);
+            PB(body, CREAM, 1.20, 0.22, PED_D + 0.30, px, DK + 1.62, pz);
+
+            /* An ornamental standard: a moulded base, a fluted shaft, a
+               heraldic figure under the lantern and a finial over it, in the
+               dark green bronze every piece of nineteenth-century street iron
+               in this city was painted. Metalness stays at nothing — this
+               world has no environment map, and a metallic standard material
+               with nothing to reflect renders black. */
+            const L = MX(px, DK + 1.73, pz);
+            const carryP = (hex, g) => { g.applyMatrix4(L); PG(body, hex, g); };
+            const carryG = (hex, g) => { g.applyMatrix4(L); PG(glow, hex, g); };
+            carryP(BRONZE, put(boxG(1.02, 0.34, 1.02), 0, 0.17, 0));
+            carryP(BRONZE, put(cylG(0.40, 0.52, 0.62, 10), 0, 0.65, 0));
+            carryP(BRONZE, put(cylG(0.20, 0.30, 3.10, 10), 0, 2.51, 0));
+            for (let f = 0; f < 6; f++) {                       // the flutes
+                const a = f * Math.PI / 3;
+                carryP(BRONZE, put(boxG(0.07, 3.10, 0.07), Math.sin(a) * 0.24, 2.51, Math.cos(a) * 0.24));
+            }
+            carryP(BRONZE, put(cylG(0.34, 0.26, 0.30, 10), 0, 4.20, 0));
+            carryP(BRONZE, put(sphG(0.22, 8, 6), 0, 4.52, 0));  // the figure under the lantern
+            carryP(BRONZE, put(boxG(0.36, 0.44, 0.24), 0, 4.66, 0));
+            carryG(0xf6efd8, put(boxG(0.66, 0.92, 0.66), 0, 5.36, 0));
+            carryP(BRONZE, put(cylG(0.08, 0.48, 0.42, 8), 0, 6.02, 0));
+            carryP(BRONZE, put(cylG(0.04, 0.04, 0.46, 6), 0, 6.42, 0));
+        }
+
+        // and the pylon that closes the parapet at each end of the bridge
+        for (const bz of [BZ0 + 0.9, BZ1 - 0.9]) for (const sx of [-1, 1]) {
+            PB(body, BLUE, 1.40, 2.30, 2.20, sx * (HW - 0.35), DK + 1.05, bz);
+            PB(body, BLUE_D, 1.60, 0.26, 2.40, sx * (HW - 0.35), DK + 2.30, bz);
+        }
+
+        /* ---- the overhead, and the poles that hold it up --------------
+           The wire runs the whole length of the corridor, so a tram coming up
+           from St Kilda Road is under wire the entire way; the poles are the
+           bridge's own, standing on the footway kerb the way they do on the
+           real deck. */
         for (const o of [-TRS, TRS]) {
-            for (const r of [-RAIL, RAIL]) { q = boxG(0.075, 0.05, BL + 60); put(q, o + r, DK + 0.14, RIV_N + 40); deck.push(q); }
-            q = boxG(0.035, 0.035, BL + 60); put(q, o, DK + WIRE_H, RIV_N + 40); ironR.push(q);
+            for (const r of [-RAIL, RAIL]) {
+                PB(deck, 0xb0a89a, 0.075, 0.05, BL, o + r, DK + 0.05, BC);
+            }
+            PB(body, IRONW, 0.035, 0.035, RUN_Z1 - 96, o, DK + WIRE_H, (96 + RUN_Z1) / 2);
+        }
+        for (let i = 0; i < 5; i++) {
+            const pz = BZ0 + 12 + i * 22.5, sx = (i % 2) ? 1 : -1;
+            const px = sx * (FW_X + FW_W / 2 - 0.45);
+            PB(body, POLE, 0.20, 8.2, 0.20, px, FWY + 4.1, pz);
+            PB(body, POLE, Math.abs(px) - 1.2, 0.14, 0.14, sx * (Math.abs(px) + 1.2) / 2, DK + WIRE_H + 0.55, pz);
+            // and on every second one a modern outreach light over the roadway
+            if (i % 2 === 0) {
+                PB(body, POLE, 2.6, 0.14, 0.14, px - sx * 1.3, FWY + 8.00, pz);
+                PG(glow, 0xf3e6c6, put(boxG(0.86, 0.10, 0.34), px - sx * 2.4, FWY + 7.86, pz));
+            }
         }
 
         const bridge = new THREE.Group();
-        const deckMesh = merged(deck, stdMat(0x3c3e42, { roughness: 0.30, metalness: 0.22 }));
+        const deckMesh = merged(deck, new THREE.MeshStandardMaterial({
+            vertexColors: true, roughness: 0.52, metalness: 0.05,
+        }));
         bridge.add(
-            merged(ironR, stdMat(0xa8442c, { roughness: 0.46, metalness: 0.28 })),
-            merged(cream, stdMat(0xe6e2d6, { roughness: 0.62 })),
-            merged(stone.concat(lampI), stdMat(0x5a5f59, { roughness: 0.66 })),
+            merged(body, new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.66, metalness: 0.04,
+            })),
             deckMesh,
-            merged(parapets, stdMat(0xffffff, { map: parapetTex, roughness: 0.60 })));
-        const lamps = merged(lampG, emissive(0xf3ecd6, 0xffe0a8, 2.6));
+            merged(balus, stdMat(0xffffff, { map: parapetTex, roughness: 0.60 })));
+        const lamps = merged(glow, emissive(0xf3ecd6, 0xffe0a8, 2.4));
         bridge.add(lamps); world.ghost(lamps);
         scene.add(bridge);
         world.part('bridge_00', bridge);
@@ -6785,7 +7047,8 @@ export default function build(world) {
         for (let i = 0; i < 4; i++) spots.push([23.5 + i * 6.4, -199.0 + rr(-1.2, 1.2)]);  // two ends of it
         for (let i = 0; i < 3; i++) spots.push([46.8, -132.0 - i * 4.6]);                   // and along the hotel
         for (let i = 0; i < 5; i++) spots.push([78 + i * 9, 122 + rr(-3, 3)]);       // Fed Square's terrace
-        for (let i = 0; i < 12; i++) spots.push([-190 + i * 34, RIV_S + 6]);         // Southbank promenade
+        for (let i = 0; i < 12; i++) spots.push([-190 + i * 34, RIV_S + 11.5]);      // Southbank, in the grass
+        for (let i = 0; i < 9; i++) spots.push([-176 + i * 40, RIV_N - 1.5]);        // and the north bank wall
 
         // The trunk and its three limbs, built once and stood up sixty times.
         const trunk = [];
@@ -6982,12 +7245,19 @@ export default function build(world) {
        ten seconds, so each intersection north of Flinders Street takes its green
        ten and a half seconds after the one south of it and a northbound tram
        meets a progression rather than a wall. Southbound traffic pays for it,
-       which is exactly what happens on the real street in the evening peak. */
+       which is exactly what happens on the real street in the evening peak.
+
+       Alexandra Avenue is the one south of Flinders Street, so its offset is
+       the same step the other way: a tram or a car coming off the bridge into
+       the city meets Flinders Street's green two hundred and sixty metres
+       later, which at the thirty-odd a vehicle holds over the deck is about
+       the ten and a half seconds that separates the two. */
     const XSEC = [
         { z: 0, h: FL, table: P_SCR, off: 0.0 },
         { z: NST[0].z, h: NST[0].h, table: P_STD, off: 10.5 },
         { z: NST[1].z, h: NST[1].h, table: P_STD, off: 21.0 },
         { z: NST[2].z, h: NST[2].h, table: P_STD, off: 31.5 },
+        { z: SKR.z, h: SKR.h, table: P_STD, off: -10.5 },
     ];
     for (const X of XSEC) { X.ns = 'r'; X.ew = 'r'; X.pns = 'd'; X.pew = 'd'; X.scr = 0; X.left = 0; X.code = -1; }
 
@@ -7549,14 +7819,22 @@ export default function build(world) {
     const tramLeafM = stdMat(0xffffff, { map: doorLeafTex, roughness: 0.28, metalness: 0.08 });
 
     /* ---- the fleet ------------------------------------------------------
-       Eight running and one standing. The one standing is at Stop 13 with its
+       Ten running and one standing. The one standing is at Stop 13 with its
        doors open, and it is standing for a reason that is not scenery: see
        section 20, where the walk's floor is worked out.
 
        A car stabled across a road closes that road, so the service runs on the
        other one. The northbound track through Stop 13 belongs to 272 and to
-       nothing else; the eight in traffic share the southbound track up
-       Swanston and the two tracks along Flinders. */
+       nothing else; the eight going north share the southbound track up
+       Swanston and the two tracks along Flinders.
+
+       The last two are southbound over Princes Bridge, and they are the reason
+       the run range became a per-car thing. A southbound car on the northbound
+       track meets 272 standing at Stop 13 and queues behind it for the rest of
+       the afternoon, because 272 is never going to move — so these two are
+       given a run of their own that begins south of it, at 84, and ends out on
+       St Kilda Road. Nothing about that is visible from the bridge, which is
+       where anybody watching them is standing. */
     const TRAM_DEFS = [
         { ax: 'z', dir: -1, s: 96, fleet: 2071, route: '3', dest: 'MELB UNI', via: 'SWANSTON ST' },
         { ax: 'z', dir: -1, s: 8, fleet: 2118, route: '67', dest: 'CARNEGIE', via: 'SWANSTON ST' },
@@ -7567,13 +7845,15 @@ export default function build(world) {
         { ax: 'z', dir: -1, s: -256, fleet: 2168, route: '72', dest: 'CAMBERWELL', via: 'SWANSTON ST' },
         { ax: 'z', dir: -1, s: -344, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
         { ax: 'z', dir: 1, s: 64, fleet: 272, route: '109', dest: 'BOX HILL', via: 'via Collins St', park: true },
+        { ax: 'z', dir: 1, s: 178, fleet: 2088, route: '8', dest: 'TOORAK', via: 'ST KILDA RD', rz0: 84, rz1: RUN_Z1 },
+        { ax: 'z', dir: 1, s: 96, fleet: 2141, route: '55', dest: 'DOMAIN INT', via: 'ST KILDA RD', rz0: 84, rz1: RUN_Z1 },
     ];
 
     const TRAMS = [];
     let tramWhiteIM, tramDarkIM, tramLampIM, tramFitIM, tramFloorIM, tramLeafIM;
     {
         const shell = tramShell(), saloon = tramSaloon();
-        const N = TRAM_DEFS.length, MOV = N - 1;
+        const N = TRAM_DEFS.length;
         const im = (geo, mat, n) => {
             const m = new THREE.InstancedMesh(geo, mat, n);
             // An InstancedMesh takes its bounding sphere from the geometry it
@@ -7588,10 +7868,14 @@ export default function build(world) {
         tramDarkIM = im(merge(shell.dark), tramDarkM, N);
         tramLampIM = im(merge(shell.lamps), tramLampM, N);
         tramFitIM = im(merge(saloon.fit), tramIntM, N);
-        // The parked car is not in this one. Its floor is a mesh of its own,
-        // because a floor somebody stands on has to be in the collision grid
-        // and an instance never is.
-        tramFloorIM = im(merge(saloon.floor), tramIntM, MOV);
+        /* The parked car's slot in this one is never written. Its floor is a
+           mesh of its own, because a floor somebody stands on has to be in the
+           collision grid and an instance never is — and the slot is left in
+           rather than the buffer shortened, because the parked car is no
+           longer the last of the fleet and an index that skips it walks the
+           two southbound cars off the end of the array. An unwritten instance
+           matrix is sixteen zeroes, which draws nothing at all. */
+        tramFloorIM = im(merge(saloon.floor), tramIntM, N);
         tramLeafIM = im(boxG(0.055, 1.90, LEAF_W), tramLeafM, N * 12);
 
         TRAM_DEFS.forEach((d, i) => {
@@ -7635,6 +7919,7 @@ export default function build(world) {
                 vmax: d.park ? 0 : rr(9, 12), len: TRAM_L, dwell: 0,
                 doors: d.park ? 1 : 0, parked: !!d.park, served: -1,
                 ry: G.rotation.y, wl: (!d.park && i < 3) ? HEAD_WL[i] : -1,
+                rz0: d.rz0, rz1: d.rz1,
             });
         });
     }
@@ -7713,8 +7998,13 @@ export default function build(world) {
            run from the bridge to Little Collins is half a kilometre, and three
            cars spread over that is an empty street with a signal on it. */
         const lanes = [
-            { ax: 'z', dir: 1, off: 8.4, n: 8, taxi: true },
-            { ax: 'z', dir: -1, off: -8.4, n: 8, taxi: true },
+            /* Twelve now rather than eight, because the run grew by a hundred
+               and fifty metres at the southern end and eight cars spread over
+               six hundred and seventy is one car every eighty metres, which
+               reads as a street that has been closed. Twelve is one every
+               fifty-odd, which is what a peak-hour bridge looks like. */
+            { ax: 'z', dir: 1, off: 8.4, n: 12, taxi: true },
+            { ax: 'z', dir: -1, off: -8.4, n: 12, taxi: true },
             { ax: 'x', dir: 1, off: -10.2, n: 5 },
             { ax: 'x', dir: -1, off: 10.2, n: 5 },
             { ax: 'x', dir: -1, off: -115 - 2.6, n: 2 },
@@ -7723,6 +8013,11 @@ export default function build(world) {
             { ax: 'x', dir: -1, off: -230 + 10.2, n: 2 },
             { ax: 'x', dir: 1, off: -345 - 1.9, n: 2 },
             { ax: 'x', dir: 1, off: -345 + 1.9, n: 2 },
+            // Alexandra Avenue, along the south bank. It has a lantern over it
+            // now, and a lantern with nothing ever arriving at it is a lantern
+            // talking to itself — the same argument Little Collins won.
+            { ax: 'x', dir: 1, off: SKR.z - 4.6, n: 3, rx1: 118 },
+            { ax: 'x', dir: -1, off: SKR.z + 4.6, n: 3, rx1: 118 },
         ];
         lanes.forEach((ln, li) => {
             /* Dealt out behind the leader, because the lane is sorted once at
@@ -7737,9 +8032,9 @@ export default function build(world) {
                 const taxi = !van && (ln.taxi ? rnd() < 0.62 : rnd() < 0.15);
                 CARS.push({
                     ax: ln.ax, dir: ln.dir, off: ln.off, lane: li, van, taxi,
-                    s: head - ln.dir * i * (ln.ax === 'z' ? rr(44, 78) : rr(18, 34)),
+                    s: head - ln.dir * i * (ln.ax === 'z' ? rr(38, 62) : rr(18, 34)),
                     v: 8, vmax: rr(10.5, 14.5),
-                    len: van ? 5.6 : 4.7,
+                    len: van ? 5.6 : 4.7, rx1: ln.rx1,
                 });
             }
         });
@@ -8323,11 +8618,20 @@ export default function build(world) {
        the traffic model's memory. It runs on the axis rather than on a constant
        because Swanston is nearly twice the cross streets: a vehicle taken off at
        a hundred and forty metres never sees the northern half of the corridor,
-       and the corridor is the point. */
+       and the corridor is the point.
+
+       A vehicle may also carry a run of its own, which is how the two
+       southbound trams keep clear of the car standing at Stop 13 without any
+       of the rest of the fleet knowing about it. */
     const wrapS = (o) => {
         if (o.ax === 'z') {
-            if (o.s > RUN_Z1) o.s = RUN_Z0; else if (o.s < RUN_Z0) o.s = RUN_Z1;
-        } else if (o.s > RUN_X) o.s = -RUN_X; else if (o.s < -RUN_X) o.s = RUN_X;
+            const z0 = o.rz0 === undefined ? RUN_Z0 : o.rz0;
+            const z1 = o.rz1 === undefined ? RUN_Z1 : o.rz1;
+            if (o.s > z1) o.s = z0; else if (o.s < z0) o.s = z1;
+        } else {
+            const x1 = o.rx1 === undefined ? RUN_X : o.rx1;
+            if (o.s > x1) o.s = -x1; else if (o.s < -x1) o.s = x1;
+        }
     };
 
     world.frame((dt, t) => {
@@ -8555,4 +8859,384 @@ export default function build(world) {
         archLight.intensity = 46 * hum;
         pubLight.intensity = 26 * (2.0 - hum);
     });
+
+    /* ============================================================
+       27 · the riverbanks
+
+       Everything inside the cut the two road sheets now have taken out of
+       them, which is to say everything between the top of one bank wall and
+       the top of the other: the bluestone river walls, the promenade at water
+       level under the bridge on both sides, the two long flights of steps down
+       to it, the broad sitting steps into the water on the south bank, and the
+       buildings, gardens, palms and kiosks that stand on either side.
+
+       Also Alexandra Avenue, which runs along the south bank and is the cross
+       street at the south end of the bridge. It is not one of the three cut
+       into the road shader in section 7 — that loop is a fixed three and the
+       shader is not this section's to change — so its carriageway, footpaths
+       and kerbs are laid here as geometry, over the top of the sheet that runs
+       out to the fog. Everything else about it, the lantern included, is the
+       same intersection as the other four.
+
+       One honest departure from the photograph. The reference has the park
+       with the palms north-west of the bridge, running down to the water. In
+       this world the north bank is Flinders Street Station: `station_00` runs
+       from x −160 to −4 and from z 16 all the way to 131, which is the cut,
+       and Federation Square fills the same band on the other side of Swanston.
+       There is no north bank here to put a park on — nine metres of quay wall
+       and nothing else. So the palms, the lawn, the winding paths and the
+       domed drum have gone to the south-west quadrant instead, which in
+       Melbourne is Queen Victoria Gardens and reads the same way from the
+       bridge; the north bank gets its own row of palms along the wall.
+       ============================================================ */
+    {
+        const _rt = new Map();
+        const rc = (hex) => { let c = _rt.get(hex); if (!c) { c = srgb(hex); _rt.set(hex, c); } return c; };
+        // Same rule as the bridge, for the same reason: a merge whose members
+        // disagree about having a colour attribute answers null.
+        const col = (g, hex) => {
+            const c = rc(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+        const PG = (arr, hex, g) => { arr.push(col(g, hex)); return g; };
+        const PB = (arr, hex, w, h, d, x, y, z, rx, ry, rz) =>
+            PG(arr, hex, put(boxG(w, h, d), x, y, z, rx, ry, rz));
+        // a box from two opposite corners, which is how a plan is actually read
+        const BOX = (arr, hex, x0, y0, z0, x1, y1, z1) =>
+            PB(arr, hex, Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0),
+               (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+
+        const ground = [], stone = [], built = [], glow = [];
+
+        // Every colour here is written light, because `srgb` reads it twice.
+        const PAVE = 0xb4b0a4, PAVE_D = 0xa09c94, KERBC = 0x94918c;
+        const BLUE = 0x929ca7, BLUE_D = 0x808b96;      // the same bluestone as the piers
+        const ASPH = 0x63666c, LAWN = 0x7f9464, PATH = 0xb5aa92;
+        const RAILC = 0x6d7478;
+
+        /* ---- the plan, in one place ------------------------------------
+           NPAV/SPAV are the strips of bank at street level, NWAL/SWAL the
+           faces of the two river walls, NQ/SQ the promenades six metres
+           under them. The two stair slots are the gaps in the wall where the
+           flights come down; there is no wall and no railing across them. */
+        const TOP = KERB_H + 0.01;                   // the bank, level with the footpath
+        const NPAV0 = 131.5, NPAV1 = 141.5, NWAL1 = 143.6, NQ1 = 156.5;
+        const SQ0 = 214.0, SWAL0 = 226.4, SPAV0 = 228.5, SPAV1 = 238.5;
+        const STEP0 = 205.0;                          // the sitting steps run down to here
+        const AB = 15.0;                              // half the deck, and where the bank meets it
+        const NSX0 = -58, NSX1 = -32;                 // the north flight, west of the bridge
+        const SSX0 = 32, SSX1 = 58;                   // and the south one, east of it
+        const NSZ0 = 136.0, NSZ1 = 152.0;
+        const SSZ0 = 218.0, SSZ1 = 234.0;
+        const EDGE = 190;                             // how far the promenades run either way
+        const FAR = 520;                              // and the plain bank behind them
+
+        /* ---- the two banks at street level ----------------------------
+           Laid in three pieces a side rather than one, because the flight
+           down has to break the strip: the paving in a stair slot stops
+           short and the top tread carries on from where it stopped. */
+        for (const b of [{ p0: NPAV0, p1: NPAV1, sx0: NSX0, sx1: NSX1, cut: NSZ0, s: 1 },
+                         { p0: SPAV0, p1: SPAV1, sx0: SSX0, sx1: SSX1, cut: SSZ1, s: -1 }]) {
+            const far = b.s > 0 ? b.p0 : b.p1;
+            for (const r of [[-FAR, -AB], [AB, FAR]]) {
+                // the strip, minus the slot the flight comes down through
+                if (b.sx0 > r[0] && b.sx1 < r[1]) {
+                    BOX(ground, PAVE, r[0], -0.6, b.p0, b.sx0, TOP, b.p1);
+                    BOX(ground, PAVE, b.sx1, -0.6, b.p0, r[1], TOP, b.p1);
+                    BOX(ground, PAVE, b.sx0, -0.6, b.s > 0 ? far : b.cut, b.sx1, TOP, b.s > 0 ? b.cut : far);
+                } else {
+                    BOX(ground, PAVE, r[0], -0.6, b.p0, r[1], TOP, b.p1);
+                }
+            }
+        }
+
+        /* ---- the river walls, and the abutment between them ------------
+           Split round two gaps, not one: the bridge takes the middle of the
+           bank and the flight down takes a slot in it, and a wall run through
+           either of them is a wall across the only way to the water. */
+        const runs = (excl) => {
+            const sorted = excl.slice().sort((a, b) => a[0] - b[0]);
+            const out = []; let a = -FAR;
+            for (const e of sorted) { if (e[0] > a + 0.5) out.push([a, e[0]]); a = Math.max(a, e[1]); }
+            if (a < FAR - 0.5) out.push([a, FAR]);
+            return out;
+        };
+        for (const w of [{ z0: NPAV1, z1: NWAL1, sx0: NSX0, sx1: NSX1 },
+                         { z0: SWAL0, z1: SPAV0, sx0: SSX0, sx1: SSX1 }]) {
+            for (const r of runs([[-AB, AB], [w.sx0, w.sx1]])) {
+                BOX(stone, BLUE, r[0], -9.2, w.z0, r[1], TOP + 0.04, w.z1);
+                // a coursing line along it, so six metres of wall is not one flat face
+                BOX(stone, BLUE_D, r[0], -3.30, w.z0 - 0.10, r[1], -2.90, w.z1 + 0.10);
+                BOX(stone, BLUE_D, r[0], -6.40, w.z0 - 0.10, r[1], -6.05, w.z1 + 0.10);
+                // and a coping over it. Without one the top of the wall was a
+                // pale blue stripe along the river seen from every angle,
+                // because bluestone read face-on and bluestone read from above
+                // are not the same colour and only one of them is the wall.
+                BOX(stone, PAVE, r[0], TOP - 0.02, w.z0 - 0.12, r[1], TOP + 0.10, w.z1 + 0.12);
+            }
+        }
+        /* And the abutment, closing the end of the bridge between the wall on
+           one side of it and the wall on the other. Its top stops just under
+           the deck soffit so it never becomes part of the deck. */
+        BOX(stone, BLUE_D, -AB, -9.2, 130.0, AB, -1.62, NWAL1);
+        BOX(stone, BLUE_D, -AB, -9.2, SWAL0, AB, -1.62, 240.0);
+
+        /* ---- the promenades -------------------------------------------
+           Both run under the bridge, which is the whole point of them: the
+           first arch springs at four and a third under the deck and the quay
+           is at six and a bit, so there is three metres of headroom in the
+           middle of the span and a red soffit over your head. */
+        BOX(ground, PAVE_D, -EDGE, -9.0, NWAL1, EDGE, QUAY, NQ1);
+        BOX(ground, PAVE_D, -EDGE, -9.0, SQ0, EDGE, QUAY, SWAL0);
+        // a raised lip along the water's edge of the north quay, which is what
+        // stops a promenade reading as a raft
+        BOX(ground, PAVE, -EDGE, QUAY, NQ1 - 0.45, EDGE, QUAY + 0.22, NQ1);
+
+        /* ---- the broad steps into the water, on the south bank ---------
+           Ten treads at nine hundred deep and two hundred and ten high, which
+           is a stair nobody would choose to climb and exactly the thing
+           everybody sits on. The last one is a hand's width over the river. */
+        for (let k = 0; k < Math.round((SQ0 - STEP0) / 0.90); k++) {
+            const z1 = SQ0 - k * 0.90, z0 = z1 - 0.90;
+            BOX(ground, k % 2 ? PAVE_D : PAVE, -104, -9.0, z0, 152, QUAY - k * 0.21, z1);
+        }
+
+        /* ---- the two long flights down ---------------------------------
+           A quarter in twenty-six metres, which is under the gradient the walk
+           calls a slope rather than a wall — a flight that answers `STEEP` is
+           a flight nobody can use, and this is the only way down to the water
+           in the world. */
+        for (const f of [{ x0: NSX0, x1: NSX1, z0: NSZ0, z1: NSZ1, dir: 1 },
+                         { x0: SSX1, x1: SSX0, z0: SSZ0, z1: SSZ1, dir: -1 }]) {
+            const N = 30, run = Math.abs(f.x1 - f.x0) / N;
+            const rise = (TOP - QUAY) / (N - 1);
+            for (let k = 0; k < N; k++) {
+                const a = f.x0 + f.dir * k * run, b = a + f.dir * run;
+                BOX(ground, k % 2 ? PAVE : PAVE_D,
+                    Math.min(a, b), -9.0, f.z0, Math.max(a, b) + 0.02, TOP - k * rise, f.z1);
+            }
+            // and a cheek wall down each side of it
+            for (const cz of [f.z0 - 0.55, f.z1 + 0.55]) {
+                BOX(stone, BLUE, Math.min(f.x0, f.x1), -9.0, cz - 0.55,
+                    Math.max(f.x0, f.x1), TOP + 0.05, cz + 0.55);
+            }
+        }
+
+        /* ---- the railing along the top of both walls -------------------
+           Merged rather than instanced: a hundred and twenty posts is one
+           geometry either way and this one is already being merged. */
+        for (const g of [{ z: NPAV1 + 0.9, sx0: NSX0, sx1: NSX1 },
+                         { z: SPAV0 - 0.9, sx0: SSX0, sx1: SSX1 }]) {
+            for (const r of runs([[-AB, AB], [g.sx0, g.sx1]])) {
+                if (r[1] - r[0] < 2) continue;
+                if (r[0] < -EDGE || r[1] > EDGE) { r[0] = Math.max(r[0], -EDGE); r[1] = Math.min(r[1], EDGE); }
+                for (let x = r[0]; x < r[1] - 1; x += 2.6) {
+                    PB(stone, RAILC, 0.10, 1.05, 0.10, x, TOP + 0.52, g.z);
+                }
+                BOX(stone, RAILC, r[0], TOP + 0.98, g.z - 0.05, r[1], TOP + 1.06, g.z + 0.05);
+                BOX(stone, RAILC, r[0], TOP + 0.56, g.z - 0.04, r[1], TOP + 0.62, g.z + 0.04);
+            }
+        }
+
+        /* ---- Alexandra Avenue ------------------------------------------ */
+        const AZ0 = SKR.z - SKR.h, AZ1 = SKR.z + SKR.h;
+        BOX(ground, ASPH, -180, -0.4, AZ0, 180, 0.015, AZ1);
+        for (const r of [[-180, -SW], [SW, 180]]) {
+            BOX(ground, PAVE, r[0], -0.4, AZ0 - FP, r[1], TOP, AZ0);
+            BOX(ground, PAVE, r[0], -0.4, AZ1, r[1], TOP, AZ1 + FP);
+            BOX(ground, KERBC, r[0], -0.4, AZ0 - 0.34, r[1], TOP + 0.02, AZ0);
+            BOX(ground, KERBC, r[0], -0.4, AZ1, r[1], TOP + 0.02, AZ1 + 0.34);
+        }
+
+        /* ---- and the paving that gets a person on and off the bridge ----
+           The street's own footpath is the flat band the road shader paints
+           either side of Swanston and it has no height at all; the bridge's is
+           a kerb up from the carriageway and five metres wide. Without this
+           the walk down to the river was a step off a raised footway onto
+           nothing, twice. */
+        for (const sx of [-1, 1]) {
+            for (const r of [[117.0, NPAV0 + 0.5], [SPAV1 - 0.5, AZ0 - FP], [AZ1 + FP, 304]]) {
+                BOX(ground, PAVE, sx * 9.6, -0.4, r[0], sx * 19.6, TOP, r[1]);
+                BOX(ground, KERBC, sx * 9.6, -0.4, r[0], sx * 9.94, TOP + 0.02, r[1]);
+            }
+        }
+
+        /* ---- the lawn, the winding paths and the drum -------------------
+           South-west, between the bank and Alexandra Avenue and again behind
+           it, which is where this world has room for a garden. */
+        BOX(ground, LAWN, -178, -0.4, SPAV1, -24, TOP - 0.02, AZ0 - FP);
+        BOX(ground, LAWN, 24, -0.4, SPAV1, 178, TOP - 0.02, AZ0 - FP);
+        BOX(ground, LAWN, -84, -0.4, AZ1 + FP, -24, TOP - 0.02, 352);
+        // Two paths, each a chain of short slabs off a sine, because a garden
+        // path that runs straight is a footpath with grass beside it.
+        for (const w of [{ x0: -168, x1: -30, z: 244, amp: 3.4, ph: 0.0 },
+                         { x0: -80, x1: -28, z: 316, amp: 5.5, ph: 1.7 }]) {
+            const N = 26;
+            for (let k = 0; k < N; k++) {
+                const t0 = k / N, t1 = (k + 1) / N;
+                const ax = lerp(w.x0, w.x1, t0), bx = lerp(w.x0, w.x1, t1);
+                const az = w.z + Math.sin(t0 * 4.2 + w.ph) * w.amp;
+                const bz = w.z + Math.sin(t1 * 4.2 + w.ph) * w.amp;
+                const len = Math.hypot(bx - ax, bz - az) * 1.12;
+                PB(ground, PATH, len, 0.06, 2.6, (ax + bx) / 2, TOP - 0.01, (az + bz) / 2,
+                   0, -Math.atan2(bz - az, bx - ax), 0);
+            }
+        }
+        /* The drum, set back in the garden under its pale dome. Built in
+           courses — plinth, shaft, cornice, dome, lantern — because a cylinder
+           with a lid on it is a water tank, and the difference between the two
+           is entirely in what happens at the top and the bottom of the wall. */
+        const DX = -48, DZ = 306;
+        PG(built, 0xbdb5a4, put(cylG(16.4, 17.0, 1.20, 26), DX, 0.60, DZ));
+        PG(built, 0xd4cdbc, put(cylG(15.2, 15.8, 9.60, 26), DX, 6.00, DZ));
+        for (let k = 0; k < 20; k++) {                 // pilasters round the shaft
+            const a = k / 20 * 6.283;
+            PG(built, 0xe0dac9, put(boxG(0.85, 9.60, 0.50), DX + Math.sin(a) * 15.5, 6.00, DZ + Math.cos(a) * 15.5, 0, a, 0));
+        }
+        PG(built, 0xe6e0d0, put(cylG(16.9, 16.1, 1.30, 26), DX, 11.35, DZ));
+        PG(built, 0xd9d2c0, put(cylG(14.4, 15.0, 1.40, 26), DX, 12.70, DZ));
+        PG(built, 0xe9e4d6, put(sphG(14.4, 26, 10), DX, 13.10, DZ, 0, 0, 0, 1, 0.66, 1));
+        PG(built, 0xd4cdbc, put(cylG(2.30, 2.90, 2.20, 12), DX, 23.20, DZ));
+        PG(built, 0xe9e4d6, put(sphG(2.90, 12, 7), DX, 24.10, DZ, 0, 0, 0, 1, 0.70, 1));
+        PG(built, 0xbfb7a4, put(cylG(0.14, 0.26, 2.40, 8), DX, 27.10, DZ));
+        for (let k = 0; k < 16; k++) {                 // the lit openings at its foot
+            const a = k / 16 * 6.283;
+            PG(glow, 0xf6e6c4, put(boxG(1.5, 3.4, 0.30), DX + Math.sin(a) * 15.7, 4.4, DZ + Math.cos(a) * 15.7, 0, a, 0));
+        }
+
+        /* ---- south-east: the arts complex on the water ------------------
+           Low, long and pale-roofed, standing on the bank with its river
+           frontage over the promenade — the thing in the photograph with the
+           restaurants under it. */
+        BOX(built, 0xcfc7b4, 40, TOP, SPAV0 + 0.2, 130, 7.4, 240.0);
+        BOX(built, 0xe7e2d4, 38, 7.4, SPAV0 - 0.8, 132, 8.5, 241.0);      // the pale roof
+        BOX(built, 0xb9b1a0, 44, 8.5, 246.0, 96, 13.5, 258.0);            // and the block behind it
+        BOX(built, 0xe7e2d4, 42, 13.5, 245.0, 98, 14.4, 259.0);
+        for (let k = 0; k < 15; k++) {                                     // the glazed frontage
+            PG(glow, 0xf3dfba, put(boxG(4.2, 1.9, 0.3), 44 + k * 5.8, 2.9, SPAV0 + 0.05));
+        }
+        // a wide stone forecourt in front of it, and the steps down to the quay
+        BOX(ground, PAVE, 34, -0.4, SPAV1, 136, TOP + 0.02, SPAV1 + 4.0);
+
+        /* ---- the blue-clad building, and the grey-roofed hall behind ---- */
+        BOX(built, 0x93b4ce, 34, TOP, 292, 90, 26.0, 326);
+        BOX(built, 0x8d99a4, 32, 26.0, 291, 92, 27.2, 327);
+        BOX(built, 0xb6ada0, 100, TOP, 292, 158, 15.0, 322);
+        BOX(built, 0x8b9096, 98, 15.0, 291, 160, 16.4, 323);
+
+        /* ---- the boathouses and kiosks on the south water's edge --------
+           Small, low and cheerful, which is the whole of what they are for:
+           three bright roofs and a handful of umbrellas at river level, west
+           of the bridge where the quay is widest. */
+        const ROOFS = [0xc2503c, 0x3f9e97, 0xe4ded0, 0xc2503c, 0x3f9e97];
+        for (let k = 0; k < 5; k++) {
+            const kx = -104 + k * 17.5, kz = 218.6;
+            BOX(built, 0xd8d2c2, kx - 3.2, QUAY, kz - 2.6, kx + 3.2, QUAY + 2.9, kz + 2.6);
+            PG(built, ROOFS[k], put(coneG(5.0, 1.5, 4), kx, QUAY + 3.6, kz, 0, Math.PI / 4, 0));
+            PG(glow, 0xf6e2b6, put(boxG(2.8, 0.70, 0.24), kx, QUAY + 1.85, kz - 2.7));
+            // and the umbrellas outside, which is where anybody is actually sitting
+            for (const u of [[-5.2, 3.4], [5.4, 3.0]]) {
+                PG(built, k % 2 ? 0xe8e2d2 : 0xc2503c,
+                   put(coneG(1.9, 0.55, 8), kx + u[0], QUAY + 2.55, kz + u[1]));
+                PG(built, 0x9a938a, put(cylG(0.05, 0.05, 2.4, 6), kx + u[0], QUAY + 1.2, kz + u[1]));
+            }
+        }
+        // a punt moored off the steps, and a second one further down
+        for (const bp of [[-140, 209.5], [126, 208.0]]) {
+            BOX(built, 0xe3ddcc, bp[0] - 5.5, WATER - 0.35, bp[1] - 1.35, bp[0] + 5.5, WATER + 0.55, bp[1] + 1.35);
+            BOX(built, 0x8d5a3c, bp[0] - 4.2, WATER + 0.55, bp[1] - 1.0, bp[0] + 2.6, WATER + 0.80, bp[1] + 1.0);
+            BOX(built, 0x3f9e97, bp[0] - 3.4, WATER + 0.80, bp[1] - 1.1, bp[0] + 1.4, WATER + 1.95, bp[1] + 1.1);
+        }
+
+        /* ---- the palms ---------------------------------------------------
+           One geometry, twenty-eight matrices: a leaning trunk in rings and a
+           crown of nine fronds, which at this scale is the whole of what a
+           Canary Island date palm is from across a river. */
+        /* Vertex-coloured, so a trunk can be trunk-coloured and a frond can be
+           green out of one instanced draw. The instance colour still varies
+           each tree, because it multiplies the vertex colour rather than
+           replacing it — twenty-eight palms, one geometry, one mesh, and not
+           one of them the same green. */
+        const palm = [];
+        for (let r = 0; r < 9; r++) {
+            const t = r / 9;
+            PG(palm, r % 2 ? 0xe6dcc4 : 0xd2c6ab,
+               put(cylG(0.30 - t * 0.10, 0.36 - t * 0.10, 0.86, 7),
+                   Math.sin(t * 1.6) * 0.55, 0.45 + r * 0.82, 0));
+        }
+        /* Fourteen fronds rather than nine, wider and shorter, and each one
+           tapered by building it as two pieces: a stiff inner half and a
+           drooping outer. Nine bare battens read from the far bank as a
+           spider rather than as a palm. */
+        for (let f = 0; f < 14; f++) {
+            const a = f / 14 * 6.283 + (f % 2) * 0.18, droop = 0.30 + (f % 3) * 0.20;
+            // droop it about its own axis first, then swing the whole thing
+            // round the crown — one Euler could not do both in the right order
+            const inner = boxG(0.62, 0.09, 2.20);
+            put(inner, 0, 0, 1.15, droop * 0.55);
+            PG(palm, 0xe8f0c8, put(inner, 0.9, 7.55, 0, 0, a, 0));
+            const outer = boxG(0.44, 0.07, 2.30);
+            put(outer, 0, -0.42, 3.30, droop * 1.35);
+            PG(palm, 0xd6e2ae, put(outer, 0.9, 7.55, 0, 0, a, 0));
+        }
+        // and the dead skirt every date palm carries under the crown
+        for (let f = 0; f < 8; f++) {
+            const a = f / 8 * 6.283;
+            const sk = boxG(0.36, 1.10, 0.30);
+            put(sk, 0, 0, 1.00, -0.55);
+            PG(palm, 0xb49a72, put(sk, 0.9, 7.05, 0, 0, a, 0));
+        }
+        const palmSpots = [];
+        for (let k = 0; k < 9; k++) palmSpots.push([-150 + k * 15 + rr(-2, 2), 136.4 + rr(-1.2, 1.2)]);
+        for (let k = 0; k < 5; k++) palmSpots.push([34 + k * 15 + rr(-2, 2), 136.4 + rr(-1.2, 1.2)]);
+        for (let k = 0; k < 8; k++) palmSpots.push([-166 + k * 18 + rr(-3, 3), 243.0 + rr(-2.5, 2.5)]);
+        for (let k = 0; k < 6; k++) palmSpots.push([-78 + k * 9 + rr(-3, 3), 296 + rr(-6, 26)]);
+        const palmIM = new THREE.InstancedMesh(merge(palm),
+            new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.02 }),
+            palmSpots.length);
+        const ptint = new THREE.Color();
+        palmSpots.forEach((p, i) => {
+            const s = rr(0.82, 1.28);
+            palmIM.setMatrixAt(i, MX(p[0], TOP, p[1], 0, rr(0, 6.28), 0, s, s, s));
+            const v = rr(0.80, 1.14);
+            ptint.setRGB(v * 0.96, v, v * 0.86);
+            palmIM.setColorAt(i, ptint);
+        });
+        palmIM.instanceMatrix.needsUpdate = true;
+        if (palmIM.instanceColor) palmIM.instanceColor.needsUpdate = true;
+        scene.add(palmIM);
+        world.ghost(palmIM);          // a frond is not something to walk into
+
+        const banks = new THREE.Group();
+        const groundMesh = merged(ground, new THREE.MeshStandardMaterial({
+            vertexColors: true, roughness: 0.74, metalness: 0.04,
+        }));
+        banks.add(
+            groundMesh,
+            merged(stone, new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.70, metalness: 0.04,
+            })),
+            merged(built, new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.72, metalness: 0.05,
+            })));
+        const lit = merged(glow, emissive(0xd9cfb6, 0xffe6bc, 0.85));
+        banks.add(lit); world.ghost(lit);
+        scene.add(banks);
+        world.part('riverbank_00', banks);
+        /* And deliberately not `world.ground`. Everything here is walkable —
+           `ground.js` rasterises every visible, un-ghosted, un-instanced mesh
+           whatever a world calls it — but `world.ground` also decides how big
+           the walk's grid is, and that is a different question with a much
+           worse answer. The grid is five hundred and twelve cells across the
+           largest declared solid that is not a flat sheet at ground level.
+           These banks are a kilometre of paving with a six-metre drop in the
+           middle of them, which is not flat and not small: declared, they take
+           the corner of Flinders and Swanston from 1.46 m a cell to 2.34, or —
+           if they end up the only non-flat solid in the list — recentre the
+           whole field on the river and leave the city off the edge of it.
+           So the quays and the flights collide, and the roadway still says
+           where the walk is. */
+    }
 }
