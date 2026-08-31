@@ -1946,6 +1946,213 @@ export default function build(world) {
     tramStop('safetyzone_02', -(TRS + 2.35), -45, 30, 1, 'z', [-0.12]);
 
     /* ============================================================
+       8b · Collins Street, Stop 11 — the pair of platform stops
+
+       Swanston between Flinders Lane and Collins Street. Not a safety zone
+       like the ones above but a platform stop: the footpath's own level
+       carried out into the roadway until it reaches the rail, so the step
+       from the platform into a low-floor tram is a step across rather than a
+       step up. Two of them, one to each track, and each is its own object.
+
+       One decision worth setting down, because it is the only place this
+       departs from the photograph. A real platform stop takes the whole
+       kerbside lane: the platform runs from the building line to the rail and
+       what traffic there is uses the tram lane. Swanston Street really is
+       closed to cars along here, so that costs nothing on the actual street —
+       but it is not closed in this world, and twelve cars a lane run the whole
+       six hundred metres of it. Rather than route them onto the tracks and
+       have them drive through the trams, the platform stops 2.6 m short of the
+       kerb and the cars squeeze past behind it, which is what a platform stop
+       leaves at the places where the lane does survive. So it still reaches
+       the rail, it is still an island you climb onto from the road, and the
+       street stays busy.
+
+       Which is also why the ramps matter. You arrive at this one off the
+       carriageway rather than off the footpath, so each end runs down to the
+       road at about one in eleven — well under the 0.35 the walk calls too
+       steep to stand on — and the walk can get up either of them.
+       ============================================================ */
+    {
+        /* The fascia, which is the whole of how you know which stop this is.
+           Green band, white type, and the name and the number on separate
+           patches of one sheet so a fifty-metre canopy can carry the name at
+           one end, the number at the other and plain green between them
+           without stretching a single glyph. */
+        const stopSheet = tex(1024, 256, (g, W, H) => {
+            g.fillStyle = '#00843d'; g.fillRect(0, 0, W, H);
+            g.fillStyle = '#ffffff';
+            g.textAlign = 'center'; g.textBaseline = 'middle';
+            /* Each patch is cut to the shape of the piece of band it goes on,
+               which is the whole trick: a name plate six metres long wants a
+               rect thirteen times as wide as it is tall or the type comes out
+               stretched to five metres of letter, which is what the first pass
+               of this did. */
+            g.font = '600 50px "Helvetica Neue", Helvetica, Arial, sans-serif';
+            g.fillText('Collins Street', 512, 40);
+            g.font = '600 58px "Helvetica Neue", Helvetica, Arial, sans-serif';
+            g.fillText('Stop 11', 256, 146);
+            // the plain white the downlights take, and the disc on the pole:
+            // white ground, red ring, red S, which is what says a tram stops
+            g.fillStyle = '#ffffff'; g.fillRect(556, 206, 108, 48);
+            g.fillStyle = '#ffffff'; g.fillRect(702, 132, 116, 116);
+            g.beginPath(); g.arc(760, 190, 58, 0, 6.284); g.fill();
+            g.strokeStyle = '#d0202a'; g.lineWidth = 9;
+            g.beginPath(); g.arc(760, 190, 50, 0, 6.284); g.stroke();
+            g.fillStyle = '#d0202a';
+            g.font = '700 72px "Helvetica Neue", Helvetica, Arial, sans-serif';
+            g.fillText('S', 760, 194);
+        });
+        const FAS = {
+            name:  [0.00, 0.055, 1.00, 0.258],     // 6.0 m x 0.46 — thirteen to one
+            stop:  [0.00, 0.383, 0.50, 0.766],     // 2.4 m x 0.46 — five to one
+            /* Bottom left, and it has to be somewhere nothing else is: the
+               plain patch was over on the right where the white and the disc
+               were later drawn, so the twenty-metre middle run of the band
+               came out as one enormously stretched tram-stop disc. */
+            plain: [0.020, 0.820, 0.195, 0.977],
+            white: [0.547, 0.812, 0.645, 0.984],
+            disc:  [0.686, 0.516, 0.799, 0.977],
+        };
+        const fasMat = emissive(0xffffff, 0xffffff, 0.55, { map: stopSheet, emissiveMap: stopSheet });
+        const fas = (g, k) => {
+            const r = FAS[k], uv = g.attributes.uv;
+            for (let i = 0; i < uv.count; i++) {
+                uv.setXY(i, r[0] + uv.getX(i) * (r[2] - r[0]),
+                            (1 - r[3]) + uv.getY(i) * (r[3] - r[1]));
+            }
+            return g;
+        };
+
+        const platformStop = (name, side, cz, len) => {
+            const conc = [], yell = [], steel = [], glass = [], lit = [], sign = [];
+            const D = 0.28;                     // the platform's own height
+            const XF = TRS + 1.46;              // 5.16 — the face, a hundred mm off the tram
+            const XW = 3.74;                    // and how far out into the road it comes
+            /* u is measured out from the rail, so everything below reads the
+               same for both platforms and the sign of `side` does the mirror. */
+            const B = (arr, u0, y0, z0, u1, y1, z1) => {
+                const g = boxG(Math.abs(u1 - u0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+                put(g, side * (XF + (u0 + u1) / 2), (y0 + y1) / 2, cz + (z0 + z1) / 2);
+                arr.push(g); return g;
+            };
+            const C = (arr, r0, r1, h, u, y, z, rx, ry, rz) => {
+                const g = cylG(r0, r1, h, 10);
+                put(g, side * (XF + u), y, cz + z, rx, ry, rz);
+                arr.push(g); return g;
+            };
+            const HL = len / 2;
+
+            // ---- the deck, its ramps, and the two edges
+            B(conc, 0, 0, -HL, XW, D, HL);
+            for (const e of [-1, 1]) {          // one in eleven down to the carriageway
+                const g = boxG(XW, D, 3.2);
+                put(g, side * (XF + XW / 2), D / 2 - 0.10, cz + e * (HL + 1.6), e * side * 0.088);
+                conc.push(g);
+            }
+            B(yell, 0, D, -HL, 0.50, D + 0.025, HL);                   // the nosing at the rail
+            B(yell, 0.58, D, -HL + 1.0, 1.18, D + 0.03, HL - 1.0);     // and the tactile behind it
+            B(conc, XW - 0.16, D, -HL, XW, D + 0.13, HL);              // the upstand on the road side
+
+            /* The canopy. Its leading edge is a run of shallow folds rather
+               than a straight line, which is the thing you actually recognise
+               these shelters by: from the footpath opposite it reads as a
+               zigzag of light and shadow along the whole length, and it is the
+               only part of the stop that does anything at all at this hour. */
+            const CH = D + 3.02, CZ0 = -len * 0.44, CZ1 = len * 0.44;
+            B(steel, 0.42, CH, CZ0, 3.30, CH + 0.13, CZ1);
+            {
+                const n = Math.max(8, Math.round((CZ1 - CZ0) / 1.30)), st = (CZ1 - CZ0) / n;
+                for (let i = 0; i < n; i++) {
+                    const g = boxG(0.62, 0.05, st * 0.98);
+                    put(g, side * (XF + 0.30), CH + 0.02, cz + CZ0 + st * (i + 0.5),
+                        0, 0, side * (i % 2 ? 0.34 : -0.34));
+                    steel.push(g);
+                }
+            }
+            // the green band, front and back, and the number on the far end
+            for (const u of [0.40, 3.28]) {
+                for (const seg of [[CZ0, CZ0 + 6.0, 'name'],
+                                   [CZ0 + 6.0, CZ1 - 2.4, 'plain'],
+                                   [CZ1 - 2.4, CZ1, 'stop']]) {
+                    const g = boxG(0.09, 0.46, Math.abs(seg[1] - seg[0]));
+                    put(g, side * (XF + u), CH - 0.24, cz + (seg[0] + seg[1]) / 2);
+                    sign.push(fas(g, seg[2]));
+                }
+            }
+            // the posts, and the downlights in a row under the soffit
+            for (let i = 0; i <= 5; i++) {
+                const z = CZ0 + (CZ1 - CZ0) * (i / 5);
+                B(steel, 3.06, D, z - 0.07, 3.20, CH, z + 0.07);
+            }
+            for (let i = 0; i < 14; i++) {
+                const z = CZ0 + (CZ1 - CZ0) * ((i + 0.5) / 14);
+                sign.push(fas(B(lit, 1.62, CH - 0.06, z - 0.10, 1.86, CH - 0.01, z + 0.10), 'white'));
+            }
+            lit.length = 0;
+
+            /* Two shelters under the one canopy, one at each end, which is
+               what the photograph shows and is not decoration: the gap between
+               them is where you stand to get on, and it is where the pole and
+               the machine go. */
+            for (const q of [-0.235, 0.235]) {
+                const z = len * q, SL = 8.6;
+                B(glass, 3.32, D, z - SL / 2, 3.38, D + 2.10, z + SL / 2);     // the back screen
+                /* Glazed on the outer end only, and only across the back half
+                   of it. Both ends full width was the first pass and it made
+                   each shelter a sealed glass box: the walk, quite rightly,
+                   would not let anybody in — every cell inside came back
+                   unreachable. A shelter you cannot get into is scenery, and
+                   the photograph does not show one anyway. The track side and
+                   the inner end stay open, which is where you board from. */
+                const e = Math.sign(q);
+                B(glass, 2.40, D, z + e * SL / 2 - 0.03, 3.38, D + 2.10, z + e * SL / 2 + 0.03);
+                B(steel, 1.86, D + 2.06, z - SL / 2, 3.42, D + 2.14, z + SL / 2);
+                // the timetable and the network map, hung on the back screen
+                for (const b of [-2.2, 0.3]) {
+                    B(steel, 3.24, D + 0.95, z + b - 0.55, 3.32, D + 2.00, z + b + 0.55);
+                }
+                /* The bench: a slatted seat on slim legs with a slatted back,
+                   which is a stainless bench and not a concrete one because at
+                   this hour the stainless is the one thing on the platform
+                   that catches the sun coming up Collins Street. */
+                B(steel, 2.42, D + 0.44, z - 3.1, 3.16, D + 0.50, z + 3.1);
+                for (let i = 0; i < 9; i++) {
+                    const zz = z - 3.1 + 6.2 * (i / 8);
+                    B(steel, 2.86, D + 0.50, zz - 0.05, 3.14, D + 1.02, zz + 0.05);
+                }
+                for (const e of [-2.6, 0, 2.6]) {
+                    B(steel, 2.56, D, z + e - 0.04, 2.66, D + 0.44, z + e + 0.04);
+                }
+            }
+
+            /* The stop pole, between the two shelters: the disc with the S on
+               it that means a tram stops here, and the flag under it. */
+            C(steel, 0.075, 0.085, 4.35, 1.55, D + 2.17, 0);
+            sign.push(fas(B(lit, 1.44, D + 3.60, -0.36, 1.52, D + 4.32, 0.36), 'disc'));
+            sign.push(fas(B(lit, 1.46, D + 2.30, -0.13, 1.52, D + 3.30, 0.13), 'plain'));
+            lit.length = 0;
+            // the ticket machine, and a bin beside it
+            B(steel, 2.62, D, 3.9, 3.14, D + 1.42, 4.42);
+            B(steel, 2.58, D + 0.62, 3.98, 2.62, D + 1.24, 4.34);
+            C(steel, 0.28, 0.24, 0.92, 2.9, D + 0.46, -4.6);
+            // and the grate in the paving, which is the one thing down there
+            B(steel, 1.90, D - 0.01, -8.6, 2.70, D + 0.015, -7.0);
+
+            const G = new THREE.Group();
+            G.add(merged(conc, MATS.concrete), merged(yell, MATS.yellow),
+                  merged(steel, MATS.iron), merged(glass, glassMat));
+            const em = merged(sign, fasMat);
+            G.add(em); world.ghost(em);
+            scene.add(G);
+            world.part(name, G);
+            return G;
+        };
+
+        platformStop('tramstop_11e', 1, -182, 52);
+        platformStop('tramstop_11w', -1, -182, 52);
+    }
+
+    /* ============================================================
        9 · Flinders Street Station — the south-west quadrant
 
        The building reads from the ground up in bands, and modelling it that way
@@ -8316,7 +8523,7 @@ export default function build(world) {
     const CAR_COLS = [0xd8d9db, 0x2b2f33, 0x8f959b, 0x9c2b26, 0x1f3a63, 0xe4e2dc,
                       0x394048, 0xb9bcc0, 0x5c6b52, 0xcfa63a];
     const CARS = [], LANES = new Map();
-    let carBodyIM, carGlassIM, carWheelIM, carLampIM, bikeIM;
+    let carBodyIM, carGlassIM, carWheelIM, carLampIM;
     {
         /* Little Collins gets its two lanes as well, because an intersection
            with a lantern over it and nothing ever arriving at it is a lantern
@@ -8330,8 +8537,13 @@ export default function build(world) {
                six hundred and seventy is one car every eighty metres, which
                reads as a street that has been closed. Twelve is one every
                fifty-odd, which is what a peak-hour bridge looks like. */
-            { ax: 'z', dir: 1, off: 8.4, n: 12, taxi: true },
-            { ax: 'z', dir: -1, off: -8.4, n: 12, taxi: true },
+            /* 10.1 rather than 8.4, which is where the Stop 11 platforms
+               put them: a platform stop takes the lane the traffic was in and
+               the traffic takes what is left between it and the kerb. It is
+               also a better line everywhere else on this street — at 8.4 a car
+               passed the Stop 13 platforms with 240 mm to spare. */
+            { ax: 'z', dir: 1, off: 10.1, n: 12, taxi: true },
+            { ax: 'z', dir: -1, off: -10.1, n: 12, taxi: true },
             { ax: 'x', dir: 1, off: -10.2, n: 5 },
             { ax: 'x', dir: -1, off: 10.2, n: 5 },
             { ax: 'x', dir: -1, off: -115 - 2.6, n: 2 },
@@ -8398,39 +8610,17 @@ export default function build(world) {
         for (const m of [carBodyIM, carGlassIM, carWheelIM, carLampIM]) world.ghost(m);
     }
 
-    // ---- bikes, in the green kerbside lanes both streets keep for them
-    const BIKES = [];
-    {
-        const parts = [];
-        let g;
-        for (const z of [-0.52, 0.52]) {
-            g = new THREE.TorusGeometry(0.34, 0.035, 5, 12); put(g, 0, 0.34, z, 0, Math.PI / 2, 0); parts.push(g);
-        }
-        g = boxG(0.05, 0.05, 0.95); put(g, 0, 0.62, 0); parts.push(g);
-        g = boxG(0.05, 0.42, 0.05); put(g, 0, 0.52, -0.30); parts.push(g);
-        g = boxG(0.05, 0.46, 0.05); put(g, 0, 0.55, 0.34); parts.push(g);
-        g = boxG(0.42, 0.04, 0.05); put(g, 0, 0.98, 0.36); parts.push(g);
-        g = boxG(0.34, 0.50, 0.26); put(g, 0, 1.14, -0.10); parts.push(g);     // the rider
-        g = boxG(0.16, 0.50, 0.16); put(g, -0.12, 0.62, -0.02); parts.push(g);
-        g = boxG(0.16, 0.50, 0.16); put(g, 0.12, 0.62, 0.06); parts.push(g);
-        g = sphG(0.14, 10, 7); put(g, 0, 1.50, -0.02); parts.push(g);          // helmet
-        const lanesB = [['z', -10.35, -1], ['z', 10.35, 1], ['x', -12.35, 1], ['x', 12.35, -1]];
-        for (const ln of lanesB) for (let i = 0; i < 5; i++) {
-            const long = ln[0] === 'z';
-            BIKES.push({
-                ax: ln[0], off: ln[1], dir: ln[2], v: 5, vmax: rr(5.0, 7.2),
-                s: long ? RUN_Z0 + 20 + i * rr(76, 116) : -ln[2] * (18 + i * rr(20, 46)),
-            });
-        }
-        bikeIM = new THREE.InstancedMesh(merge(parts), stdMat(0xffffff, { roughness: 0.36, metalness: 0.30 }), BIKES.length);
-        const tint = new THREE.Color();
-        BIKES.forEach((b, i) => {
-            tint.copy(srgb(pickOf([0x1d2b3a, 0x7a2422, 0x2c2c2e, 0xd8d5cc, 0x1f5c3d, 0xc4483a])));
-            bikeIM.setColorAt(i, tint);
-        });
-        if (bikeIM.instanceColor) bikeIM.instanceColor.needsUpdate = true;
-        scene.add(bikeIM); world.ghost(bikeIM);
-    }
+    /* ---- the bikes, which went with the people.
+
+       Twenty of them ran the green kerbside lanes, and every one had a rider
+       modelled on it — a body, two arms and a helmet. A rider is a person, so
+       the riders had to go; and a bicycle riding itself down Swanston Street
+       at fifteen an hour is a stranger thing than an empty lane. The lane is
+       still marked on the road, which is the honest end of it: the paint is
+       infrastructure, the cyclist was not.
+
+       The kerbside width they were using is now the traffic lane, because the
+       Stop 11 platforms took the lane the cars were in. ---- */
 
     /* ---- the crowd, which is not here any more.
 
@@ -9155,18 +9345,6 @@ export default function build(world) {
         carGlassIM.instanceMatrix.needsUpdate = true;
         carWheelIM.instanceMatrix.needsUpdate = true;
         carLampIM.instanceMatrix.needsUpdate = true;
-
-        for (let i = 0; i < BIKES.length; i++) {
-            const b = BIKES[i];
-            const target = vehTarget(b.ax, b.dir, b.s, b.off, b.vmax);
-            b.v = lerp(b.v, target, 1 - Math.exp(-dt * 2.4));
-            b.s += b.dir * b.v * dt;
-            wrapS(b);
-            const x = b.ax === 'z' ? b.off : b.s, z = b.ax === 'z' ? b.s : b.off;
-            const ry = (b.ax === 'z') ? (b.dir > 0 ? 0 : Math.PI) : (b.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
-            setM(bikeIM, i, x, 0, z, ry);
-        }
-        bikeIM.instanceMatrix.needsUpdate = true;
 
         /* ---- and the billboards, which change every eight seconds or so -- */
         adT += dt;
