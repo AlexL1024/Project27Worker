@@ -3747,6 +3747,14 @@ export default function build(world) {
             granite:  0x33342f, bronze:  0x6a5330, gold: 0xbe9c58,
             leaf:     0x40592c, trunk:   0x4b4237,
             towerLo:  0x9fa3a4, towerHi: 0xc9c6bd, towerBand: 0x2f363e,
+            /* Australia 108, across the river and in nobody else's colours:
+               blue mirror glass graded sill to head the way every pane in
+               this world is, the pale rule that runs at every slab of it,
+               and the two golds — the flank you photograph and the soffit
+               under the teeth, which is a shade lighter because it is the
+               face that has to carry from four hundred metres. */
+            a108Lo:   0x22405e, a108Hi:   0x86b2d6, a108Band: 0xc6dbec,
+            a108Gold: 0xd8a238, a108Soff: 0xf0cd6e, a108Base: 0x39434e,
         };
 
         /* Every surface accumulates into one of these and is merged once at
@@ -3777,6 +3785,10 @@ export default function build(world) {
             sCrete: [], sSteel: [], sTrim: [],
             // and the inclined balustrades, which are ghosted — see 21f
             gGlass: [], gTrim: [],
+            // Australia 108, half a kilometre away over the river: the whole
+            // of it in two arrays, because at that range the only decision
+            // that survives is which of the two colours a surface is.
+            a108: [], a108g: [],
         };
 
         /* A box from two opposite corners rather than from a centre and three
@@ -5578,6 +5590,251 @@ export default function build(world) {
         }
 
         /* ------------------------------------------------------------
+           21k · Australia 108 — Fender Katsalidis, 2020. Three hundred and
+                 seventeen metres of blue glass standing in Southbank half a
+                 kilometre south-west of this corner, and every one of those
+                 metres is building: there is no spire on it, no mast and no
+                 aerial, so what you are looking at when you look at the top
+                 of it is the roof. That is the whole of why the argument
+                 about the tallest tower in the country is an argument.
+
+                 It is filed in this section rather than given one of its own
+                 because it is made the way the frontage in front of it is
+                 made — the colour is in the vertices — and because that is
+                 what buys the only thing that matters at this range. The
+                 tower is ruled with a pale line at every one of its hundred
+                 slabs, and from the crossing that ruling is most of what you
+                 see of it. As geometry it would be a hundred rings of trim;
+                 as a texture it would be a texture, in a section that threw
+                 its facade textures away. As a sawtooth read off each
+                 vertex's own height it costs nothing and rides on the mesh
+                 that had to exist anyway.
+
+                 Southbank puts it behind Eureka and well west of it — a
+                 hundred and twenty metres further off Swanston's axis and a
+                 hundred and forty further back — which from this corner is
+                 about eight degrees of separation: far enough apart to read
+                 as two towers, near enough to read as one skyline.
+           ------------------------------------------------------------ */
+        const M108 = {
+            /* Its own material and not M21.body, for one reason. Every other
+               wall in this section is stone with holes punched in it and
+               wants to be matt; this is a hundred storeys of mirror. The
+               metalness stays low all the same, because nothing in this world
+               carries an environment map and a metal with nothing to reflect
+               renders as a hole in the fog. */
+            glass: new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.26, metalness: 0.14,
+            }),
+            /* The gold carries a little emissive for the same reason the
+               canopy soffit does. The faces that make the starburst read from
+               the north are the ones pointing outward and down, away from
+               every source there is up there — and without a bounce term the
+               one warm thing on the building comes out as the darkest thing
+               on it. */
+            gold: new THREE.MeshStandardMaterial({
+                vertexColors: true, emissive: srgb(0x6d5220),
+                emissiveIntensity: 0.55, roughness: 0.34, metalness: 0.20,
+            }),
+        };
+        {
+            const OX = -198, OZ = 430;      // where Southbank puts it
+            const FLR = 3.17;               // and a hundred of these is the roof
+
+            /* The plan, walked by arc length rather than by angle: a square
+               with the corners taken off, six points to a face and three
+               facets to a corner. Three is what makes a corner read as
+               softened instead of as either sharp or round, and six to a face
+               is what the starburst needs to fold itself across. Every point
+               carries the outward normal of the piece of plan it sits on,
+               because a chevron pushes out square to the face it hangs off
+               and not away from the middle of the building — sample a plan by
+               angle and the projections skew round towards the corners. */
+            const planPts = (hw, hd, r) => {
+                const pts = [], NS = 6, NC = 3, cx = hw - r, cz = hd - r;
+                const face = (x0, z0, x1, z1, nx, nz) => {
+                    for (let i = 0; i < NS; i++) {
+                        const t = i / NS;
+                        pts.push({ x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, nx, nz, u: t });
+                    }
+                };
+                const corner = (ox, oz, a0) => {
+                    for (let i = 0; i < NC; i++) {
+                        const a = a0 + Math.PI / 2 * (i / NC), c = Math.cos(a), s = Math.sin(a);
+                        pts.push({ x: ox + c * r, z: oz + s * r, nx: c, nz: s, u: -1 });
+                    }
+                };
+                face(hw, -cz, hw, cz, 1, 0);     corner(cx, cz, 0);
+                face(cx, hd, -cx, hd, 0, 1);     corner(-cx, cz, Math.PI / 2);
+                face(-hw, cz, -hw, -cz, -1, 0);  corner(-cx, -cz, Math.PI);
+                face(-cx, -hd, cx, -hd, 0, -1);  corner(cx, -cz, -Math.PI / 2);
+                return pts;
+            };
+
+            // That plan lifted to a height, scaled, pushed out and dropped —
+            // the four things anything on this tower ever asks of it.
+            const ring = (pl, y, sc, out, dip) => pl.map((p) => {
+                const o = out ? out(p) : 0;
+                return { x: p.x * sc + p.nx * o, y: y - (dip ? dip(p) : 0), z: p.z * sc + p.nz * o };
+            });
+
+            /* Rings skinned into one geometry, and non-indexed on purpose:
+               computeVertexNormals over a non-indexed strip gives every quad
+               its own flat normal, which is the whole of why the corners come
+               out as facets and the starburst comes out as folds rather than
+               as a smeared cylinder with a bulge in it. */
+            const tube = (rings) => {
+                const S = rings.length - 1, N = rings[0].length;
+                const pos = new Float32Array(S * N * 18);
+                let k = 0;
+                for (let s = 0; s < S; s++) {
+                    const r0 = rings[s], r1 = rings[s + 1];
+                    for (let i = 0; i < N; i++) {
+                        const j = (i + 1) % N;
+                        const v = [r0[i], r1[i], r1[j], r0[i], r1[j], r0[j]];
+                        for (let t = 0; t < 6; t++) { pos[k++] = v[t].x; pos[k++] = v[t].y; pos[k++] = v[t].z; }
+                    }
+                }
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                g.computeVertexNormals();
+                return g;
+            };
+            // and the flat roof, which is the one thing on this building
+            // everybody argues about, fanned off its own centre
+            const lid = (r) => {
+                const N = r.length, pos = new Float32Array(N * 9), cy = r[0].y;
+                let k = 0;
+                for (let i = 0; i < N; i++) {
+                    const j = (i + 1) % N;
+                    pos[k++] = 0; pos[k++] = cy; pos[k++] = 0;
+                    pos[k++] = r[j].x; pos[k++] = cy; pos[k++] = r[j].z;
+                    pos[k++] = r[i].x; pos[k++] = cy; pos[k++] = r[i].z;
+                }
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                g.computeVertexNormals();
+                return g;
+            };
+
+            /* The ruling, which is the building. Rings go up two to a floor
+               and the second of them only three tenths of the way up the
+               storey — that asymmetry is what turns a soft stripe into a
+               line: the glass goes dark fast under each slab and then takes
+               the rest of the floor to come back to it. Every eighth slab
+               takes the gold instead, which is the accent the tower carries
+               the whole way up, and the base colour walks from the dark it
+               takes off the buildings opposite at the bottom to the sky it
+               takes at the top, the way `pane` does it everywhere else. */
+            /* And the one thing in this section that does not take the wet
+               grade `TONE` puts on everything else. That grade is a wet-street
+               grade: it exists so that precast and bluestone forty metres away
+               read as rained on, and it costs two thirds of the saturation of
+               whatever it touches. Half a kilometre off, behind four hundred
+               metres of warm haze that is already draining this tower for
+               nothing, paying it twice leaves the blue grey and the gold
+               beige — and the blue and the gold are the only two things
+               anybody recognises the building by. So these colours are set
+               where they land, and the haze does the rest. */
+            const _hue = new Map();
+            const HU = (hex) => { let c = _hue.get(hex); if (!c) { c = srgb(hex); _hue.set(hex, c); } return c; };
+            const flat = (arr, hex, g) => {
+                const c = HU(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+                for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+                g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+                arr.push(g);
+                return g;
+            };
+            /* The accent lines are the pale rule warmed halfway towards the
+               gold and not the gold itself. At full strength, under a sun
+               this low and this orange, every eighth floor came out as a band
+               of rust and the tower read as striped rather than as ruled —
+               and the point of the accent is that you notice it after you
+               notice the building. */
+            const G_LO = HU(CF.a108Lo), G_HI = HU(CF.a108Hi), G_BND = HU(CF.a108Band);
+            const G_GLD = HU(CF.a108Band).clone().lerp(HU(CF.a108Gold), 0.52);
+            const rule = (g) => {
+                const p = g.attributes.position, n = p.count, a = new Float32Array(n * 3);
+                for (let i = 0; i < n; i++) {
+                    const y = p.getY(i), f = y / FLR, fr = f - Math.floor(f);
+                    const s = fr < 0.32 ? (1 - fr / 0.32) * 0.52 : 0;
+                    const gd = Math.round(f) % 8 === 0 ? 1 : 0;
+                    const t = smoothstep(-30, 340, y);
+                    a[i * 3] = lerp(lerp(G_LO.r, G_HI.r, t), lerp(G_BND.r, G_GLD.r, gd), s);
+                    a[i * 3 + 1] = lerp(lerp(G_LO.g, G_HI.g, t), lerp(G_BND.g, G_GLD.g, gd), s);
+                    a[i * 3 + 2] = lerp(lerp(G_LO.b, G_HI.b, t), lerp(G_BND.b, G_GLD.b, gd), s);
+                }
+                g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+                return g;
+            };
+            // Painted where it stands, then carried out to Southbank. Nothing
+            // here goes into an array by any other door: one geometry in this
+            // section without a colour attribute on it and the merge at the
+            // end of 21j answers null, and a null geometry is the viewport.
+            const glazed = (g) => { P.a108.push(rule(put(g, OX, 0, OZ))); return g; };
+
+            const rungs = (pl, f0, f1, sc) => {
+                const out = [];
+                for (let f = f0; f <= f1; f++) {
+                    out.push(ring(pl, f * FLR, sc ? sc(f) : 1));
+                    if (f < f1) out.push(ring(pl, (f + 0.30) * FLR, sc ? sc(f + 0.30) : 1));
+                }
+                return out;
+            };
+
+            /* The block it stands on, the podium over that, and then the
+               shaft — which starts a floor inside the podium so the two
+               never argue about where they meet. Every step back is closed
+               with a flat annulus rather than left open, because an open
+               shoulder at this range is a black seam three metres wide. */
+            const plinth = planPts(58, 50, 15);
+            const podium = planPts(34, 30, 9);
+            const lower  = planPts(23.6, 22.4, 6.2);
+            const upper  = planPts(19.8, 18.8, 5.6);
+            const F_POD = 5, F_GOLD = 71, F_TOP = 100;
+
+            const based = (g) => flat(P.a108, CF.a108Base, put(g, OX, 0, OZ));
+            based(tube([ring(plinth, 0, 1), ring(plinth, 8.4, 1)]));
+            based(tube([ring(plinth, 8.4, 1), ring(podium, 8.4, 1)]));
+            glazed(tube(rungs(podium, 0, F_POD)));
+            based(tube([ring(podium, F_POD * FLR, 1), ring(lower, F_POD * FLR, 1)]));
+            glazed(tube(rungs(lower, F_POD - 1, F_GOLD)));
+            based(tube([ring(lower, F_GOLD * FLR, 1), ring(upper, F_GOLD * FLR, 1)]));
+
+            /* The last three and a half floors draw themselves in by a tenth,
+               which at four hundred metres is the entire parapet: it is what
+               gives the roofline the curved, banded profile it has instead of
+               the flat cut a prism ends on. */
+            const crown = (f) => 1 - 0.10 * smoothstep(96.5, F_TOP, f);
+            glazed(tube(rungs(upper, F_GOLD, F_TOP, crown)));
+            based(lid(ring(upper, F_TOP * FLR, crown(F_TOP))));
+
+            /* And the starburst, two thirds of the way up, which is the thing
+               anybody actually recognises this tower by.
+
+               Three chevrons to a face. Each one pushes out square to its own
+               face and is dragged down as it goes, so the lower edge of the
+               gold is a saw of six-metre teeth and the surface between that
+               edge and the shaft below it is a soffit — the face you see from
+               this side of the river, looking up at it through twenty-three
+               degrees, and the reason the material has a bounce term in it.
+               Above the teeth the same band leans back into the tower over
+               six storeys, and that leaning face is the gold in every
+               photograph of the place. The corner facets keep a metre and a
+               bit of projection and no drop at all, so the band carries round
+               the corners as a band instead of stopping dead at them. */
+            const F_GB = 59, F_GM = 65;
+            const tri = (u) => { const k = (u * 3) % 1; return 1 - Math.abs(k * 2 - 1); };
+            const proj = (p) => (p.u < 0 ? 1.6 : 1.6 + 8.4 * tri(p.u));
+            const drop = (p) => (p.u < 0 ? 0 : 8.0 * tri(p.u));
+            const gA = ring(lower, F_GB * FLR, 1, () => 0.5);
+            const gB = ring(lower, F_GM * FLR, 1, proj, drop);
+            const gC = ring(lower, F_GOLD * FLR, 1, () => 0.9);
+            flat(P.a108g, CF.a108Soff, put(tube([gA, gB]), OX, 0, OZ));
+            flat(P.a108g, CF.a108Gold, put(tube([gB, gC]), OX, 0, OZ));
+        }
+
+        /* ------------------------------------------------------------
            21j · everything merged
            ------------------------------------------------------------ */
         {
@@ -5586,6 +5843,9 @@ export default function build(world) {
                reason somebody in edit mode picks up the hotel rather than
                picking up every pale surface in the precinct. */
             const OBJECTS = [
+                // Two meshes and three hundred and seventeen metres: the whole
+                // tower is one colour attribute and the starburst is the other.
+                ['australia108_00', [[P.a108, M108.glass], [P.a108g, M108.gold]], []],
                 ['centurybuilding_00', [[P.m2, M21.body]], []],
                 ['walescorner_00', [[P.w1, M21.body]], []],
                 ['swanstonwestlower_00', [[P.w2, M21.body]], []],
