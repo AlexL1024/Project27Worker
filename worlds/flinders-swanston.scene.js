@@ -3840,14 +3840,13 @@ export default function build(world) {
         {
             const A = P.b2, GB = P.b2g, LB = P.b2l;
             const XW = SQ.BX0, XE = SQ.BX1;                  // 49 to 88
-            const ZS = SQ.BZ0, ZN = -186.0;                  // the arcaded length
-            const ZT = SQ.BZ1;                               // and on to Collins, in terraces
+            const ZS = SQ.BZ0, ZN = SQ.BZ1, ZT = ZN;         // Flinders Lane to Collins Street
             const D = 0.40, XC = XW + D;
 
             const Y_SHOP = 5.60, Y_POD = 8.60;
             const FH = 3.72, FLOORS = 5, Y_MID = Y_POD + FH * FLOORS;   // 27.20
             const Y_SPR = Y_MID + 13.60;                                // 40.80, the springing
-            const NB = 8, BW = (ZS - ZN) / NB, RIB = 1.30;              // eight wide bays
+            const NB = 11, BW = (ZS - ZN) / NB, RIB = 1.30;             // eleven wide bays
             const AR = (BW - RIB) / 2;                                  // the arch's radius
             const Y_CRN = Y_SPR + AR;                                   // its crown
             const XL = XW + 2.30;                                       // the back of a loggia
@@ -4218,73 +4217,6 @@ export default function build(world) {
                 F(A, CF.stoneHi, XW, Y_CRN - 0.8, zf + dir * 0.10, XE, Y_CRN - 0.3, zf - dir * 0.34);
             }
 
-            /* ---- and the Collins Street end: four terraces stepping down and
-                    back, with a glass rail and a garden on every one of them,
-                    and the corner rounded off the way the photograph has it ---- */
-            {
-                F(A, CF.stoneLo, XC, Y_SHOP, ZN, XE, Y_MID, ZT);
-                F(A, CF.stoneLo, XW + 9.0, 0, ZN, XE, Y_SHOP, ZT);
-                F(A, CF.stoneLo, XW - 0.12, Y_SHOP, ZN, XC, Y_POD + 0.46, ZT);
-                for (let i = 0; i <= 6; i++) {
-                    const z = ZN - i * ((ZN - ZT) / 6);
-                    F(A, CF.stone, XW, Y_POD + 0.46, z + 0.68, XC, Y_MID, z - 0.68);
-                }
-                for (let i = 0; i < 6; i++) {
-                    const zc = ZN - (i + 0.5) * ((ZN - ZT) / 6);
-                    for (let f = 0; f < FLOORS; f++) {
-                        const y = Y_POD + 0.46 + f * FH;
-                        W(A, XC - 0.07, y + 0.34, zc + 1.02, XC, y + FH - 0.62, zc - 1.02);
-                        F(A, CF.stone, XW, y + FH - 0.62, zc + 1.02, XC, y + FH + 0.34, zc - 1.02);
-                        F(A, CF.mullion, XW - 0.24, y + 1.36, zc + 1.10, XW - 0.10, y + 1.46, zc - 1.10);
-                        for (let b = 0; b < 9; b++) {
-                            const bz = zc + 1.02 - b * (2.04 / 8);
-                            F(A, CF.mullion, XW - 0.21, y + 0.34, bz - 0.028, XW - 0.13, y + 1.42, bz + 0.028);
-                        }
-                    }
-                }
-                F(A, CF.stone,   XW - 0.22, Y_MID, ZN, XC, Y_MID + 0.36, ZT);
-                F(A, CF.stoneHi, XW - 0.42, Y_MID + 0.36, ZN, XC, Y_MID + 0.80, ZT);
-                for (let t = 0; t < 4; t++) {
-                    const xf = XW + 3.4 + t * 4.6, y0 = Y_MID + 0.80 + t * 3.55, y1 = y0 + 3.55;
-                    const zb = ZT + 2.0 + t * 3.2;
-                    F(A, CF.stoneLo, XW + (t ? 3.4 + (t - 1) * 4.6 : 0) - 0.24, y0, ZN + 0.4,
-                                     xf + 0.30, y0 + 0.40, zb);
-                    F(A, CF.stone, xf, y0 + 0.40, ZN + 0.8, XE - 3 - t * 2, y1, zb + 0.6);
-                    for (let i = 0; i < 5; i++) {
-                        const zc = ZN + 1.6 - i * ((ZN - zb - 3.2) / 5);
-                        W(A, xf - 0.07, y0 + 0.85, zc + 1.55, xf, y1 - 0.40, zc - 1.55);
-                        F(A, CF.mullion, xf - 0.10, y0 + 0.85, zc - 0.05, xf - 0.01, y1 - 0.40, zc + 0.05);
-                        F(A, CF.stone, xf - 0.04, y0 + 0.40, zc + 1.55, xf, y1, zc + 2.00);
-                        F(A, CF.stoneHi, xf - 0.22, y1 - 0.40, zc + 1.75, xf, y1, zc - 1.75);
-                    }
-                    const xr = XW + (t ? 3.4 + (t - 1) * 4.6 : 0.34);
-                    W(GB, xr, y0 + 0.40, ZN + 0.6, xr + 0.10, y0 + 1.42, zb - 0.2, 0x33505f, 0x9ab2c0);
-                    F(A, CF.bronze, xr - 0.10, y0 + 1.38, ZN + 0.6, xr + 0.20, y0 + 1.50, zb - 0.2);
-                    // the garden on it
-                    const px = xr + 1.1;
-                    F(A, CF.stoneLo, px, y0 + 0.40, ZN + 1.4, px + 1.6, y0 + 1.15, zb - 1.0);
-                    for (let k = 0; k < 4; k++) {
-                        const z = ZN + 2.4 - k * ((ZN - zb - 4.8) / 4);
-                        const tr = cylG(0.10, 0.14, 1.6, 6);
-                        put(tr, px + 0.8, y0 + 1.95, z); FG(A, CF.trunk, tr);
-                        for (let b = 0; b < 3; b++) {
-                            const lf = sphG(rr(0.58, 0.92), 8, 6);
-                            put(lf, px + 0.8 + rr(-0.45, 0.45), y0 + 2.75 + rr(-0.2, 0.45), z + rr(-0.45, 0.45));
-                            FG(A, CF.leaf, lf);
-                        }
-                    }
-                }
-                // the rounded corner at the top of it, which the photograph
-                // shows turning the Collins Street corner in one sweep
-                for (let k = 0; k < 8; k++) {
-                    const a0 = (Math.PI / 2) * (k / 8), a1 = (Math.PI / 2) * ((k + 1) / 8);
-                    const am = (a0 + a1) / 2, RC = 5.2;
-                    const g = boxG(RC * 0.42, 3.55, 1.6);
-                    put(g, XW + RC - Math.cos(am) * RC + 0.6, Y_MID + 2.6, ZT + RC - Math.sin(am) * RC - 0.6,
-                        0, am, 0);
-                    FG(A, H.zinc, g);
-                }
-            }
         }
 
         /* ------------------------------------------------------------
