@@ -41,8 +41,11 @@
 //    · the traffic. Trams that brake for the signals and dwell at Stop 13,
 //      cars and bikes as instanced fleets, a hundred pedestrians who wait at
 //      the corners and then cross diagonally when the scramble comes up — all
-//      of it driven by one eight-phase signal cycle that the four mast signals
-//      are showing at the same time.
+//      of it driven by four signal controllers, one for each street Swanston
+//      crosses, running the same cycle length off four offsets so that a tram
+//      going north meets a progression rather than a wall. Every vehicle in
+//      the world stops at the lantern on its own approach, and every person
+//      waits for the walking figure on the crossing they are standing at.
 //    · four real-time lights, total. The lamps, the signals, the tram
 //      headlights, the LED billboards and the concourse mouth are emissive
 //      materials, and world.bloom carries the shine.
@@ -202,6 +205,15 @@ export default function build(world) {
     ];
     const NX = 158;               // how far east and west each cross street runs
     const NZ_END = -404;
+
+    /* How far anything on wheels runs before it is taken off one end of the
+       street and put back on at the other. Swanston is the long one and has to
+       be: a car that turns round at a hundred and forty metres never gets north
+       of Flinders Lane, so it never meets Collins Street's lantern or Little
+       Collins', and the offsets that make this a coordinated corridor rather
+       than four separate intersections are a thing nobody in the world ever
+       experiences. Half a kilometre of Swanston is four lanterns in a row. */
+    const RUN_Z0 = -368, RUN_Z1 = 152, RUN_X = 148;
 
     // 101 Collins Street, on this scene's simplified Hoddle Grid.
     const C101 = { x: 345, z: -146, W: 47, D: 40, H: 188, H2: 200, TIP: 260 };
@@ -5745,93 +5757,288 @@ export default function build(world) {
 
     /* ---- the signals.
 
-       A three-aspect head drawn as a texture rather than as three lit discs:
-       one aspect is lit at a time, so four small canvases and a swapped map say
-       exactly what three emissive meshes per signal would have said, for a
-       quarter of the meshes and none of the per-frame material churn. ---- */
-    const aspectTex = {};
-    for (const st of ['r', 'y', 'g', 'o']) {
-        aspectTex[st] = tex(96, 288, (g, W, H) => {
-            g.fillStyle = '#241f18'; g.fillRect(0, 0, W, H);
-            const cols = { r: '#ff2b16', y: '#ffb219', g: '#2bff62' };
-            const on = { r: st === 'r', y: st === 'y', g: st === 'g' };
-            ['r', 'y', 'g'].forEach((k, i) => {
-                g.fillStyle = on[k] ? cols[k] : '#181410';
-                g.beginPath(); g.arc(W / 2, H * (i + 0.5) / 3, W * 0.30, 0, 6.3); g.fill();
-                if (on[k]) {
-                    g.fillStyle = 'rgba(255,255,255,.55)';
-                    g.beginPath(); g.arc(W / 2, H * (i + 0.5) / 3, W * 0.13, 0, 6.3); g.fill();
+       Swanston crosses four streets inside this world — Flinders Street,
+       Flinders Lane, Collins Street and Little Collins — and every one of them
+       is signalised the way this city signalises an intersection: a lantern out
+       on a mast arm over the approach lanes, a second one post-top on the
+       near-left corner for the driver who has already pulled up under the first
+       and can no longer see it, and on every corner a pedestrian lantern facing
+       each crossing with its push button on the back of the same post.
+
+       That is thirty-two vehicle heads and thirty-two pedestrian ones, and not
+       one of them may be a mesh of its own. The posts, the arms and the button
+       boxes merge per intersection into a single iron mesh; the housings are one
+       InstancedMesh each; and every lit aspect in the world — red, amber, green,
+       the standing figure and the walking one — is an instance carrying its own
+       colour. Turning a signal green is writing three colours into a buffer,
+       which is why the whole corridor costs eight meshes rather than two hundred.
+
+       The aspect colours are written well above one and their materials are
+       taken out of tone mapping, because these lanterns are the only surfaces
+       here that are their own light source rather than something lit. They land
+       in the half-float buffer at a luminance that clears the bloom threshold,
+       and the halo comes back down the pipe for nothing. ---- */
+
+    const CYCLE = 56.0;      // one cycle length for the whole corridor. Four
+                             // controllers on four different lengths are four
+                             // clocks that drift past each other; a coordinated
+                             // street is one length and four offsets.
+    const cum = (rows) => { let a = 0; for (const r of rows) { a += r.t; r.end = a; } return rows; };
+
+    /* A phase says what each of the two streets is showing and what each of the
+       two pedestrian movements is showing, and the pedestrian movement runs with
+       the traffic beside it: the crossing over the cross street walks on
+       Swanston's green, goes to flashing red for its clearance while that green
+       is still running, and is at a steady red well before the amber. */
+    const P_STD = cum([
+        { ns: 'g', ew: 'r', pns: 'w', pew: 'd', t: 16.0 },
+        { ns: 'g', ew: 'r', pns: 'c', pew: 'd', t: 6.0 },
+        { ns: 'g', ew: 'r', pns: 'd', pew: 'd', t: 2.0 },
+        { ns: 'y', ew: 'r', pns: 'd', pew: 'd', t: 3.5 },
+        { ns: 'r', ew: 'r', pns: 'd', pew: 'd', t: 1.5 },
+        { ns: 'r', ew: 'g', pns: 'd', pew: 'w', t: 14.0 },
+        { ns: 'r', ew: 'g', pns: 'd', pew: 'c', t: 6.0 },
+        { ns: 'r', ew: 'g', pns: 'd', pew: 'd', t: 2.0 },
+        { ns: 'r', ew: 'y', pns: 'd', pew: 'd', t: 3.5 },
+        { ns: 'r', ew: 'r', pns: 'd', pew: 'd', t: 1.5 },
+    ]);
+
+    /* Flinders and Swanston is the exception, and has been since 2013: it is a
+       scramble, so the two pedestrian movements do not run with anybody's green.
+       They wait, and then everything on wheels is held while the whole
+       intersection belongs to the crowd, diagonals included. */
+    const P_SCR = cum([
+        { ns: 'g', ew: 'r', pns: 'd', pew: 'd', t: 14.0 },
+        { ns: 'y', ew: 'r', pns: 'd', pew: 'd', t: 3.5 },
+        { ns: 'r', ew: 'r', pns: 'd', pew: 'd', t: 1.5 },
+        { ns: 'r', ew: 'g', pns: 'd', pew: 'd', t: 12.0 },
+        { ns: 'r', ew: 'y', pns: 'd', pew: 'd', t: 3.5 },
+        { ns: 'r', ew: 'r', pns: 'd', pew: 'd', t: 1.5 },
+        { ns: 'r', ew: 'r', pns: 'w', pew: 'w', t: 14.0, scr: 1 },
+        { ns: 'r', ew: 'r', pns: 'c', pew: 'c', t: 6.0 },
+    ]);
+
+    /* The offsets are the whole point of a corridor. A hundred and fifteen
+       metres at the fifty a tram actually holds between stops is a little over
+       ten seconds, so each intersection north of Flinders Street takes its green
+       ten and a half seconds after the one south of it and a northbound tram
+       meets a progression rather than a wall. Southbound traffic pays for it,
+       which is exactly what happens on the real street in the evening peak. */
+    const XSEC = [
+        { z: 0, h: FL, table: P_SCR, off: 0.0 },
+        { z: NST[0].z, h: NST[0].h, table: P_STD, off: 10.5 },
+        { z: NST[1].z, h: NST[1].h, table: P_STD, off: 21.0 },
+        { z: NST[2].z, h: NST[2].h, table: P_STD, off: 31.5 },
+    ];
+    for (const X of XSEC) { X.ns = 'r'; X.ew = 'r'; X.pns = 'd'; X.pew = 'd'; X.scr = 0; X.left = 0; X.code = -1; }
+
+    // Which intersection a thing running east–west is standing at. Nothing in
+    // this world ever changes streets, so four comparisons a frame is cheaper
+    // than the bookkeeping it would take to avoid them.
+    const xsecAt = (z) => {
+        let best = XSEC[0], bd = 1e9;
+        for (let i = 0; i < XSEC.length; i++) { const d = Math.abs(XSEC[i].z - z); if (d < bd) { bd = d; best = XSEC[i]; } }
+        return best;
+    };
+
+    /* What a driver may do about the next lantern in front of them. A red or an
+       amber inside the approach is a braking curve down to the stop line; an
+       amber already under the nose is not, because a car that stands on the
+       brakes at a metre and a half from the line is a car that has stopped in
+       the intersection. Swanston reads all four intersections, since a car
+       running north up it meets every one of them. */
+    const STOP_LOOK = 48;
+    const vehTarget = (ax, dir, s, off, vmax) => {
+        let target = vmax;
+        if (ax === 'z') {
+            for (let i = 0; i < XSEC.length; i++) {
+                const X = XSEC[i];
+                if (X.ns === 'g') continue;
+                const d = dir * (X.z - dir * (X.h + STOPL) - s);
+                if (d < -0.8 || d > STOP_LOOK) continue;
+                if (X.ns === 'y' && d < 6) continue;
+                const cap = Math.max(0, (d - 0.6) * 0.55);
+                if (cap < target) target = cap;
+            }
+        } else {
+            const X = xsecAt(off);
+            if (X.ew !== 'g') {
+                const d = dir * (-dir * (SW + STOPL) - s);
+                if (d > -0.8 && d < STOP_LOOK && !(X.ew === 'y' && d < 6)) {
+                    const cap = Math.max(0, (d - 0.6) * 0.55);
+                    if (cap < target) target = cap;
                 }
-                g.fillStyle = '#100d0a';                       // the cowl over each aspect
-                g.fillRect(W * 0.10, H * (i + 0.5) / 3 - W * 0.40, W * 0.80, W * 0.09);
-            });
-        });
-    }
-    const pedTex = {};
-    for (const st of ['r', 'g', 'o']) {
-        pedTex[st] = tex(96, 192, (g, W, H) => {
-            g.fillStyle = '#241f18'; g.fillRect(0, 0, W, H);
-            [['r', 0.28], ['g', 0.72]].forEach((q) => {
-                const on = st === q[0];
-                g.fillStyle = on ? (q[0] === 'r' ? '#ff3020' : '#35ff62') : '#181410';
-                // a standing figure over a walking one, as flatly as the real ones
-                g.fillRect(W * 0.42, H * q[1] - H * 0.16, W * 0.16, H * 0.10);
-                g.beginPath(); g.arc(W * 0.5, H * q[1] - H * 0.20, W * 0.09, 0, 6.3); g.fill();
-                g.fillRect(W * (q[0] === 'r' ? 0.44 : 0.36), H * q[1] - H * 0.06, W * 0.12, H * 0.12);
-                if (q[0] === 'g') g.fillRect(W * 0.52, H * q[1] - H * 0.06, W * 0.12, H * 0.12);
-            });
-        });
-    }
-
-    const SIGNALS = [];
-    {
-        const approaches = [
-            { x: -(SW + 1.0), z: -(FL + 2.2), face: Math.PI, dir: 'NS', reach: SW * 1.15 },
-            { x: (SW + 1.0), z: (FL + 2.2), face: 0, dir: 'NS', reach: SW * 1.15 },
-            { x: (SW + 2.2), z: -(FL + 1.0), face: Math.PI / 2, dir: 'EW', reach: FL * 1.15 },
-            { x: -(SW + 2.2), z: (FL + 1.0), face: -Math.PI / 2, dir: 'EW', reach: FL * 1.15 },
-        ];
-        approaches.forEach((a, i) => {
-            const G = new THREE.Group();
-            const body = [], lens = [];
-            let g = cylG(0.13, 0.16, 5.4, 10); put(g, 0, 2.7, 0); body.push(g);
-            g = cylG(0.24, 0.28, 0.5, 10); put(g, 0, 0.25, 0); body.push(g);
-            g = boxG(0.46, 1.35, 0.30); put(g, 0, 3.6, 0.28); body.push(g);
-            g = new THREE.PlaneGeometry(0.40, 1.20); put(g, 0, 3.6, 0.44); lens.push(g);
-            // the mast arm out over the roadway, and its second head
-            g = boxG(a.reach, 0.14, 0.14); put(g, -a.reach / 2, 6.1, 0); body.push(g);
-            g = boxG(0.46, 1.35, 0.30); put(g, -a.reach + 1.0, 5.2, 0.10); body.push(g);
-            g = new THREE.PlaneGeometry(0.40, 1.20); put(g, -a.reach + 1.0, 5.2, 0.26); lens.push(g);
-            const lensMat = emissive(0x241f18, 0xffffff, 2.4, { map: aspectTex.r, emissiveMap: aspectTex.r, roughness: 0.34 });
-            G.add(merged(body, MATS.iron));
-            const lm = mesh(merge(lens), lensMat);
-            G.add(lm); world.ghost(lm);
-            G.position.set(a.x, KERB_H, a.z);
-            G.rotation.y = a.face;
-            scene.add(G);
-            world.part('signal_0' + i, G);
-            SIGNALS.push({ dir: a.dir, mat: lensMat, state: '' });
-        });
-    }
-
-    // pedestrian lanterns on all four corners, facing both ways across
-    const PEDMAT = emissive(0x241f18, 0xffffff, 2.2, { map: pedTex.r, emissiveMap: pedTex.r, roughness: 0.34 });
-    {
-        const body = [], lens = [];
-        for (const s of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-            const M0 = MX(s[0] * (SW + 0.9), KERB_H, s[1] * (FL + 0.9));
-            let g = cylG(0.09, 0.11, 3.0, 8); put(g, 0, 1.5, 0); carry(body, g, M0);
-            g = boxG(0.16, 0.3, 0.2); put(g, 0, 1.15, 0.16); carry(body, g, M0);
-            for (const q of [[0.24 * -s[0], 0, s[1] > 0 ? 0 : Math.PI], [0, 0.24 * -s[1], s[0] > 0 ? Math.PI / 2 : -Math.PI / 2]]) {
-                g = boxG(0.42, 0.86, 0.26); put(g, q[0], 2.35, q[1], 0, q[2], 0); carry(body, g, M0);
-                g = new THREE.PlaneGeometry(0.34, 0.74);
-                put(g, q[0] + Math.sin(q[2]) * 0.15, 2.35, q[1] + Math.cos(q[2]) * 0.15, 0, q[2], 0);
-                carry(lens, g, M0);
             }
         }
-        scene.add(merged(body, MATS.iron));
-        const pl = merged(lens, PEDMAT);
-        scene.add(pl); world.ghost(pl);
+        return target;
+    };
+
+    /* The aspects themselves, as colours rather than as textures, because the
+       lit one is chosen per instance and an instance cannot have a map of its
+       own. Each is scaled so its luminance lands a little over the bloom
+       threshold of 0.80 — a red lantern with no halo at dusk looks painted on. */
+    const ASP = {
+        red: new THREE.Color(4.40, 0.35, 0.14),
+        amber: new THREE.Color(2.60, 1.05, 0.08),
+        green: new THREE.Color(0.30, 1.55, 0.55),
+        stand: new THREE.Color(3.60, 0.30, 0.12),
+        walk: new THREE.Color(0.30, 1.45, 0.52),
+        off: new THREE.Color(0.020, 0.018, 0.015),
+    };
+
+    let sigHeadIM, sigAspIM, plHeadIM, plStandIM, plWalkIM;
+    {
+        // The lens, hot in the middle the way a lit one is and dark at the rim
+        // where the cowl shades it. One map for ninety-six aspects; the colour
+        // is the instance's business.
+        const lensTex = tex(64, 64, (g, W, H) => {
+            g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+            const rg = g.createRadialGradient(W * 0.5, H * 0.46, 0, W * 0.5, H * 0.5, W * 0.5);
+            rg.addColorStop(0.00, '#ffffff');
+            rg.addColorStop(0.42, '#e6e6e6');
+            rg.addColorStop(0.86, '#6e6e6e');
+            rg.addColorStop(1.00, '#141414');
+            g.fillStyle = rg;
+            g.beginPath(); g.arc(W * 0.5, H * 0.5, W * 0.5, 0, 6.3); g.fill();
+        });
+        // And the two figures, drawn as flatly as the real ones are: a man
+        // standing with his feet together, and the same man mid-stride.
+        const figTex = (walking) => tex(64, 96, (g, W, H) => {
+            g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
+            g.fillStyle = '#ffffff';
+            g.beginPath(); g.arc(W * 0.50, H * 0.20, W * 0.115, 0, 6.3); g.fill();
+            if (walking) {
+                g.fillRect(W * 0.40, H * 0.30, W * 0.22, H * 0.27);
+                g.fillRect(W * 0.20, H * 0.34, W * 0.21, H * 0.075);
+                g.fillRect(W * 0.61, H * 0.39, W * 0.19, H * 0.075);
+                g.fillRect(W * 0.25, H * 0.56, W * 0.17, H * 0.26);
+                g.fillRect(W * 0.55, H * 0.56, W * 0.17, H * 0.26);
+                g.fillRect(W * 0.19, H * 0.79, W * 0.16, H * 0.06);
+                g.fillRect(W * 0.62, H * 0.79, W * 0.16, H * 0.06);
+            } else {
+                g.fillRect(W * 0.38, H * 0.30, W * 0.24, H * 0.29);
+                g.fillRect(W * 0.25, H * 0.32, W * 0.12, H * 0.25);
+                g.fillRect(W * 0.63, H * 0.32, W * 0.12, H * 0.25);
+                g.fillRect(W * 0.39, H * 0.58, W * 0.10, H * 0.27);
+                g.fillRect(W * 0.51, H * 0.58, W * 0.10, H * 0.27);
+            }
+        });
+
+        /* three only lets an InstancedMesh's per-instance colour reach the
+           fragment when the material declares vertexColors — and a material
+           that declares it over geometry with no colour attribute draws every
+           instance black, because a missing attribute reads as zero. So the
+           aspect geometry carries a white one, and the instance colour is the
+           only thing that decides what any of these lanterns is showing. */
+        const white = (g) => {
+            const n = g.attributes.position.count;
+            const a = new Float32Array(n * 3); a.fill(1);
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+        const litMat = (map) => new THREE.MeshBasicMaterial({
+            color: 0xffffff, map, vertexColors: true, toneMapped: false,
+        });
+
+        const CASE = stdMat(0x1e2226, { roughness: 0.50, metalness: 0.36 });
+
+        // the three-aspect vehicle head, its cap and its three cowls
+        const headParts = [];
+        let g = boxG(0.42, 1.34, 0.26); headParts.push(g);
+        g = boxG(0.50, 0.07, 0.12); put(g, 0, 0.70, 0.05); headParts.push(g);
+        for (const y of [0.44, 0.0, -0.44]) { g = boxG(0.42, 0.05, 0.19); put(g, 0, y + 0.19, 0.15); headParts.push(g); }
+        g = boxG(0.11, 0.18, 0.16); put(g, 0, 0, -0.19); headParts.push(g);
+        const headG = merge(headParts);
+
+        // and the two-aspect pedestrian one, which is squarer and lower
+        const plParts = [];
+        g = boxG(0.40, 0.76, 0.24); plParts.push(g);
+        g = boxG(0.46, 0.07, 0.11); put(g, 0, 0.41, 0.04); plParts.push(g);
+        for (const y of [0.17, -0.17]) { g = boxG(0.40, 0.05, 0.17); put(g, 0, y + 0.20, 0.14); plParts.push(g); }
+        g = boxG(0.11, 0.16, 0.15); put(g, 0, 0, -0.18); plParts.push(g);
+        const plG = merge(plParts);
+
+        // Everything below is written in the frame of the person the lantern is
+        // talking to: it faces local +z and the mast arm reaches local +x. One
+        // description, turned four ways, stands up every approach in the world.
+        const at = (px, pz, yaw, lx, ly, lz) => {
+            _e.set(0, yaw, 0);
+            _v.set(lx, 0, lz).applyEuler(_e);
+            return MX(px + _v.x, ly, pz + _v.z, 0, yaw, 0);
+        };
+
+        const HEADS = [], ASPECTS = [], PLHEADS = [], FIGS = [];
+        for (let i = 0; i < XSEC.length; i++) {
+            const X = XSEC[i];
+            const iron = [];
+
+            /* The four approaches, each signalled from the corner on its own
+               left, because that is the kerb an Australian driver stops beside
+               and the arm has to reach out over the lanes from somewhere. */
+            const app = [
+                { x: (SW + 1.1), z: X.z - (X.h + 2.0), yaw: Math.PI, reach: SW * 0.90 },
+                { x: -(SW + 1.1), z: X.z + (X.h + 2.0), yaw: 0, reach: SW * 0.90 },
+                { x: -(SW + 2.0), z: X.z - (X.h + 1.1), yaw: -Math.PI / 2, reach: X.h * 0.90 },
+                { x: (SW + 2.0), z: X.z + (X.h + 1.1), yaw: Math.PI / 2, reach: X.h * 0.90 },
+            ];
+            for (const a of app) {
+                const M0 = MX(a.x, KERB_H, a.z, 0, a.yaw, 0);
+                g = cylG(0.13, 0.17, 6.6, 10); put(g, 0, 3.30, 0); carry(iron, g, M0);
+                g = cylG(0.26, 0.30, 0.50, 10); put(g, 0, 0.25, 0); carry(iron, g, M0);
+                g = boxG(a.reach, 0.15, 0.15); put(g, a.reach * 0.5, 6.45, 0); carry(iron, g, M0);
+                g = boxG(1.30, 0.09, 0.09); put(g, 0.46, 6.00, 0, 0, 0, 0.62); carry(iron, g, M0);
+                // the head out over the roadway, and the post-top secondary
+                for (const h of [[a.reach - 0.80, KERB_H + 5.75, 0.0], [0.0, KERB_H + 3.55, 0.31]]) {
+                    HEADS.push(at(a.x, a.z, a.yaw, h[0], h[1], h[2]));
+                    for (const dy of [0.44, 0.0, -0.44]) ASPECTS.push(at(a.x, a.z, a.yaw, h[0], h[1] + dy, h[2] + 0.14));
+                }
+            }
+
+            /* Four corners, and on each of them a lantern down each of the two
+               crossings that corner touches — facing the far end, because the
+               lantern a person reads is the one on the other side of the road,
+               and the button they press is on the post beside them. */
+            for (let lc = 0; lc < 4; lc++) {
+                const sx = (lc === 0 || lc === 3) ? -1 : 1, sz = (lc < 2) ? -1 : 1;
+                const cx = sx * (SW + 2.4), cz = X.z + sz * (X.h + 2.4);
+                g = cylG(0.10, 0.13, 3.00, 8); put(g, cx, KERB_H + 1.50, cz); iron.push(g);
+                g = cylG(0.22, 0.24, 0.40, 8); put(g, cx, KERB_H + 0.20, cz); iron.push(g);
+                // q 0 is the crossing over Swanston, q 1 the one over the cross
+                // street, and the frame loop leans on that order
+                for (let q = 0; q < 2; q++) {
+                    const yaw = q === 0 ? -sx * Math.PI / 2 : (sz > 0 ? Math.PI : 0);
+                    PLHEADS.push(at(cx, cz, yaw, 0, KERB_H + 2.44, 0.21));
+                    FIGS.push(at(cx, cz, yaw, 0, KERB_H + 2.60, 0.34), at(cx, cz, yaw, 0, KERB_H + 2.28, 0.34));
+                    const B = MX(cx, KERB_H, cz, 0, yaw, 0);
+                    g = boxG(0.18, 0.32, 0.15); put(g, 0, 1.06, -0.20); carry(iron, g, B);
+                    g = cylG(0.05, 0.05, 0.07, 8); put(g, 0, 0, -0.04, Math.PI / 2, 0, 0);
+                    put(g, 0, 1.10, -0.28); carry(iron, g, B);
+                }
+            }
+
+            const post = merged(iron, MATS.iron);
+            scene.add(post);
+            world.part('signal_0' + i, post);
+        }
+
+        sigHeadIM = new THREE.InstancedMesh(headG, CASE, HEADS.length);
+        HEADS.forEach((m, k) => sigHeadIM.setMatrixAt(k, m));
+        sigAspIM = new THREE.InstancedMesh(white(new THREE.CircleGeometry(0.125, 16)), litMat(lensTex), ASPECTS.length);
+        ASPECTS.forEach((m, k) => { sigAspIM.setMatrixAt(k, m); sigAspIM.setColorAt(k, ASP.off); });
+        plHeadIM = new THREE.InstancedMesh(plG, CASE, PLHEADS.length);
+        PLHEADS.forEach((m, k) => plHeadIM.setMatrixAt(k, m));
+        plStandIM = new THREE.InstancedMesh(white(new THREE.PlaneGeometry(0.26, 0.34)), litMat(figTex(false)), PLHEADS.length);
+        plWalkIM = new THREE.InstancedMesh(white(new THREE.PlaneGeometry(0.26, 0.34)), litMat(figTex(true)), PLHEADS.length);
+        for (let k = 0; k < PLHEADS.length; k++) {
+            plStandIM.setMatrixAt(k, FIGS[k * 2]); plStandIM.setColorAt(k, ASP.off);
+            plWalkIM.setMatrixAt(k, FIGS[k * 2 + 1]); plWalkIM.setColorAt(k, ASP.off);
+        }
+        for (const m of [sigHeadIM, sigAspIM, plHeadIM, plStandIM, plWalkIM]) {
+            m.instanceMatrix.needsUpdate = true;
+            if (m.instanceColor) m.instanceColor.needsUpdate = true;
+            scene.add(m);
+            world.ghost(m);          // the posts collide; the lanterns on them need not
+        }
     }
 
     /* ---- bollards, crowd barriers, bike hoops, fencing and bins ---- */
@@ -6076,7 +6283,7 @@ export default function build(world) {
             { ax: 'z', dir: 1, s: -232, fleet: 2094, route: '1', dest: 'STH MELB', via: 'SWANSTON ST' },
             { ax: 'z', dir: 1, s: 108, fleet: 2135, route: '64', dest: 'BRIGHTON', via: 'SWANSTON ST' },
             { ax: 'z', dir: -1, s: -142, fleet: 2168, route: '72', dest: 'CAMBERWELL', via: 'SWANSTON ST' },
-            { ax: 'z', dir: -1, s: 196, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
+            { ax: 'z', dir: -1, s: -318, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
             /* Four more on Swanston and no more than that. A tram is about
                seven meshes — the shell, the glass, the doors, the bogies, the
                pantograph and two lit destination boxes — so ten of them is
@@ -6120,29 +6327,47 @@ export default function build(world) {
     const CARS = [], LANES = new Map();
     let carBodyIM, carGlassIM, carWheelIM, carLampIM, bikeIM;
     {
+        /* Little Collins gets its two lanes as well, because an intersection
+           with a lantern over it and nothing ever arriving at it is a lantern
+           talking to itself — and every one of the four is signalised now.
+           Swanston carries twice the cars it used to for the same reason: the
+           run from the bridge to Little Collins is half a kilometre, and three
+           cars spread over that is an empty street with a signal on it. */
         const lanes = [
-            { ax: 'z', dir: 1, off: 8.4, n: 3, taxi: true },
-            { ax: 'z', dir: -1, off: -8.4, n: 3, taxi: true },
+            { ax: 'z', dir: 1, off: 8.4, n: 8, taxi: true },
+            { ax: 'z', dir: -1, off: -8.4, n: 8, taxi: true },
             { ax: 'x', dir: 1, off: -10.2, n: 5 },
             { ax: 'x', dir: -1, off: 10.2, n: 5 },
             { ax: 'x', dir: -1, off: -115 - 2.6, n: 2 },
             { ax: 'x', dir: -1, off: -115 + 2.6, n: 2 },
             { ax: 'x', dir: 1, off: -230 - 10.2, n: 2 },
             { ax: 'x', dir: -1, off: -230 + 10.2, n: 2 },
+            { ax: 'x', dir: 1, off: -345 - 1.9, n: 2 },
+            { ax: 'x', dir: 1, off: -345 + 1.9, n: 2 },
         ];
         lanes.forEach((ln, li) => {
+            /* Dealt out behind the leader, because the lane is sorted once at
+               build and never again: the car with the largest s in the
+               direction it is going is the one in front, and everybody else is
+               laid down the street behind it. Swanston's are spread over the
+               whole half-kilometre; a cross street only ever holds the hundred
+               metres either side of Swanston. */
+            const head = ln.ax === 'z' ? (ln.dir > 0 ? RUN_Z1 - 10 : RUN_Z0 + 10) : -ln.dir * 22;
             for (let i = 0; i < ln.n; i++) {
                 const van = rnd() < 0.16;
                 const taxi = !van && (ln.taxi ? rnd() < 0.62 : rnd() < 0.15);
                 CARS.push({
                     ax: ln.ax, dir: ln.dir, off: ln.off, lane: li, van, taxi,
-                    s: -ln.dir * (26 + i * rr(18, 34)), v: 8, vmax: rr(10.5, 14.5),
+                    s: head - ln.dir * i * (ln.ax === 'z' ? rr(44, 78) : rr(18, 34)),
+                    v: 8, vmax: rr(10.5, 14.5),
                     len: van ? 5.6 : 4.7,
                 });
             }
         });
+        // Grouped by lane and left in the order they were dealt. There is no
+        // sort any more: the frame loop asks who is in front rather than being
+        // told, because being told is only true until the first car wraps.
         for (const c of CARS) { if (!LANES.has(c.lane)) LANES.set(c.lane, []); LANES.get(c.lane).push(c); }
-        for (const arr of LANES.values()) arr.sort((a, b) => (b.s * b.dir) - (a.s * a.dir));
 
         // one saloon shape, stretched into a van and repainted into a taxi
         const bodyG = [];
@@ -6189,8 +6414,12 @@ export default function build(world) {
         g = boxG(0.16, 0.50, 0.16); put(g, 0.12, 0.62, 0.06); parts.push(g);
         g = sphG(0.14, 10, 7); put(g, 0, 1.50, -0.02); parts.push(g);          // helmet
         const lanesB = [['z', -10.35, -1], ['z', 10.35, 1], ['x', -12.35, 1], ['x', 12.35, -1]];
-        for (const ln of lanesB) for (let i = 0; i < 4; i++) {
-            BIKES.push({ ax: ln[0], off: ln[1], dir: ln[2], s: -ln[2] * (18 + i * rr(20, 46)), v: 5, vmax: rr(5.0, 7.2) });
+        for (const ln of lanesB) for (let i = 0; i < 5; i++) {
+            const long = ln[0] === 'z';
+            BIKES.push({
+                ax: ln[0], off: ln[1], dir: ln[2], v: 5, vmax: rr(5.0, 7.2),
+                s: long ? RUN_Z0 + 20 + i * rr(76, 116) : -ln[2] * (18 + i * rr(20, 46)),
+            });
         }
         bikeIM = new THREE.InstancedMesh(merge(parts), stdMat(0xffffff, { roughness: 0.36, metalness: 0.30 }), BIKES.length);
         const tint = new THREE.Color();
@@ -6208,14 +6437,18 @@ export default function build(world) {
        walking the footpaths, and two thirds of them have an umbrella up —
        which, seen from above, is what this crossing looks like in the rain. ---- */
     const PEDS = [];
-    /* Both crossings now, not one. Everybody in this world used to be
-       standing at Flinders and Swanston, which is why the four hundred metres
-       north of it read as evacuated. */
-    const CORNERS = [[-(SW + 2.2), -(FL + 2.2)], [SW + 2.2, -(FL + 2.2)],
-                     [SW + 2.2, FL + 2.2], [-(SW + 2.2), FL + 2.2],
-                     [-(SW + 2.4), -216.9], [SW + 2.4, -216.9],
-                     [-(SW + 2.4), -243.1], [SW + 2.4, -243.1],
-                     [SW + 3.0, -128.6], [-(SW + 3.0), -128.6]];
+    /* Every crossing now, not one. Everybody in this world used to be standing
+       at Flinders and Swanston, which is why the four hundred metres north of
+       it read as evacuated — so the corners are taken from the intersections
+       themselves, four apiece, in the order the signals were built in: the
+       north-west, the north-east, the south-east and the south-west of each.
+       That order is what lets a person work out, from the corner they are
+       standing on, which lantern is theirs. */
+    const CORNERS = [];
+    for (const X of XSEC) {
+        CORNERS.push([-(SW + 2.4), X.z - (X.h + 2.4)], [SW + 2.4, X.z - (X.h + 2.4)],
+                     [SW + 2.4, X.z + (X.h + 2.4)], [-(SW + 2.4), X.z + (X.h + 2.4)]);
+    }
     let pedBodyIM, pedHeadIM, brollyIM;
     {
         const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c, 0xf6d9bd];
@@ -6555,26 +6788,28 @@ export default function build(world) {
     /* ============================================================
        20 · what moves
 
-       One eight-phase cycle drives the whole intersection: Swanston green,
-       amber, all-red, Flinders green, amber, all-red, then the scramble and its
-       clearance. The trams and the cars read it to decide whether to stop, and
-       the crowd reads it to decide whether to cross — so the traffic and the
-       people are not two animations that happen to run at the same time, they
-       are one intersection.
+       Four controllers, one per intersection, each running the phase table it
+       was given back in section 16 against its own offset off the one clock. The
+       trams, the cars and the bikes read the intersection in front of them to
+       decide whether to stop, and the crowd reads the crossing it is standing on
+       to decide whether to go — so the traffic and the people up this whole
+       street are not two animations that happen to run at the same time, they
+       are four intersections.
        ============================================================ */
-    const PHASES = [
-        { ns: 'g', ew: 'r', ped: 0, t: 17.0 },
-        { ns: 'y', ew: 'r', ped: 0, t: 3.6 },
-        { ns: 'r', ew: 'r', ped: 0, t: 1.8 },
-        { ns: 'r', ew: 'g', ped: 0, t: 15.0 },
-        { ns: 'r', ew: 'y', ped: 0, t: 3.6 },
-        { ns: 'r', ew: 'r', ped: 0, t: 1.8 },
-        { ns: 'r', ew: 'r', ped: 1, t: 14.0 },   // the scramble
-        { ns: 'r', ew: 'r', ped: 2, t: 6.0 },    // clearance, the red man flashing
-    ];
-    let phaseIdx = 0, phaseT = 0, pedPainted = '', adT = 0;
+    let adT = 0;
     const _cam = new THREE.Vector3();
     const TRAM_STOPS_Z = [-45, 64], TRAM_STOPS_X = [-42, 42];
+
+    /* Off one end of the street and back on at the other, which is the whole of
+       the traffic model's memory. It runs on the axis rather than on a constant
+       because Swanston is nearly twice the cross streets: a vehicle taken off at
+       a hundred and forty metres never sees the northern half of the corridor,
+       and the corridor is the point. */
+    const wrapS = (o) => {
+        if (o.ax === 'z') {
+            if (o.s > RUN_Z1) o.s = RUN_Z0; else if (o.s < RUN_Z0) o.s = RUN_Z1;
+        } else if (o.s > RUN_X) o.s = -RUN_X; else if (o.s < -RUN_X) o.s = RUN_X;
+    };
 
     world.frame((dt, t) => {
         camera.getWorldPosition(_cam);
@@ -6586,42 +6821,64 @@ export default function build(world) {
         const gz = 0.09 + 0.08 * Math.sin(t * 0.15 + 2.1) + 0.04 * Math.sin(t * 0.47);
         U.uWind.value.set(gx, gz);
 
-        /* ---- the signal cycle ---------------------------------------- */
-        phaseT += dt;
-        if (phaseT > PHASES[phaseIdx].t) { phaseT = 0; phaseIdx = (phaseIdx + 1) % PHASES.length; }
-        const P = PHASES[phaseIdx];
-        for (const sig of SIGNALS) {
-            const st = sig.dir === 'NS' ? P.ns : P.ew;
-            if (st !== sig.state) {          // only when it actually changes
-                sig.state = st;
-                sig.mat.map = aspectTex[st];
-                sig.mat.emissiveMap = aspectTex[st];
-                sig.mat.needsUpdate = true;
+        /* ---- the four controllers ------------------------------------ */
+        /* Each intersection is its own clock read off the one time: nothing
+           accumulates, so no controller can drift out of the corridor no matter
+           what the frame rate did, and a phase is a lookup rather than a state
+           machine to keep in step. Nothing is repainted unless what it is
+           showing actually changed — the flashing red is the only thing that
+           changes at speed, and only while there is a clearance running. */
+        let repaint = false;
+        for (let i = 0; i < XSEC.length; i++) {
+            const X = XSEC[i];
+            let lt = (t - X.off) % CYCLE;
+            if (lt < 0) lt += CYCLE;
+            const tb = X.table;
+            let k = 0;
+            while (k < tb.length - 1 && lt >= tb[k].end) k++;
+            const R = tb[k];
+            X.ns = R.ns; X.ew = R.ew; X.pns = R.pns; X.pew = R.pew; X.scr = R.scr || 0;
+            X.left = R.end - lt;      // what the crowd needs to know before it steps off
+
+            const flash = (R.pns === 'c' || R.pew === 'c') ? (Math.sin(t * 9.4) > 0 ? 1 : 0) : 0;
+            const code = k * 2 + flash;
+            if (code === X.code) continue;
+            X.code = code;
+            repaint = true;
+
+            // the first four heads of an intersection face along Swanston and
+            // the last four face along its cross street, in the order they were
+            // built in; three aspects each, top to bottom
+            for (let hh = 0; hh < 8; hh++) {
+                const st = hh < 4 ? X.ns : X.ew;
+                const b = (i * 8 + hh) * 3;
+                sigAspIM.setColorAt(b, st === 'r' ? ASP.red : ASP.off);
+                sigAspIM.setColorAt(b + 1, st === 'y' ? ASP.amber : ASP.off);
+                sigAspIM.setColorAt(b + 2, st === 'g' ? ASP.green : ASP.off);
+            }
+            // and the pedestrian lanterns two to a corner: the even one belongs
+            // to the crossing over Swanston, the odd one to the crossing over
+            // the cross street
+            for (let c = 0; c < 8; c++) {
+                const p = (c & 1) ? X.pns : X.pew;
+                const idx = i * 8 + c;
+                plStandIM.setColorAt(idx, (p === 'd' || (p === 'c' && flash)) ? ASP.stand : ASP.off);
+                plWalkIM.setColorAt(idx, p === 'w' ? ASP.walk : ASP.off);
             }
         }
-        const want = P.ped === 1 ? 'g' : 'r';
-        if (want !== pedPainted) {
-            pedPainted = want;
-            PEDMAT.map = pedTex[want];
-            PEDMAT.emissiveMap = pedTex[want];
-            PEDMAT.needsUpdate = true;
+        if (repaint) {
+            sigAspIM.instanceColor.needsUpdate = true;
+            plStandIM.instanceColor.needsUpdate = true;
+            plWalkIM.instanceColor.needsUpdate = true;
         }
-        // the clearance flash is intensity, not a texture swap: a material that
-        // recompiles twice a second is a stutter nobody can explain later
-        PEDMAT.emissiveIntensity = P.ped === 2 ? (Math.sin(t * 9.4) > 0 ? 2.4 : 0.25) : 2.2;
 
         /* ---- trams --------------------------------------------------- */
         for (let i = 0; i < TRAMS.length; i++) {
             const o = TRAMS[i];
-            const half = (o.ax === 'z') ? FL : SW;
-            let target = o.vmax;
+            // every lantern between here and the end of the street, not just
+            // the one at Flinders — a tram up Swanston passes four of them
+            let target = vehTarget(o.ax, o.dir, o.s, o.off, o.vmax);
 
-            const stopPos = -o.dir * (half + STOPL);
-            const d = o.dir * (stopPos - o.s);
-            const green = (o.ax === 'z') ? P.ns : P.ew;
-            if (green !== 'g' && d > -0.8 && d < 46) {
-                if (!(green === 'y' && d < 6)) target = Math.min(target, Math.max(0, (d - 0.6) * 0.55));
-            }
             // and the platform stops, where a tram stands with its doors open
             const stops = o.ax === 'z' ? TRAM_STOPS_Z : TRAM_STOPS_X;
             let best = 1e9;
@@ -6646,8 +6903,7 @@ export default function build(world) {
 
             o.v = lerp(o.v, target, 1 - Math.exp(-dt * (target < o.v ? 2.6 : 1.0)));
             o.s += o.dir * o.v * dt;
-            if (o.dir > 0 && o.s > 150) o.s = -150;
-            if (o.dir < 0 && o.s < -150) o.s = 150;
+            wrapS(o);
             if (o.ax === 'z') o.mesh.position.set(o.off, 0.05, o.s);
             else o.mesh.position.set(o.s, 0.05, o.off);
             // the headlight is one of the ten mirrors the wet road keeps, so
@@ -6660,31 +6916,43 @@ export default function build(world) {
             }
         }
 
-        /* ---- cars, lane by lane, leader first ------------------------ */
+        /* ---- cars, lane by lane -------------------------------------- */
         for (const arr of LANES.values()) {
             for (let i = 0; i < arr.length; i++) {
                 const o = arr[i];
-                const half = (o.ax === 'z') ? FL : SW;
-                let target = o.vmax;
-                // the cross streets have their own stop lines; this is the one
-                // signal the whole world is actually measured off
-                if (Math.abs(o.off) < 40) {
-                    const stopPos = -o.dir * (half + STOPL);
-                    const d = o.dir * (stopPos - o.s);
-                    const green = (o.ax === 'z') ? P.ns : P.ew;
-                    if (green !== 'g' && d > -0.8 && d < 45) {
-                        if (!(green === 'y' && d < 6)) target = Math.min(target, Math.max(0, (d - 0.6) * 0.55));
-                    }
+                // the cross streets have their own stop lines now, and their own
+                // controllers behind them: a car on Flinders Lane is held by
+                // Flinders Lane's lantern, not by the one four blocks south
+                let target = vehTarget(o.ax, o.dir, o.s, o.off, o.vmax);
+
+                /* Whatever is genuinely in front in this lane, found the way the
+                   trams find it, rather than by trusting the order the lane was
+                   sorted into at build. That order stops being true the first
+                   time a car runs off the end of the street and comes back on at
+                   the other: the car this one had been following is suddenly
+                   half a kilometre behind it, the gap goes hugely negative, and
+                   a follower that believes that pulls up against a vehicle that
+                   is not there and never moves again for the rest of the
+                   session — which is what used to happen to a whole lane of
+                   Swanston Street a minute or so after the world opened.
+
+                   Asking who is ahead every frame costs sixty-four comparisons
+                   in the worst lane and cannot go stale. Measuring forward only
+                   is what keeps two cars abreast from each stopping for the
+                   other, and the forty-six metre window is what keeps a car that
+                   has just wrapped from being anybody's problem. */
+                for (let j = 0; j < arr.length; j++) {
+                    if (j === i) continue;
+                    const ahead = (arr[j].s - o.s) * o.dir;
+                    if (ahead <= 0 || ahead > 46) continue;
+                    const gap = ahead - (arr[j].len + o.len) / 2 - 1.6;
+                    const cap = Math.max(0, gap * 0.62);
+                    if (cap < target) target = cap;
                 }
-                if (i > 0) {
-                    const lead = arr[i - 1];
-                    const gap = (lead.s - o.s) * o.dir - (lead.len + o.len) / 2 - 1.6;
-                    target = Math.min(target, Math.max(0, gap * 0.62));
-                }
+
                 o.v = lerp(o.v, target, 1 - Math.exp(-dt * (target < o.v ? 2.8 : 1.2)));
                 o.s += o.dir * o.v * dt;
-                if (o.dir > 0 && o.s > 140) o.s = -140;
-                if (o.dir < 0 && o.s < -140) o.s = 140;
+                wrapS(o);
             }
         }
         for (let i = 0; i < CARS.length; i++) {
@@ -6704,15 +6972,10 @@ export default function build(world) {
 
         for (let i = 0; i < BIKES.length; i++) {
             const b = BIKES[i];
-            const green = (b.ax === 'z') ? P.ns : P.ew;
-            const half = (b.ax === 'z') ? FL : SW;
-            const d = b.dir * (-b.dir * (half + STOPL) - b.s);
-            let target = b.vmax;
-            if (green !== 'g' && d > -0.8 && d < 26) target = Math.min(target, Math.max(0, (d - 0.6) * 0.5));
+            const target = vehTarget(b.ax, b.dir, b.s, b.off, b.vmax);
             b.v = lerp(b.v, target, 1 - Math.exp(-dt * 2.4));
             b.s += b.dir * b.v * dt;
-            if (b.dir > 0 && b.s > 130) b.s = -130;
-            if (b.dir < 0 && b.s < -130) b.s = 130;
+            wrapS(b);
             const x = b.ax === 'z' ? b.off : b.s, z = b.ax === 'z' ? b.s : b.off;
             const ry = (b.ax === 'z') ? (b.dir > 0 ? 0 : Math.PI) : (b.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
             setM(bikeIM, i, x, 0, z, ry);
@@ -6724,21 +6987,64 @@ export default function build(world) {
             const o = PEDS[i];
             let moving = false;
             if (o.mode === 'walk') {
-                o.s += o.dir * o.sp * dt;
-                if (o.s > 118) o.s = -118;
-                if (o.s < -118) o.s = 118;
-                // people stop at the kerb rather than strolling into the road
-                const near = (o.ax === 'z') ? Math.abs(o.s) < FL + 2.8 : Math.abs(o.s) < SW + 2.8;
-                if (near && P.ped !== 1) o.s -= o.dir * o.sp * dt; else moving = true;
+                /* Somebody walking the footpath is stopped by the kerb of a
+                   street they are about to cross, and by nothing else. The test
+                   is on the step rather than on the position, because a person
+                   who is already out in the road when the figure goes red has to
+                   finish crossing — freezing them on the centre line is the one
+                   thing a crossing never does. */
+                const step = o.dir * o.sp * dt;
+                const s1 = o.s + step;
+                const X = (o.ax === 'z') ? xsecAt(o.s) : XSEC[0];
+                const mid = (o.ax === 'z') ? X.z : 0;
+                const zone = ((o.ax === 'z') ? X.h : SW) + 3.0;
+                const walkable = (o.ax === 'z') ? (X.pns === 'w' || X.pns === 'c')
+                                                : (X.pew === 'w' || X.pew === 'c');
+                if (!walkable && Math.abs(o.s - mid) > zone && Math.abs(s1 - mid) < zone) {
+                    // held at the kerb, and shuffling the way people do
+                } else {
+                    o.s = s1; moving = true;
+                }
+                /* And off the end of the footpath and back on at the other, over
+                   the length the walkers were dealt out across rather than the
+                   hundred and eighteen metres this used to use — which quietly
+                   swept everybody north of Flinders Lane back down to the
+                   station on the first frame and left the top half of the
+                   corridor with nobody standing at its kerbs at all. */
+                if (o.ax === 'z') {
+                    if (o.s > 234) o.s = -352; else if (o.s < -352) o.s = 234;
+                } else if (o.s > 150) o.s = -150; else if (o.s < -150) o.s = 150;
                 o.x = (o.ax === 'z') ? o.off : o.s;
                 o.z = (o.ax === 'z') ? o.s : o.off;
             } else if (o.mode === 'wait') {
                 o.t -= dt;
-                if (P.ped === 1 && o.t < 0 && rnd() < dt * 2.4) {
-                    const tgt = (o.corner + irr(1, 3)) % 4;
-                    o.tx = CORNERS[tgt][0] + rr(-2.6, 2.6);
-                    o.tz = CORNERS[tgt][1] + rr(-2.6, 2.6);
-                    o.tgt = tgt; o.mode = 'cross';
+                /* Which of the two crossings this corner touches is walking, if
+                   either. Crossing Swanston runs with the cross street's green;
+                   crossing the cross street runs with Swanston's. The diagonal
+                   exists at Flinders Street and nowhere else, and only while the
+                   scramble is actually up. */
+                const X = XSEC[o.corner >> 2], lc = o.corner & 3, base = o.corner & ~3;
+                let tgt = -1;
+                if (o.t < 0 && rnd() < dt * 2.4) {
+                    if (X.scr && rnd() < 0.42) tgt = (lc + 2) % 4;
+                    else if (X.pew === 'w' && (X.pns !== 'w' || rnd() < 0.5)) tgt = lc ^ 1;
+                    else if (X.pns === 'w') tgt = 3 - lc;
+                }
+                if (tgt >= 0) {
+                    /* And then the thing everybody does without thinking about
+                       it: work out whether there is enough of the phase left to
+                       get across. What is left of the walk plus the six seconds
+                       of clearance behind it is the whole of the time on offer,
+                       and somebody who cannot make Swanston Street in it stays
+                       on the kerb — which is why the diagonal empties out well
+                       before the scramble ends rather than at the end of it. */
+                    const px = CORNERS[base + tgt][0], pz = CORNERS[base + tgt][1];
+                    if (Math.hypot(px - o.x, pz - o.z) / (o.sp * 1.35) > X.left + 6.0) tgt = -1;
+                }
+                if (tgt >= 0) {
+                    o.tx = CORNERS[base + tgt][0] + rr(-2.4, 2.4);
+                    o.tz = CORNERS[base + tgt][1] + rr(-2.4, 2.4);
+                    o.tgt = base + tgt; o.mode = 'cross';
                 } else if (rnd() < dt * 0.25) {
                     o.wx = rr(-0.4, 0.4); o.wz = rr(-0.4, 0.4);
                 }
@@ -6748,7 +7054,12 @@ export default function build(world) {
                 if (len < 0.6) {
                     o.mode = 'wait'; o.corner = o.tgt; o.t = rr(2, 14); o.wx = 0; o.wz = 0;
                 } else {
-                    const sp = o.sp * (P.ped === 2 ? 1.55 : 1.0);
+                    /* Nobody crosses a road at the pace they walk down a
+                       footpath, and the flashing red is what everybody still out
+                       there is reading — so a crossing is a third quicker than a
+                       stroll and a clearance is quicker again. */
+                    const X = XSEC[o.corner >> 2];
+                    const sp = o.sp * ((X.pns === 'c' || X.pew === 'c') ? 1.75 : 1.35);
                     o.x += dx / len * sp * dt; o.z += dz / len * sp * dt;
                     o.ry = Math.atan2(dx, dz);
                     moving = true;
