@@ -47,10 +47,11 @@
 //      headlights, the LED billboards and the concourse mouth are emissive
 //      materials, and world.bloom carries the shine.
 //    · City Square, behind St Paul's between Flinders Lane and Collins Street:
-//      the plaza, the steel canopy on its six tree columns, and Town Hall
-//      Station under both. The block behind the plaza is vacant ground — the
-//      building that stood there was wrong enough to pull down rather than
-//      patch.
+//      the plaza, the steel canopy on its six tree columns, the hotel behind
+//      them and Town Hall Station under the lot. The hotel is built shape
+//      first — five floors of French doors, then eight arched bays of pale
+//      zinc with a four-storey loggia behind each, a rolled cap over them and
+//      four planted terraces stepping down to Collins Street.
 //    · and the west side of Swanston opposite the Town Hall — the terracotta
 //      tower on the Collins corner, the cream one on Little Collins, and the
 //      three older frontages between them. Nothing on that frontage is painted:
@@ -3715,6 +3716,8 @@ export default function build(world) {
                vertices rather than in a map, so a wall, the reveal behind it,
                the spandrel under it and the pane in it are four numbers on the
                same merged geometry. */
+            // the hotel behind the square: its stone, its glass, its lit things
+            b2: [], b2g: [], b2l: [],
             // the west side of Swanston, opposite the Town Hall
             m1: [], m2: [], m3: [],
             // the shops under them, and the light inside the shops
@@ -3808,6 +3811,455 @@ export default function build(world) {
            Street, and the west face of everything on this block.
            ------------------------------------------------------------ */
         const XW = SQ.BX0;
+
+        /* ------------------------------------------------------------
+           21d · the hotel behind the square
+
+           Built again, and the second time around the shape came first.
+
+           The building that was here before was a rectangular box with a row
+           of small round arches sitting on its parapet, which is a thing you
+           could draw from a written description and is not this building at
+           all. What is actually on this site is one continuous curved mass:
+           the wall rises flat for six floors, then a giant arcade of pale
+           metal ribs stands on it — ribs a storey wide that run up thirteen
+           metres and then bend over to meet the rib beside them — and behind
+           those arches the whole top of the building rolls back in a quarter
+           of a circle of standing-seam zinc with the top floors punched into
+           the curve. The curve is not a detail on this building, it is the
+           building, and every sill and course spent on the wrong silhouette
+           was wasted.
+
+           Bottom to top, then: a stone podium with the shops in it, six
+           floors of warm precast with a French door and a railing in every
+           bay, eleven arched bays with a four-storey loggia behind each, the
+           zinc shoulder rolling back over them, and — at the Collins Street
+           end, where the photograph shows trees growing out of the roof —
+           four terraces stepping down and back with gardens on them.
+           ------------------------------------------------------------ */
+        {
+            const A = P.b2, GB = P.b2g, LB = P.b2l;
+            const XW = SQ.BX0, XE = SQ.BX1;                  // 49 to 88
+            const ZS = SQ.BZ0, ZN = -186.0;                  // the arcaded length
+            const ZT = SQ.BZ1;                               // and on to Collins, in terraces
+            const D = 0.40, XC = XW + D;
+
+            const Y_SHOP = 5.60, Y_POD = 8.60;
+            const FH = 3.72, FLOORS = 5, Y_MID = Y_POD + FH * FLOORS;   // 27.20
+            const Y_SPR = Y_MID + 13.60;                                // 40.80, the springing
+            const NB = 8, BW = (ZS - ZN) / NB, RIB = 1.30;              // eight wide bays
+            const AR = (BW - RIB) / 2;                                  // the arch's radius
+            const Y_CRN = Y_SPR + AR;                                   // its crown
+            const XL = XW + 2.30;                                       // the back of a loggia
+            const RSH = 6.10, XSH = XW + RSH;                           // the rolled cap's centre
+            const Y_ROOF = Y_CRN + RSH;                                 // the flat roof behind it
+
+            /* Painted even though the glass material never reads the colour:
+               `mergeGeometries` answers null the moment one array mixes
+               geometry that has a colour attribute with geometry that has
+               not, and a null geometry is a mesh that takes the viewport down
+               with it. The shopfront glass and the balcony glass share an
+               array, so they have to share an attribute set. */
+            const glassy = (arr, x0, y0, z0, x1, y1, z1) => {
+                const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+                put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+                arr.push(pane(g, CF.glassLo, CF.glassHi, Math.min(y0, y1), Math.max(y0, y1)));
+                return g;
+            };
+            const litP = (k, x0, y0, z0, x1, y1, z1) => {
+                const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+                put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+                LB.push(shp(g, k));
+                return g;
+            };
+            const H = { zinc: 0xbcbdb5, zincHi: 0xdcdcd2, zincLo: 0x8b8f90 };
+
+            /* ---- the core. It stops at the shopfront head and picks up nine
+                    metres back, because the shops below are rooms. ---- */
+            F(A, CF.stoneLo, XC, Y_SHOP, ZS, XE, Y_MID, ZN);
+            F(A, CF.stoneLo, XW + 9.0, 0, ZS, XE, Y_SHOP, ZN);
+            F(A, CF.stoneLo, XL, Y_MID, ZS, XE, Y_CRN, ZN);
+            F(A, CF.stoneLo, XSH, Y_CRN, ZS, XE - 2, Y_ROOF, ZN);
+            /* the back of it. Collins Street looks straight at this face and it
+               was one flat slab of stone; it gets the same floors as the front,
+               plainly, because that is what the back of a hotel is. */
+            for (let f = 0; f < FLOORS + 3; f++) {
+                const y = Y_POD + 0.46 + f * FH;
+                for (let i = 0; i < 14; i++) {
+                    const zc = ZS - (i + 0.5) * ((ZS - ZN) / 14);
+                    W(A, XE, y + 0.44, zc + 1.30, XE - 0.07, y + FH - 0.72, zc - 1.30);
+                    F(A, CF.stoneLo, XE - 0.02, y + FH - 0.72, zc + 1.55, XE + 0.10, y + FH + 0.44, zc - 1.55);
+                }
+                F(A, CF.stoneLo, XE, y, ZS, XE + 0.10, y + 0.44, ZN);
+            }
+
+            /* ---- the podium: a deep stone band over the shops with the
+                    hotel's own windows in it, and the cornice the wall above
+                    stands on ---- */
+            F(A, CF.stoneLo, XW - 0.12, Y_SHOP, ZS, XC, Y_SHOP + 0.95, ZN);
+            F(A, CF.stone,   XW - 0.30, Y_SHOP + 0.95, ZS, XC, Y_SHOP + 1.28, ZN);
+            for (let i = 0; i < NB * 2; i++) {
+                const zc = ZS - (i + 0.5) * (BW / 2);
+                W(A, XC - 0.07, Y_SHOP + 1.70, zc + 1.05, XC, Y_POD - 0.42, zc - 1.05);
+                F(A, CF.mullion, XC - 0.10, Y_SHOP + 1.70, zc - 0.05, XC - 0.02, Y_POD - 0.42, zc + 0.05);
+                F(A, CF.stoneLo, XW - 0.14, Y_SHOP + 1.48, zc + 1.24, XC, Y_SHOP + 1.70, zc - 1.24);
+            }
+            F(A, CF.stone,   XW - 0.24, Y_POD - 0.42, ZS, XC, Y_POD, ZN);
+            F(A, CF.stoneHi, XW - 0.44, Y_POD, ZS + 0.2, XC, Y_POD + 0.46, ZN - 0.2);
+
+            /* ---- the wall: six floors of warm precast, and in every bay a
+                    pair of French doors with a dark railing across them,
+                    which is what the middle of this building actually is —
+                    not punched holes but doors you could stand in. ---- */
+            const HALF = BW / 2;
+            for (let i = 0; i <= NB * 2; i++) {
+                const z = ZS - i * HALF;
+                F(A, CF.stone, XW, Y_POD + 0.46, z + 0.90, XC, Y_MID, z - 0.90);
+            }
+            for (let i = 0; i < NB * 2; i++) {
+                const zc = ZS - (i + 0.5) * HALF;
+                for (let f = 0; f < FLOORS; f++) {
+                    const y = Y_POD + 0.46 + f * FH;
+                    const s = y + 0.34, h = y + FH - 0.62;
+                    W(A, XC - 0.07, s, zc + 0.86, XC, h, zc - 0.86);
+                    F(A, CF.mullion, XC - 0.11, s, zc - 0.05, XC - 0.01, h, zc + 0.05);
+                    F(A, CF.mullion, XC - 0.11, h - 0.62, zc + 0.86, XC - 0.01, h - 0.54, zc - 0.86);
+                    F(A, CF.stone,  XW, h, zc + 0.86, XC, y + FH + 0.34, zc - 0.86);   // the spandrel
+                    F(A, CF.stoneHi, XW - 0.16, h, zc + 1.04, XC, h + 0.20, zc - 1.04); // its lintel
+                    // the railing: a sill plate, a top rail and nine uprights
+                    F(A, CF.stoneLo, XW - 0.20, s - 0.14, zc + 1.06, XC, s, zc - 1.06);
+                    F(A, CF.mullion, XW - 0.22, s + 1.02, zc + 0.94, XW - 0.11, s + 1.11, zc - 0.94);
+                    F(A, CF.mullion, XW - 0.22, s + 0.06, zc + 0.94, XW - 0.11, s + 0.13, zc - 0.94);
+                    for (let b = 0; b < 7; b++) {
+                        const bz = zc + 0.86 - b * (1.72 / 6);
+                        F(A, CF.mullion, XW - 0.20, s, bz - 0.022, XW - 0.13, s + 1.08, bz + 0.022);
+                    }
+                }
+            }
+            F(A, CF.stone,   XW - 0.22, Y_MID, ZS, XC, Y_MID + 0.36, ZN);
+            F(A, CF.stoneHi, XW - 0.42, Y_MID + 0.36, ZS + 0.2, XC, Y_MID + 0.80, ZN - 0.2);
+
+            /* ---- the arcade.
+
+                   Eleven ribs a metre wide, standing on the cornice and
+                   running thirteen metres straight up before each one bends
+                   over a quarter of a circle to meet the rib beside it. Built
+                   as what it is — a leg, an arc of segments, and the same
+                   again mirrored — rather than as a torus, because these
+                   arches are not half-round: the leg is long and the head is
+                   small, and the proportion between the two is most of what
+                   the elevation looks like. ---- */
+            for (let i = 0; i <= NB; i++) {
+                const z = ZS - i * BW;
+                F(A, H.zinc,   XW, Y_MID + 0.80, z + RIB / 2, XL, Y_SPR, z - RIB / 2);
+                F(A, H.zincHi, XW - 0.14, Y_MID + 0.80, z + RIB / 2 - 0.16, XW + 0.10, Y_SPR, z - RIB / 2 + 0.16);
+            }
+            const SEG = 7;
+            for (let i = 0; i < NB; i++) {
+                const zc = ZS - (i + 0.5) * BW;
+                for (const s of [-1, 1]) for (let k = 0; k < SEG; k++) {
+                    const a0 = (Math.PI / 2) * (k / SEG), a1 = (Math.PI / 2) * ((k + 1) / SEG);
+                    const am = (a0 + a1) / 2;
+                    const zm = zc + s * AR * Math.cos(am), ym = Y_SPR + AR * Math.sin(am);
+                    const len = AR * (a1 - a0) * 1.14;
+                    let g = boxG(XL - XW, RIB, len);
+                    put(g, (XW + XL) / 2, ym, zm, s * am, 0, 0);
+                    FG(A, H.zinc, g);
+                    g = boxG(0.24, RIB - 0.32, len);
+                    put(g, XW - 0.02, ym, zm, s * am, 0, 0);
+                    FG(A, H.zincHi, g);
+                }
+                /* the loggia behind: four floors of balcony, a dark reveal and
+                   a glass rail on each, which is the shadow inside every arch */
+                F(A, CF.reveal, XL, Y_MID + 0.80, zc + AR, XL + 0.18, Y_SPR + AR, zc - AR);
+                for (let f = 0; f < 4; f++) {
+                    const y = Y_MID + 1.10 + f * 3.36;
+                    F(A, CF.stoneLo, XW + 0.20, y, zc + AR - 0.10, XL, y + 0.24, zc - AR + 0.10);
+                    F(A, CF.reveal,  XW + 0.20, y - 0.16, zc + AR - 0.10, XL, y, zc - AR + 0.10);
+                    W(GB, XW + 0.34, y + 0.24, zc + AR - 0.16, XW + 0.42, y + 1.20, zc - AR + 0.16, 0x33505f, 0x9ab2c0);
+                    F(A, CF.bronze, XW + 0.28, y + 1.16, zc + AR - 0.10, XW + 0.48, y + 1.28, zc - AR + 0.10);
+                    W(A, XL - 0.07, y + 0.30, zc + AR - 0.55, XL, y + 2.60, zc - AR + 0.55);
+                }
+                // and the tympanum inside the arch head
+                W(A, XL - 0.07, Y_SPR, zc + AR * 0.72, XL, Y_SPR + AR * 0.68, zc - AR * 0.72);
+            }
+
+            /* ---- the shoulder: a quarter of a circle of standing-seam zinc,
+                    rolling the whole top of the building back from the head of
+                    the arcade to the roof, with the last two floors punched
+                    into the curve. This is the silhouette. ---- */
+            {
+                const inner = [], outer = [];
+                for (let k = 0; k <= 14; k++) {
+                    const a = Math.PI - (Math.PI / 2) * (k / 14);
+                    inner.push([XSH + RSH * Math.cos(a), Y_CRN + RSH * Math.sin(a)]);
+                    outer.push([XSH + (RSH + 0.55) * Math.cos(a), Y_CRN + (RSH + 0.55) * Math.sin(a)]);
+                }
+                const g = profileG(inner.concat(outer.reverse()), ZS - ZN);
+                put(g, 0, 0, (ZS + ZN) / 2);
+                FG(A, H.zinc, g);
+                // the seams, one per bay boundary, running up over the curve
+                for (let i = 0; i <= NB * 2; i++) {
+                    const z = ZS - i * HALF;
+                    for (let k = 0; k < 12; k++) {
+                        const a = Math.PI - (Math.PI / 2) * ((k + 0.5) / 12);
+                        const px = XSH + (RSH + 0.60) * Math.cos(a), py = Y_CRN + (RSH + 0.60) * Math.sin(a);
+                        F(A, H.zincLo, px - 0.09, py - 0.09, z - 0.07, px + 0.09, py + 0.09, z + 0.07);
+                    }
+                }
+                // the two floors punched into it, set square in the curve
+                for (let f = 0; f < 2; f++) {
+                    const a = Math.PI - (Math.PI / 2) * (0.30 + f * 0.34);
+                    const px = XSH + (RSH - 0.30) * Math.cos(a), py = Y_CRN + (RSH - 0.30) * Math.sin(a);
+                    for (let i = 0; i < NB; i++) {
+                        const zc = ZS - (i + 0.5) * BW;
+                        let g2 = boxG(1.5, 2.30, BW * 0.52);
+                        put(g2, px, py, zc, 0, 0, -(Math.PI - a) + Math.PI / 2);
+                        FG(A, CF.reveal, g2);
+                        g2 = boxG(0.10, 2.05, BW * 0.46);
+                        put(g2, px - 0.55 * Math.cos(Math.PI - a), py + 0.55 * Math.sin(Math.PI - a), zc,
+                            0, 0, -(Math.PI - a) + Math.PI / 2);
+                        A.push(pane(g2, CF.glassLo, CF.glassHi, py - 1.0, py + 1.0));
+                    }
+                }
+            }
+            F(A, CF.stoneLo, XSH - 1.0, Y_ROOF - 0.4, ZS, XE - 2, Y_ROOF, ZN);
+            for (const p of [[XE - 16, ZS - 8], [XE - 9, ZS - 34], [XE - 14, ZN + 12]]) {
+                F(A, CF.stoneLo, p[0], Y_ROOF, p[1], p[0] + 7.0, Y_ROOF + 2.9, p[1] - 6.0);
+                F(A, CF.granite, p[0] + 1.4, Y_ROOF + 2.9, p[1] - 1.2, p[0] + 3.2, Y_ROOF + 4.6, p[1] - 3.0);
+            }
+
+            /* ---- the ground floor.
+
+                   What the photograph has along here and nothing else: a
+                   colonnade for most of the length — square piers on the
+                   building line, the wall four and a half metres behind them,
+                   a lit soffit over the walk and the hotel's banners hung off
+                   every second pier — one boutique with a room behind it, the
+                   hotel's own door, and a pair of black service gates. ---- */
+            {
+                const XP0 = XW - 0.34, XP1 = XW + 0.82, XBK = XW + 4.70;
+                const Y_HD = 4.35, Y_F0 = 4.46, Y_F1 = 5.52;
+                const room = (z0, z1) => {
+                    F(A, 0x9b968c, XP1, 0.10, z0, XBK, 0.18, z1);
+                    F(A, 0xd7d2c6, XBK, 0.18, z0, XBK + 0.42, Y_HD + 1.10, z1);
+                    litP('warm', XBK - 0.14, 0.60, z0 + 0.30, XBK - 0.10, Y_HD - 0.25, z1 - 0.30);
+                    glassy(GB, XBK - 0.06, 0.55, z0 + 0.25, XBK + 0.02, Y_HD - 0.15, z1 - 0.25);
+                    F(A, CF.granite, XBK - 0.08, 0.18, z0 + 0.12, XBK + 0.04, 0.55, z1 - 0.12);
+                    F(A, CF.bronze,  XBK - 0.09, Y_HD - 0.15, z0 + 0.12, XBK + 0.05, Y_HD - 0.03, z1 - 0.12);
+                };
+
+                for (const [z0, z1] of [[-127.6, -149.8], [-176.2, -190.2], [-193.9, -208.8]]) {
+                    const n = Math.max(2, Math.round(Math.abs(z1 - z0) / 4.4));
+                    F(A, 0xcfc7b6, XP0, Y_HD + 0.85, z0, XBK, Y_F1, z1);          // the soffit
+                    F(A, CF.granite, XP0 - 0.06, Y_HD + 0.70, z0, XBK, Y_HD + 0.85, z1);
+                    for (let i = 0; i <= n; i++) {
+                        const z = z0 - (z0 - z1) * (i / n);
+                        F(A, CF.granite, XP0 - 0.10, 0, z + 0.64, XP1 + 0.10, 0.58, z - 0.64);
+                        F(A, CF.stone,   XP0, 0.58, z + 0.56, XP1, Y_HD + 0.62, z - 0.56);
+                        F(A, CF.stoneHi, XP0 - 0.09, Y_HD + 0.36, z + 0.68, XP1 + 0.09, Y_HD + 0.70, z - 0.68);
+                        F(A, CF.stoneHi, XP0 - 0.07, 0.58, z + 0.64, XP1 + 0.07, 0.92, z - 0.64);
+                    }
+                    for (let i = 0; i < n; i++) {
+                        const a = z0 - (z0 - z1) * ((i + 0.15) / n);
+                        const b = z0 - (z0 - z1) * ((i + 0.85) / n);
+                        room(a, b);
+                        litP('warm', XP1 + 0.95, Y_HD + 0.74, a, XP1 + 1.45, Y_HD + 0.80, b);
+                        if (i % 2) continue;
+                        const zc = (a + b) / 2;
+                        F(A, CF.bronze, XP0 - 0.58, Y_HD + 0.20, zc - 0.04, XP0, Y_HD + 0.30, zc + 0.04);
+                        litP('westin', XP0 - 0.55, Y_HD - 1.72, zc - 0.02, XP0 - 0.51, Y_HD + 0.22, zc + 0.02);
+                    }
+                }
+
+                /* the boutique: its own frame, its own door, a lit ceiling and
+                   two plinths, a mannequin and a hanging rail in the window */
+                {
+                    const z0 = -150.2, z1 = -159.4, zc = (z0 + z1) / 2, zd = z0 - (z0 - z1) * 0.5;
+                    const XF = XW + 1.55, XB = XW + 8.60;
+                    for (const zz of [z0, z1]) {
+                        F(A, CF.granite, XW - 0.10, 0, zz + 0.55, XF + 0.30, 0.75, zz - 0.55);
+                        F(A, CF.stone,   XW, 0.75, zz + 0.46, XF + 0.30, Y_F0, zz - 0.46);
+                    }
+                    F(A, CF.stone,   XW, Y_HD + 0.10, z0, XF + 0.30, Y_F0, z1);
+                    F(A, CF.granite, XF - 0.06, 0, z0 - 0.46, XF + 0.16, 0.62, z1 + 0.46);
+                    F(A, CF.bronze,  XF - 0.09, 0.62, z0 - 0.46, XF + 0.19, 0.72, z1 + 0.46);
+                    glassy(GB, XF - 0.03, 0.72, z0 - 0.46, XF + 0.05, Y_HD, z1 + 0.46);
+                    for (let m = 0; m <= 6; m++) {
+                        const z = (z0 - 0.46) - (z0 - z1 - 0.92) * (m / 6);
+                        F(A, CF.bronze, XF - 0.07, 0.62, z - 0.045, XF + 0.09, Y_HD, z + 0.045);
+                    }
+                    F(A, CF.bronze, XF - 0.07, 3.35, z0 - 0.46, XF + 0.09, 3.44, z1 + 0.46);
+                    F(A, CF.bronze, XF - 0.08, 0, zd + 0.62, XF + 0.10, 3.47, zd + 0.52);
+                    F(A, CF.bronze, XF - 0.08, 0, zd - 0.52, XF + 0.10, 3.47, zd - 0.62);
+                    glassy(GB, XF + 0.16, 0.28, zd + 0.50, XF + 0.22, 3.35, zd - 0.50);
+                    F(A, CF.gold, XF + 0.10, 1.02, zd + 0.36, XF + 0.17, 1.12, zd - 0.20);
+                    F(A, CF.granite, XW - 0.14, Y_F0, z0, XF + 0.30, Y_F1, z1);
+                    litP('dior', XW - 0.22, Y_F0 + 0.10, z0 - 0.30, XW - 0.16, Y_F1 - 0.10, z1 + 0.30);
+                    litP('warm', XW + 0.10, Y_F0 - 0.12, z0 - 0.50, XW + 0.55, Y_F0 - 0.06, z1 + 0.50);
+                    // the room
+                    F(A, 0x9b968c, XF, 0.10, z0 - 0.46, XB, 0.20, z1 + 0.46);
+                    F(A, 0xd7d2c6, XF, 0.20, z0 - 0.46, XB, Y_HD, z0 - 0.62);
+                    F(A, 0xd7d2c6, XF, 0.20, z1 + 0.46, XB, Y_HD, z1 + 0.62);
+                    F(A, 0xe4dfd3, XF, Y_HD - 0.14, z0 - 0.46, XB, Y_HD, z1 + 0.46);
+                    litP('cool', XB - 0.10, 0.20, z0 - 0.46, XB, Y_HD - 0.14, z1 + 0.46);
+                    for (let i = 0; i < 3; i++) {
+                        litP('warm', XF + 1.2 + i * 2.3, Y_HD - 0.22, z0 - 0.70, XF + 1.6 + i * 2.3, Y_HD - 0.14, z1 + 0.70);
+                    }
+                    for (const sd of [-1, 1]) {
+                        F(A, 0xf0ece4, XF + 1.6, 0.20, zc + sd * 2.6, XF + 2.6, 0.95, zc + sd * 1.6);
+                        F(A, 0x2a2622, XF + 1.9, 0.95, zc + sd * 2.3, XF + 2.35, 1.28, zc + sd * 1.9);
+                        F(A, CF.gold,  XF + 1.95, 1.28, zc + sd * 2.25, XF + 2.30, 1.40, zc + sd * 1.95);
+                    }
+                    let g = cylG(0.17, 0.13, 1.05, 9); put(g, XF + 2.1, 1.05, zc); FG(A, 0xe8e0d2, g);
+                    g = cylG(0.09, 0.17, 0.62, 9); put(g, XF + 2.1, 1.88, zc); FG(A, 0xe8e0d2, g);
+                    g = sphG(0.13, 9, 7); put(g, XF + 2.1, 2.30, zc); FG(A, 0xe8e0d2, g);
+                    F(A, 0x1c1c1e, XF + 1.85, 1.30, zc + 0.30, XF + 2.35, 2.05, zc - 0.30);
+                    F(A, CF.gold, XF + 4.2, 2.25, zc + 2.4, XF + 4.28, 2.33, zc - 2.4);
+                    for (let h = 0; h < 8; h++) {
+                        F(A, [0x24242a, 0x3a3630, 0x1e2228, 0x2e2a26][h % 4],
+                          XF + 4.05, 1.30, zc + 2.1 - h * 0.62, XF + 4.45, 2.25, zc + 1.82 - h * 0.62);
+                    }
+                }
+
+                /* the hotel's own door: three bays of glass in a bronze
+                   surround under a canopy, the name in gold over it */
+                {
+                    const z0 = -161.0, z1 = -175.0;
+                    F(A, CF.granite, XW - 0.10, 0, z0 + 0.4, XW + 1.9, 0.16, z1 - 0.4);
+                    for (let i = 0; i < 3; i++) {
+                        const zc = z0 - 1.9 - i * 4.4;
+                        F(A, CF.bronze, XW + 0.10, 0.16, zc + 1.55, XW + 0.34, 3.30, zc + 1.35);
+                        F(A, CF.bronze, XW + 0.10, 0.16, zc - 1.35, XW + 0.34, 3.30, zc - 1.55);
+                        F(A, CF.bronze, XW + 0.10, 3.10, zc + 1.55, XW + 0.34, 3.30, zc - 1.55);
+                        glassy(GB, XW + 0.16, 0.16, zc + 1.35, XW + 0.26, 3.10, zc - 1.35);
+                        F(A, CF.bronze, XW + 0.06, 1.10, zc + 1.30, XW + 0.16, 1.22, zc - 1.30);
+                        F(A, CF.bronze, XW + 0.14, 0.16, zc + 0.06, XW + 0.30, 3.10, zc - 0.06);
+                    }
+                    F(A, CF.stone,   XW - 2.50, 3.62, z0 + 0.2, XW + 1.0, 4.05, z1 - 0.2);
+                    F(A, CF.granite, XW - 2.58, 3.26, z0 + 0.2, XW - 2.50, 4.05, z1 - 0.2);
+                    litP('westin', XW - 0.14, 4.20, z0 - 1.2, XW - 0.08, 5.20, z1 + 1.2);
+                    for (const zz of [z0 - 0.6, z1 + 0.6]) {
+                        const g = cylG(0.17, 0.13, 0.9, 8);
+                        put(g, XW - 0.34, 2.5, zz); LB.push(shp(g, 'warm'));
+                        F(A, CF.bronze, XW - 0.40, 2.95, zz - 0.06, XW, 3.05, zz + 0.06);
+                    }
+                    for (let i = 0; i < 4; i++) {
+                        litP('warm', XW - 1.9, 3.56, z0 - 1.4 - i * 3.6, XW - 1.4, 3.62, z0 - 2.6 - i * 3.6);
+                    }
+                }
+
+                // the service gates, which every block has and nobody photographs
+                {
+                    const z0 = -190.5, z1 = -193.6;
+                    F(A, CF.granite, XW - 0.08, 0, z0 + 0.4, XW + 1.5, 4.60, z0);
+                    F(A, CF.granite, XW - 0.08, 0, z1, XW + 1.5, 4.60, z1 - 0.4);
+                    F(A, CF.granite, XW - 0.14, 4.30, z0 + 0.4, XW + 1.5, 4.60, z1 - 0.4);
+                    for (let i = 0; i < 26; i++) {
+                        F(A, i % 2 ? 0x2a2c2c : 0x1e2020, XW + 0.18, 0.06 + i * 0.164, z0,
+                                                          XW + 0.30, 0.20 + i * 0.164, z1);
+                    }
+                    F(A, CF.granite, XW + 0.10, 0, z0, XW + 0.34, 0.10, z1);
+                }
+            }
+
+            /* ---- the two end walls. Both were blank slabs of stone, and
+                    both are seen: the Flinders Lane end closes the view south
+                    out of the square, and the Collins Street end is what you
+                    walk towards coming down Swanston. Plainer than the front,
+                    as the ends of a hotel are, but not nothing. ---- */
+            for (const [zf, dir] of [[ZS, 1], [ZT, -1]]) {
+                for (let f = 0; f < FLOORS + 5; f++) {
+                    const y = Y_POD + 0.46 + f * FH;
+                    for (let i = 0; i < 8; i++) {
+                        const xc = XW + 3.4 + i * 4.85;
+                        if (xc > XE - 2) break;
+                        W(A, xc - 1.15, y + 0.44, zf, xc + 1.15, y + FH - 0.72, zf - dir * 0.07);
+                        F(A, CF.stone, xc - 1.42, y + FH - 0.72, zf + dir * 0.10,
+                                       xc + 1.42, y + FH + 0.44, zf - dir * 0.02);
+                        F(A, CF.stoneLo, xc - 1.42, y + 0.20, zf + dir * 0.14, xc + 1.42, y + 0.44, zf);
+                    }
+                    F(A, CF.stone, XW, y, zf, XE, y + 0.44, zf + dir * 0.10);
+                }
+                for (let i = 0; i <= 8; i++) {
+                    const x = XW + 1.0 + i * 4.85;
+                    if (x > XE) break;
+                    F(A, CF.stone, x - 1.0, Y_POD, zf, x + 1.0, Y_CRN - 1.2, zf + dir * 0.12);
+                }
+                // and the parapet that stops them, so the end does not simply
+                // run out into the sky
+                F(A, CF.stone,   XW, Y_CRN - 1.2, zf + dir * 0.10, XE, Y_CRN - 0.8, zf - dir * 0.16);
+                F(A, CF.stoneHi, XW, Y_CRN - 0.8, zf + dir * 0.10, XE, Y_CRN - 0.3, zf - dir * 0.34);
+            }
+
+            /* ---- and the Collins Street end: four terraces stepping down and
+                    back, with a glass rail and a garden on every one of them,
+                    and the corner rounded off the way the photograph has it ---- */
+            {
+                F(A, CF.stoneLo, XC, Y_SHOP, ZN, XE, Y_MID, ZT);
+                F(A, CF.stoneLo, XW + 9.0, 0, ZN, XE, Y_SHOP, ZT);
+                F(A, CF.stoneLo, XW - 0.12, Y_SHOP, ZN, XC, Y_POD + 0.46, ZT);
+                for (let i = 0; i <= 6; i++) {
+                    const z = ZN - i * ((ZN - ZT) / 6);
+                    F(A, CF.stone, XW, Y_POD + 0.46, z + 0.68, XC, Y_MID, z - 0.68);
+                }
+                for (let i = 0; i < 6; i++) {
+                    const zc = ZN - (i + 0.5) * ((ZN - ZT) / 6);
+                    for (let f = 0; f < FLOORS; f++) {
+                        const y = Y_POD + 0.46 + f * FH;
+                        W(A, XC - 0.07, y + 0.34, zc + 1.02, XC, y + FH - 0.62, zc - 1.02);
+                        F(A, CF.stone, XW, y + FH - 0.62, zc + 1.02, XC, y + FH + 0.34, zc - 1.02);
+                        F(A, CF.mullion, XW - 0.24, y + 1.36, zc + 1.10, XW - 0.10, y + 1.46, zc - 1.10);
+                        for (let b = 0; b < 9; b++) {
+                            const bz = zc + 1.02 - b * (2.04 / 8);
+                            F(A, CF.mullion, XW - 0.21, y + 0.34, bz - 0.028, XW - 0.13, y + 1.42, bz + 0.028);
+                        }
+                    }
+                }
+                F(A, CF.stone,   XW - 0.22, Y_MID, ZN, XC, Y_MID + 0.36, ZT);
+                F(A, CF.stoneHi, XW - 0.42, Y_MID + 0.36, ZN, XC, Y_MID + 0.80, ZT);
+                for (let t = 0; t < 4; t++) {
+                    const xf = XW + 3.4 + t * 4.6, y0 = Y_MID + 0.80 + t * 3.55, y1 = y0 + 3.55;
+                    const zb = ZT + 2.0 + t * 3.2;
+                    F(A, CF.stoneLo, XW + (t ? 3.4 + (t - 1) * 4.6 : 0) - 0.24, y0, ZN + 0.4,
+                                     xf + 0.30, y0 + 0.40, zb);
+                    F(A, CF.stone, xf, y0 + 0.40, ZN + 0.8, XE - 3 - t * 2, y1, zb + 0.6);
+                    for (let i = 0; i < 5; i++) {
+                        const zc = ZN + 1.6 - i * ((ZN - zb - 3.2) / 5);
+                        W(A, xf - 0.07, y0 + 0.85, zc + 1.55, xf, y1 - 0.40, zc - 1.55);
+                        F(A, CF.mullion, xf - 0.10, y0 + 0.85, zc - 0.05, xf - 0.01, y1 - 0.40, zc + 0.05);
+                        F(A, CF.stone, xf - 0.04, y0 + 0.40, zc + 1.55, xf, y1, zc + 2.00);
+                        F(A, CF.stoneHi, xf - 0.22, y1 - 0.40, zc + 1.75, xf, y1, zc - 1.75);
+                    }
+                    const xr = XW + (t ? 3.4 + (t - 1) * 4.6 : 0.34);
+                    W(GB, xr, y0 + 0.40, ZN + 0.6, xr + 0.10, y0 + 1.42, zb - 0.2, 0x33505f, 0x9ab2c0);
+                    F(A, CF.bronze, xr - 0.10, y0 + 1.38, ZN + 0.6, xr + 0.20, y0 + 1.50, zb - 0.2);
+                    // the garden on it
+                    const px = xr + 1.1;
+                    F(A, CF.stoneLo, px, y0 + 0.40, ZN + 1.4, px + 1.6, y0 + 1.15, zb - 1.0);
+                    for (let k = 0; k < 4; k++) {
+                        const z = ZN + 2.4 - k * ((ZN - zb - 4.8) / 4);
+                        const tr = cylG(0.10, 0.14, 1.6, 6);
+                        put(tr, px + 0.8, y0 + 1.95, z); FG(A, CF.trunk, tr);
+                        for (let b = 0; b < 3; b++) {
+                            const lf = sphG(rr(0.58, 0.92), 8, 6);
+                            put(lf, px + 0.8 + rr(-0.45, 0.45), y0 + 2.75 + rr(-0.2, 0.45), z + rr(-0.45, 0.45));
+                            FG(A, CF.leaf, lf);
+                        }
+                    }
+                }
+                // the rounded corner at the top of it, which the photograph
+                // shows turning the Collins Street corner in one sweep
+                for (let k = 0; k < 8; k++) {
+                    const a0 = (Math.PI / 2) * (k / 8), a1 = (Math.PI / 2) * ((k + 1) / 8);
+                    const am = (a0 + a1) / 2, RC = 5.2;
+                    const g = boxG(RC * 0.42, 3.55, 1.6);
+                    put(g, XW + RC - Math.cos(am) * RC + 0.6, Y_MID + 2.6, ZT + RC - Math.sin(am) * RC - 0.6,
+                        0, am, 0);
+                    FG(A, H.zinc, g);
+                }
+            }
+        }
 
         /* ------------------------------------------------------------
            21e · the canopy
@@ -4916,6 +5368,7 @@ export default function build(world) {
                 ['manchesterunity_00', [[P.m1, M21.body]], []],
                 ['centurybuilding_00', [[P.m2, M21.body]], []],
                 ['swanstonwest_00', [[P.m3, M21.body]], []],
+                ['westin_00', [[P.b2, M21.body], [P.b2g, M21.glass], [P.b2l, M21.lit]], []],
                 ['swanstonwestshops_00', [[P.shop, M21.body], [P.shopGlass, M21.glass],
                                       [P.shopLit, M21.lit]], []],
                 ['citysquare_00', [
