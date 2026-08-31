@@ -282,6 +282,46 @@ export default function build(world) {
         DECK: KERB_H + 0.01,               // the paving, level with the footpath beside it
     };
 
+    /* Town Hall Station's other end, on the Flinders Street footpath at the
+       Federation Square corner. Same station, opposite end of it, and no
+       connection between the two: what is under this world is two lined
+       concrete rooms and nothing joining them, which is the honest state of a
+       world whose underground was taken out.
+
+           x 25.0 ─── the opening in the paving ─── 34.2
+           z 15.6 (the head of the flight) … 19.8 (where it goes under the plaza)
+
+       The opening is a hole in the footpath and nothing stands over it — the
+       real one has no head-house, and the photograph shows a glass rectangle
+       set into the paving with the escalators diving out of sight under
+       Federation Square's forecourt. Which is where they go here too: the
+       flight runs south, out from under the daylight at z ≈ 20 and on under
+       the sandstone to z = 42, and the room it lands in is under the
+       forecourt. Nothing on this site is below ground, so there is nothing
+       down there to collide with.
+
+       The brief asked for it at z 20.5–26. That is Federation Square's
+       sandstone forecourt — a 0.5 m slab from z = 20 to z = 44 with five steps
+       up its northern edge — so the opening is a few metres north of it, in
+       the clear footpath, hard against the same corner. Everything from the
+       kerb at z 13.84 to the forecourt at z 20 was empty; the entrance takes
+       the southern two thirds of it and leaves a lane along the kerb.
+
+       IX/IZ is the lined room round the flight: the void plus a margin, the
+       same way City Square's is, and the rectangle the two road sheets in
+       section 7 have cut out of them — because section 7 runs first and a
+       solid sheet at y = 0 is a lid over the whole descent. */
+    const FQ = {
+        VX0: 25.0, VX1: 34.2,              // the opening cut into the footpath
+        VZ0: 15.6, VZ1: 19.8,              // its north edge is the head of the flight
+        IX0: 24.7, IX1: 34.5,              // the lined room, clear inside
+        IZN: 15.2, IZS: 46.0,
+        ZB: 42.1,                          // where the flight meets the floor
+        HALL: -15.0,                       // the same depth the City Square end lands at
+        DECK: KERB_H,                      // the footpath itself, not a paving slab over it
+        SOFF: -0.07,                       // and its underside — the shaft's ceiling
+    };
+
     const C = {
         asphalt: 0x3a3c40, paving: 0x9d9a94, kerb: 0x6f6d6a, rail: 0x9a9187,
         stone: 0xd9ccb3, stoneHi: 0xefe6d3, brick: 0xa16852, copper: 0x4f9e83,
@@ -1601,13 +1641,22 @@ export default function build(world) {
        hundred and sixty puts the intersection, both landmarks, Stop 13 and the
        bridge inside it at about a metre a cell. */
     {
-        /* Cut, not a plane, because of the one place in this world where the
+        /* Cut, not a plane, because of the two places in this world where the
            ground is not the bottom of it. The escalators at City Square go
-           down through the plaza to Town Hall Station, and `ground.js` fills
-           every cell inside every triangle it is given — so a solid sheet at
-           y = 0 over the shaft is a lid, and the walk stops on it a hand's
-           width below the paving with the station still twenty metres under
-           its feet. The shaft is a hole in the sheet instead.
+           down through the plaza to Town Hall Station, and the ones on the
+           Flinders Street footpath at Federation Square go down to the other
+           end of it, and `ground.js` fills every cell inside every triangle it
+           is given — so a solid sheet at y = 0 over either shaft is a lid, and
+           the walk stops on it a hand's width below the paving with the
+           station still twenty metres under its feet. Both shafts are holes in
+           the sheet instead.
+
+           The Federation Square hole is cut to the lined room rather than to
+           the opening in the paving above it: the room runs thirty metres
+           south under the forecourt and every metre of that is roofed by the
+           footpath slab already, so a rectangle of roadway left inside it
+           would be a second ceiling nobody can see and the walk would find at
+           the top of the descent.
 
            The shader wants nothing but `position`, so a triangulated shape
            draws exactly as the plane did. Shape space is (x, −z) about the
@@ -1625,15 +1674,20 @@ export default function build(world) {
             };
             const shape = new THREE.Shape();
             ring(shape, x0, z0, x1, z1);
-            const shaft = new THREE.Path();
-            ring(shaft, SQ.VX0, SQ.VZ0, SQ.VX1, SQ.VZ1);
-            shape.holes.push(shaft);
-            /* And the river, for the same reason said about a different hole:
-               a sheet over water is a lid over water. The whole width of it
-               goes, not the channel with a strip left in under the bridge —
-               a strip left in is a grey floor between the piers that hides
-               every arch from anybody standing on the bank. The bridge brings
-               its own deck across the gap and section 27 brings the banks. */
+            /* Three holes, and each is a lid that would otherwise be there.
+               Two are the ways down into Town Hall Station — the City Square
+               shaft and the Federation Square one — and the third is the
+               river. The whole width of the channel goes, not the channel
+               with a strip left in under the bridge: a strip left in is a
+               grey floor between the piers that hides every arch from
+               anybody standing on the bank. The bridge brings its own deck
+               across the gap and section 27 brings the banks. */
+            for (const r of [[SQ.VX0, SQ.VZ0, SQ.VX1, SQ.VZ1],
+                             [FQ.IX0, FQ.IZN, FQ.IX1, FQ.IZS]]) {
+                const shaft = new THREE.Path();
+                ring(shaft, r[0], r[1], r[2], r[3]);
+                shape.holes.push(shaft);
+            }
             const channel = new THREE.Path();
             ring(channel, x0, CUT_N, x1, CUT_S);
             shape.holes.push(channel);
@@ -1652,10 +1706,11 @@ export default function build(world) {
         // its cells is either a cell the roadway already owns or a cell nobody
         // can reach — and rasterising 1.2 million square metres of it is the
         // most expensive nothing in the world.
-        // The same hole, because this sheet lies twenty millimetres under the
-        // other one and would otherwise be the lid the other one stopped
-        // being: from the top of the escalators the shaft came out as a flat
-        // grey floor at street level with the whole station behind it.
+        // It used to be cut with the same holes as the sheet above, for the
+        // same reason — twenty millimetres down, it was the lid that sheet had
+        // stopped being, and from the top of the escalators the shaft came out
+        // as a flat grey floor at street level. Ghosting it says that once
+        // instead of three times, and says it about the river as well.
         const distance = mesh(sheet(-60, -500, -660, 500, 540), roadMat, 0, -0.02, -60);
         scene.add(distance);
         world.ghost(distance);
@@ -1685,6 +1740,22 @@ export default function build(world) {
             shape.moveTo(pts[0][0], -pts[0][1]);
             for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i][0], -pts[i][1]);
             shape.closePath();
+            /* And the one quadrant with a hole in it. The south-east footpath
+               is the ground Federation Square stands on, and the station
+               entrance is a rectangle cut out of it — the same cut the plaza
+               at City Square gets in 21c and for the same reason: a sheet of
+               paving over a shaft is a lid, however carefully the escalators
+               are drawn under it. Only the opening is cut, not the whole room;
+               the thirty metres of shaft that run south under the forecourt
+               want the slab left over them, because a tunnel with the roof
+               taken off is a trench. */
+            if (s[0] > 0 && s[1] > 0) {
+                const hole = new THREE.Path();
+                [[FQ.VX0, FQ.VZ0], [FQ.VX1, FQ.VZ0], [FQ.VX1, FQ.VZ1], [FQ.VX0, FQ.VZ1]]
+                    .forEach((p, i) => { i ? hole.lineTo(p[0], -p[1]) : hole.moveTo(p[0], -p[1]); });
+                hole.closePath();
+                shape.holes.push(hole);
+            }
             const g = new THREE.ExtrudeGeometry(shape, { depth: KERB_H + 0.07, bevelEnabled: false });
             g.rotateX(-Math.PI / 2);
             g.translate(0, -0.07, 0);
@@ -3848,6 +3919,22 @@ export default function build(world) {
                         roughness: 0.08, metalness: 0.10,
                         transparent: true, opacity: 0.19,
                     }),
+            /* And a second glass, for balustrades rather than for windows.
+               `glass` above is tuned to disappear so that the rooms behind it
+               can be seen, and at a fifth it does exactly that — which is
+               right for a shopfront and wrong for a metre of glass standing
+               on a footpath with nothing behind it. The frameless balustrade
+               at the Federation Square entrance came out as two steel lines
+               with air between them and the escalator handrails as six bright
+               sticks leaning out of a slot. A quarter opacity, both sides
+               drawn because you look through it from inside the shaft as well
+               as from the street, and no metalness worth the name: there is no
+               environment map in this world and a metallic pane finds nothing
+               to reflect. */
+            pane:   stdMat(0xbcd2dc, {
+                        roughness: 0.05, metalness: 0.04,
+                        transparent: true, opacity: 0.26, side: THREE.DoubleSide,
+                    }),
             /* Emissive concrete, which sounds wrong and is the only honest
                way to have anything under the paving read at all. The four
                real-time lights are all spent above ground and a forward
@@ -4038,11 +4125,22 @@ export default function build(world) {
             shop: [], shopGlass: [], shopLit: [],
             // the square: the canopy, the entrance box, the paving furniture
             qSteel: [], qRoof: [], qClad: [], qGlass: [], qTrim: [], qSign: [],
-            // the way down: the escalator bank, the stair, and the concrete
-            // box at the bottom of the shaft
+            // the way down: the escalator banks, the stairs, and the concrete
+            // boxes at the bottom of the two shafts — both ends of Town Hall
+            // Station accumulate into these, because they are one station
+            // however little there is between them
             sCrete: [], sSteel: [], sTrim: [],
+            // and its signage, which is the one thing at the Federation Square
+            // end that neither concrete nor steel nor bronze can carry: the
+            // blue blades, the panel on the balustrade, the light line in the
+            // base shoe and the strips down the shaft wall
+            sSign: [],
             // and the inclined balustrades, which are ghosted — see 21f
             gGlass: [], gTrim: [],
+            // the Federation Square end's balustrades, inclined and flat
+            // alike, ghosted for the same reason and in the glass a
+            // balustrade wants rather than the glass a shopfront wants
+            sPane: [],
             // Australia 108, half a kilometre away over the river: the whole
             // of it in two arrays, because at that range the only decision
             // that survives is which of the two colours a surface is.
@@ -4813,6 +4911,226 @@ export default function build(world) {
             G(41.04, SQ.DECK + 0.55, -180.50, 41.08, SQ.DECK + 3.10, -173.50);
             bx3(P.qTrim, null, 40.00, SQ.DECK + 0.42, -173.50, 41.30, SQ.DECK + 0.55, -172.40);
 
+        }
+
+        /* ------------------------------------------------------------
+           21h · the other end — Flinders Street, at Federation Square
+
+           The same station, four hundred metres away, and nothing like the
+           same object. City Square's entrance is a building: batten walls
+           either side of the hole, a head canopy over the top of it, a lift
+           and a pavilion on the plaza beside it. This one is a hole in the
+           footpath and nothing else. There is no head-house on the real one
+           and there is none here — what you see from across Flinders Street is
+           a rectangle of frameless glass set into the paving, an escalator
+           bank going down out of it, and the descent disappearing under
+           Federation Square's forecourt.
+
+           So the vocabulary is 21f's and the object is not. Escalators, a
+           stair, an inclined glass balustrade with a lit handrail along it,
+           and a lined concrete room at the bottom: all of that is the same and
+           accumulates into the same arrays, because it is the same station.
+           What is different is everything above the paving. The balustrade
+           round the opening is frameless — clear panes in a slim brushed-steel
+           base shoe with a thin cap rail on top, rather than City Square's
+           bronze — the signs stand on a slim post instead of hanging off a
+           canopy, and along the kerb beside it there is the grey tubular guard
+           railing that stops people stepping into Flinders Street.
+
+           Two things about the shape of it are collision rather than design.
+
+           The flight runs south, which is the only direction the footpath will
+           take it: twenty-six and a half metres of escalator at thirty degrees
+           does not fit in seven metres of kerb-to-building, so the opening is
+           four metres of it and the rest goes under Federation Square's
+           forecourt, which is where the real one goes as well. The slab over
+           that is the footpath's own, left uncut — a tunnel with the roof
+           taken off is a trench.
+
+           And the frameless balustrade is two objects rather than one. Every
+           pane here — the three round the opening and the six standing on the
+           escalators and the stair — is ghosted, because a metre of glass
+           standing on the paving merges with the paving and the walk would
+           offer the top of the cap rail as somewhere to stand, which is the
+           same thing that put a person a metre above the steps at City Square.
+           What stops anybody is the base shoe and the cap rail themselves:
+           they are solid, they are a metre apart, and the walk merges anything
+           closer together than 1.4 m into one span — so a shoe at the paving
+           and a rail at chest height come out of the encoder as the wall the
+           balustrade actually is, with the glass between them costing nothing.
+           Which is also the truth of the thing: in a frameless balustrade the
+           glass is the infill and the shoe is the structure.
+           ------------------------------------------------------------ */
+        {
+            const D = FQ.DECK;
+            const F2 = { ZT: FQ.VZ0, ZB: FQ.ZB, YT: D, YB: FQ.HALL };
+            // Read off the two ends, the way 21f's is, and for the same
+            // reason: the two ends are the footpath and the floor of the room,
+            // and an escalator that arrives half a metre under its landing is
+            // a hole somebody falls down.
+            const slope = (F2.YB - F2.YT) / (F2.ZB - F2.ZT);      // −15.16 over 26.5
+            const yAt = (z) => F2.YT + (z - F2.ZT) * slope;
+            const DOWN = Math.sign(F2.ZB - F2.ZT);                 // +1: south, under the forecourt
+            const OVER = 1.4;
+            const ZB2 = F2.ZB + DOWN * OVER;
+
+            const S = (k, x0, y0, z0, x1, y1, z1) => {
+                const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+                put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+                P.sSign.push(sgn(g, k));
+            };
+
+            /* ---- the flight: two escalators and a stair beside them. Two,
+                    not three — this is the quieter end of the station and the
+                    footpath is seven metres wide. The trusses are deliberately
+                    wider than what stands on them and overlap each other,
+                    because the walk's cells are about a metre and a half here
+                    and the gaps between the machines are two hundred
+                    millimetres: a cell centre that lands in a gap must still
+                    find solid, or the bank has a slot down it. ---- */
+            const escalator = (cx, w) => {
+                rampZ(w, 0.24, F2.ZT, F2.YT - 0.12, ZB2, yAt(ZB2) - 0.12, cx, P.sSteel);
+                rampZ(w + 0.90, 1.30, F2.ZT, F2.YT - 0.95, ZB2, yAt(ZB2) - 0.95, cx, P.sCrete);
+                for (const s of [-1, 1]) {
+                    const bxx = cx + s * (w / 2 + 0.14);
+                    rampZ(0.10, 1.02, F2.ZT, F2.YT + 0.51, ZB2, yAt(ZB2) + 0.51, bxx, P.sPane);
+                    rampZ(0.16, 0.11, F2.ZT, F2.YT + 1.07, ZB2, yAt(ZB2) + 1.07, bxx, P.gTrim);
+                }
+                for (const zz of [F2.ZT + DOWN * 0.4, F2.ZB - DOWN * 0.4]) {
+                    bx3(P.sTrim, null, cx - w / 2, yAt(zz) - 0.02, zz - 0.55, cx + w / 2, yAt(zz) + 0.05, zz + 0.55);
+                }
+            };
+            escalator(26.60, 1.62);
+            escalator(28.40, 1.62);
+
+            {
+                const cx = 31.60, w = 3.00, n = 83;
+                rampZ(w + 1.60, 1.10, F2.ZT, F2.YT - 0.80, ZB2, yAt(ZB2) - 0.80, cx, P.sCrete);
+                for (let i = 0; i < n; i++) {
+                    const z0 = F2.ZT - (F2.ZT - F2.ZB) * (i / n);
+                    const z1 = F2.ZT - (F2.ZT - F2.ZB) * ((i + 1) / n);
+                    bx3(P.sCrete, null, cx - w / 2, yAt(z1) - 0.34, z0, cx + w / 2, yAt(z1), z1);
+                }
+                for (const s of [-1, 1]) {
+                    const bxx = cx + s * (w / 2 + 0.10);
+                    rampZ(0.09, 1.02, F2.ZT, F2.YT + 0.53, ZB2, yAt(ZB2) + 0.53, bxx, P.sPane);
+                    rampZ(0.15, 0.10, F2.ZT, F2.YT + 1.09, ZB2, yAt(ZB2) + 1.09, bxx, P.gTrim);
+                }
+            }
+
+            /* ---- the frameless balustrade round the opening.
+
+                   Three runs and no fourth: the north edge is the head of the
+                   flight and you walk straight into it off the footpath, which
+                   is the whole of what an entrance without a building is. The
+                   far run stands on the two hundred millimetres of paving
+                   between the opening and the forecourt, over the top of the
+                   shaft as it goes under. ---- */
+            {
+                const rail = (x0, z0, x1, z1, ox, oz) => {
+                    bx3(P.sPane, null, x0, D, z0, x1, D + 1.12, z1);            // the pane, ghosted
+                    // Both of these are slimmer than they want to be drawn.
+                    // A shoe and a cap heavy enough to see from across the
+                    // road stop reading as steel sections and start reading as
+                    // two planks lying round a hole, which is what the first
+                    // pass of this looked like — the rectangle is made by the
+                    // light line and by the gap between the two lines, not by
+                    // the sections themselves.
+                    bx3(P.sSteel, null, x0 - 0.03, D, z0 - 0.03,
+                                        x1 + 0.03, D + 0.10, z1 + 0.03);        // the base shoe
+                    bx3(P.sSteel, null, x0 - 0.025, D + 1.10, z0 - 0.025,
+                                        x1 + 0.025, D + 1.16, z1 + 0.025);      // and the cap rail
+                    // The light line recessed into the face of the shoe that
+                    // looks into the opening, which is what makes the
+                    // rectangle read from the far kerb once the sun is off the
+                    // paving. Emissive; there is no light in it, and there is
+                    // no light to spare.
+                    const g = boxG(ox ? 0.05 : Math.abs(x1 - x0) + 0.12, 0.06,
+                                   oz ? 0.05 : Math.abs(z1 - z0) + 0.12);
+                    put(g, (x0 + x1) / 2 - ox * 0.06, D + 0.06, (z0 + z1) / 2 - oz * 0.06);
+                    P.sSign.push(sgn(g, 'strip'));
+                };
+                rail(FQ.VX0 - 0.06, FQ.VZ0, FQ.VX0, FQ.VZ1, -1, 0);            // west
+                rail(FQ.VX1, FQ.VZ0, FQ.VX1 + 0.06, FQ.VZ1, 1, 0);             // east
+                rail(FQ.VX0 - 0.06, FQ.VZ1, FQ.VX1 + 0.06, FQ.VZ1 + 0.06, 0, 1); // and across the far end
+            }
+
+            /* ---- the tactile indicators at the head of the descent, in the
+                    brass they are laid in here, and the wayfinding beside
+                    them: the station's name on a slim post at the corner of
+                    the opening, the roundel under it, and one more panel flat
+                    on the balustrade facing the crossing. ---- */
+            bx3(P.sTrim, null, FQ.VX0 + 0.10, D, FQ.VZ0 - 0.78, FQ.VX1 - 0.10, D + 0.03, FQ.VZ0 - 0.02);
+
+            // The post stands behind its own blades rather than through them:
+            // a sign box two centimetres thick and a post twelve is a post
+            // that reads as a stripe down the middle of the lettering from the
+            // one side anybody looks at it from.
+            bx3(P.sSteel, null, 23.44, D, 16.18, 23.56, D + 3.30, 16.30);
+            S('townhall', 22.55, D + 2.36, 16.10, 24.45, D + 2.98, 16.14);
+            S('metro', 22.72, D + 1.55, 16.10, 24.28, D + 2.17, 16.14);
+            S('metro', 24.90, D + 0.40, 17.10, 24.93, D + 0.82, 18.20);
+
+            /* ---- the guard railing along the kerb, either side of the
+                    opening and not across the front of it — which is where the
+                    real one stops as well, because the front of it is where
+                    everybody is walking in. Two rails on posts, a metre high,
+                    and in the encoder the whole thing merges into the one span
+                    it is meant to be: a barrier. ---- */
+            {
+                const guard = (x0, x1) => {
+                    const zr = 14.10;
+                    const n = Math.round((x1 - x0) / 1.9);
+                    for (let i = 0; i <= n; i++) {
+                        const g = cylG(0.045, 0.045, 1.02, 8);
+                        put(g, x0 + (x1 - x0) * (i / n), D + 0.51, zr);
+                        P.sSteel.push(g);
+                    }
+                    for (const yy of [0.50, 0.98]) {
+                        const g = cylG(0.035, 0.035, x1 - x0, 8);
+                        put(g, (x0 + x1) / 2, D + yy, zr, 0, 0, Math.PI / 2);
+                        P.sSteel.push(g);
+                    }
+                };
+                guard(12.60, 20.50);
+                guard(36.60, 46.10);
+            }
+
+            /* ---- the bottom of the shaft, and it is the same nothing that is
+                    at the bottom of the other one: a lined concrete room
+                    fifteen metres under the footpath, four walls and a floor,
+                    and where the concourse would be there is a wall. The
+                    station under this world was taken out and inventing half
+                    of it here to make the descent feel finished would be a
+                    worse answer than the wall.
+
+                    Lined the whole way up to the soffit of the footpath slab,
+                    so the sides of the shaft are concrete rather than a hole
+                    in the air with escalators hanging in it — and lit by
+                    nothing. The four real-time lights are all spent above
+                    ground; what carries down here is the third of a stop of
+                    emissive in the concrete itself, the lit handrails on the
+                    balustrades, and a run of light strips down the two walls
+                    where the shaft is deep enough for them to clear the
+                    paving. ---- */
+            {
+                const T = 0.5, TOP = FQ.SOFF;
+                const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
+                C_(FQ.IX0 - T, FQ.HALL - T, FQ.IZN - T, FQ.IX1 + T, FQ.HALL, FQ.IZS + T);   // the floor
+                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX0, TOP, FQ.IZS + T);               // west
+                C_(FQ.IX1, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZS + T);               // east
+                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZN);               // the head end
+                C_(FQ.IX0 - T, FQ.HALL, FQ.IZS, FQ.IX1 + T, TOP, FQ.IZS + T);               // and the far one
+
+                for (let i = 0; i < 6; i++) {
+                    const zz = 21.5 + i * 3.4;
+                    for (const s of [-1, 1]) {
+                        const g = boxG(0.06, 0.20, 2.20);
+                        put(g, s < 0 ? FQ.IX0 + 0.03 : FQ.IX1 - 0.03, yAt(zz) + 2.35, zz);
+                        P.sSign.push(sgn(g, 'strip'));
+                    }
+                }
+            }
         }
 
         /* ---- the bollards along the Swanston edge, stainless and knocked
@@ -6599,6 +6917,7 @@ export default function build(world) {
                 ]],
                 ['townhallstation_00', [
                     [P.sCrete, M21.crete], [P.sSteel, M21.steel], [P.sTrim, M21.bronze],
+                    [P.sSign, M21.sign],
                 ], [
                     /* And the balustrades down the escalators, for a reason
                        worth writing down: the walk merges two surfaces less
@@ -6609,8 +6928,16 @@ export default function build(world) {
                        handrail, and you ride to the bottom floating a metre
                        above the steps. The deck is what you stand on; the rail
                        beside it is scenery, and the batten walls either side of
-                       the bank are what actually stops anybody. */
-                    [P.gGlass, M21.glass], [P.gTrim, M21.rail],
+                       the bank are what actually stops anybody.
+
+                       The frameless panes round the opening at the Federation
+                       Square end are in here for the same arithmetic read the
+                       other way: a metre of glass standing on the footpath
+                       merges with the footpath, and the walk would offer the
+                       cap rail as a surface. Ghosted, the shoe and the rail
+                       are the two solids, 0.94 m apart, and the encoder joins
+                       them into the wall the balustrade is. */
+                    [P.gGlass, M21.glass], [P.sPane, M21.pane], [P.gTrim, M21.rail],
                 ]],
                 // and the one thing in this list that is not on this block at
                 // all: three draws for three hundred metres of tower, which is
