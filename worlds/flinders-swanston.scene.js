@@ -4112,19 +4112,20 @@ export default function build(world) {
         }
 
         /* ------------------------------------------------------------
-           the shops under all of it
+           the ground floor of it
 
-           Six of them, plus the hotel's own door at the top of the steps, a
-           service gate and the theatre's foyer round the corner — and not one
-           of them the same shop twice. Each has its own frame, its own door on
-           its own side of the bay, its own fascia, its own lit ceiling and its
-           own things in the window: a coffee machine, a rack of magazines,
-           three shelves of a dispensary, two plinths and a mannequin, a wall
-           of spectacle frames, a vitrine with four small bright things in it.
+           What the photograph has along here, and nothing else: a colonnade
+           for most of the length, one boutique, the hotel's own door at the
+           top of the steps, and a pair of black service gates. There was a
+           parade of six shops here — a cafe, a newsagent, a chemist, an
+           optician, a jeweller — invented to make a street wall next to a
+           building that already exists, which is exactly the thing not to do.
 
-           This is the part of the block you pass at arm's length, so it is
-           where the detail goes. Everything here is geometry except the
-           lettering on the fascias, which is the one thing you cannot model.
+           The boutique keeps its room: its own frame, its own door, its own
+           lit ceiling, and plinths, a mannequin and a hanging rail in the
+           window. This is the part of the block you pass at arm's length, so
+           it is where the detail goes. Everything here is geometry except the
+           lettering, which is the one thing you cannot model.
            ------------------------------------------------------------ */
         {
             const A = P.shop, G = P.shopGlass, L = P.shopLit;
@@ -4146,13 +4147,14 @@ export default function build(world) {
                 return g;
             };
 
+            /* One. There was a row of six along here — a cafe, a newsagent,
+               a chemist, an optician, a jeweller — and not one of them is on
+               this frontage: the photograph has a boutique, the hotel's own
+               door and a pair of black service gates, and everything between
+               them is the colonnade built below. A street wall invented next
+               to a building that exists is worse than no street wall. */
             const SHOPS = [
-                { k: 'cup',    z0: -129.8, z1: -136.4, door: 0.24, awning: 0x2f4038, wall: 'warm' },
-                { k: 'news',   z0: -136.9, z1: -142.2, door: 0.76, awning: 0,        wall: 'warm' },
-                { k: 'chem',   z0: -142.7, z1: -149.4, door: 0.50, awning: 0x14513a, wall: 'cool' },
-                { k: 'dior',   z0: -150.6, z1: -158.6, door: 0.50, awning: 0,        wall: 'cool' },
-                { k: 'optic',  z0: -177.4, z1: -183.6, door: 0.26, awning: 0,        wall: 'cool' },
-                { k: 'bergen', z0: -184.1, z1: -190.0, door: 0.78, awning: 0x2a1f16, wall: 'warm' },
+                { k: 'dior', z0: -150.2, z1: -159.4, door: 0.50, awning: 0, wall: 'cool' },
             ];
 
             for (const S of SHOPS) {
@@ -4307,6 +4309,49 @@ export default function build(world) {
                     for (let i = 0; i < 3; i++) {
                         litPanel('warm', XB - 0.20, 1.5 + i * 0.75, zc + 1.4 - i * 0.2,
                                          XB - 0.16, 2.05 + i * 0.75, zc + 0.5 - i * 0.2);
+                    }
+                }
+            }
+
+            /* --- the colonnade.
+
+                   Most of this frontage, and the reason it reads as one long
+                   building rather than a parade: square piers on the building
+                   line, the wall four and a half metres behind them, and a lit
+                   soffit over the walk between. You can stand under it out of
+                   the rain, which is the whole point of the thing. --- */
+            {
+                const XP0 = XW - 0.30, XP1 = XW + 0.78;      // the piers
+                const XBK = XW + 4.70;                       // the wall behind them
+                const RUNS = [[-127.6, -149.8], [-176.2, -190.2], [-193.9, -208.8]];
+                for (const [z0, z1] of RUNS) {
+                    const n = Math.max(2, Math.round(Math.abs(z1 - z0) / 4.4));
+                    F(A, CF.stoneLo, XBK, 0.14, z0, XBK + 0.40, Y_HEAD + 1.30, z1);
+                    F(A, 0x9b968c, XP1, 0.10, z0, XBK, 0.18, z1);              // the walk
+                    F(A, 0xcfc7b6, XP0, Y_HEAD + 0.85, z0, XBK, Y_FAS1, z1); // the soffit
+                    F(A, CF.granite, XP0 - 0.06, Y_HEAD + 0.70, z0, XBK, Y_HEAD + 0.85, z1);
+                    for (let i = 0; i <= n; i++) {
+                        const z = z0 - (z0 - z1) * (i / n);
+                        F(A, CF.granite, XP0 - 0.10, 0, z + 0.62, XP1 + 0.10, 0.58, z - 0.62);
+                        F(A, CF.stone, XP0, 0.58, z + 0.54, XP1, Y_HEAD + 0.62, z - 0.54);
+                        F(A, CF.stone,   XP0 - 0.09, Y_HEAD + 0.36, z + 0.66, XP1 + 0.09, Y_HEAD + 0.70, z - 0.66);
+                        F(A, CF.stone,   XP0 - 0.07, 0.58, z + 0.62, XP1 + 0.07, 0.92, z - 0.62);
+                    }
+                    // the glazing in the wall behind, and the light on it
+                    for (let i = 0; i < n; i++) {
+                        const a = z0 - (z0 - z1) * ((i + 0.16) / n);
+                        const b = z0 - (z0 - z1) * ((i + 0.84) / n);
+                        glassy(XBK - 0.06, 0.55, a, XBK + 0.02, Y_HEAD - 0.10, b);
+                        F(A, CF.granite, XBK - 0.08, 0.18, a - 0.12, XBK + 0.04, 0.55, b + 0.12);
+                        F(A, CF.bronze, XBK - 0.09, Y_HEAD - 0.10, a - 0.12, XBK + 0.05, Y_HEAD + 0.02, b + 0.12);
+                        litPanel('warm', XBK - 0.14, 0.60, a + 0.10, XBK - 0.10, Y_HEAD - 0.20, b - 0.10);
+                        litPanel('warm', XP1 + 0.90, Y_HEAD + 0.74, a, XP1 + 1.34, Y_HEAD + 0.80, b);
+                    }
+                    // the hotel's banners, hung off the piers as in the photograph
+                    for (let i = 0; i < n; i += 2) {
+                        const z = z0 - (z0 - z1) * ((i + 0.5) / n);
+                        F(A, CF.bronze, XP0 - 0.55, Y_HEAD + 0.20, z - 0.04, XP0, Y_HEAD + 0.30, z + 0.04);
+                        litPanel('westin', XP0 - 0.52, Y_HEAD - 1.70, z - 0.02, XP0 - 0.48, Y_HEAD + 0.22, z + 0.02);
                     }
                 }
             }
@@ -5477,7 +5522,7 @@ export default function build(world) {
                 ['manchesterunity_00', [[P.m1, M21.body]], []],
                 ['centurybuilding_00', [[P.m2, M21.body]], []],
                 ['swanstonwest_00', [[P.m3, M21.body]], []],
-                ['swanstonshops_00', [[P.shop, M21.body], [P.shopGlass, M21.glass],
+                ['citysquareground_00', [[P.shop, M21.body], [P.shopGlass, M21.glass],
                                       [P.shopLit, M21.lit]], []],
                 ['citysquare_00', [
                     [P.qSteel, M21.steel], [P.qClad, M21.batten], [P.qGlass, M21.glass],
