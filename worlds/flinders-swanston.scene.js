@@ -3324,20 +3324,20 @@ export default function build(world) {
            street level and its sign is the brightest thing on it. */
         const SHOP = {
             cup:    [0.000, 0.000, 0.250, 0.095],
-            news:   [0.250, 0.000, 0.500, 0.095],
-            chem:   [0.500, 0.000, 0.750, 0.095],
+            wool:   [0.250, 0.000, 0.500, 0.095],
+            linen:  [0.500, 0.000, 0.750, 0.095],
             dior:   [0.750, 0.000, 1.000, 0.095],
             westin: [0.000, 0.100, 0.350, 0.195],
-            optic:  [0.350, 0.100, 0.600, 0.195],
+            kozmin: [0.350, 0.100, 0.600, 0.195],
             bergen: [0.600, 0.100, 0.850, 0.195],
             regent: [0.850, 0.100, 1.000, 0.195],
             blade:  [0.000, 0.205, 0.075, 0.620],
             bulbs:  [0.090, 0.205, 1.000, 0.250],
             poster: [0.090, 0.270, 0.290, 0.620],
             bill:   [0.310, 0.270, 0.780, 0.620],
-            seven:  [0.800, 0.270, 1.000, 0.352],
+            atelier:[0.800, 0.270, 1.000, 0.352],
             pho:    [0.800, 0.360, 1.000, 0.442],
-            books:  [0.800, 0.450, 1.000, 0.532],
+            facet:  [0.800, 0.450, 1.000, 0.532],
             bar:    [0.800, 0.540, 1.000, 0.620],
             boss:   [0.000, 0.635, 0.250, 0.720],
             coco:   [0.250, 0.635, 0.500, 0.720],
@@ -3374,11 +3374,11 @@ export default function build(world) {
                 g.globalAlpha = 1;
             };
             fascia('cup',    'Little Cup',       '#f4e6cc', '#2f4038', 74, 'coffee · all day');
-            fascia('news',   'CITY NEWS',        '#fff2c8', '#7a2b22', 72, 'tobacco · lotto · maps');
-            fascia('chem',   'COLLINS CHEMIST',  '#eafff0', '#14513a', 56, 'dispensary open till 9');
+            fascia('wool',   'THE WOOLSTORE',    '#f4ece0', '#3a4048', 54, 'knitwear · alterations');
+            fascia('linen',  'LINEN & CO',       '#fbf6ec', '#7d6a4e', 58, 'shirtmakers since 1962');
             fascia('dior',   'DIOR',             '#f6f2ea', '#101012', 128);
             fascia('westin', 'THE WESTIN',       '#f0e2bd', '#1b232b', 78, 'MELBOURNE');
-            fascia('optic',  'NEU OPTICAL',      '#e8f2ff', '#1d3550', 62, 'eyes tested here');
+            fascia('kozmin', 'KOZMIN',           '#ffeec2', '#1b1a18', 74, 'fine jewellery');
             fascia('bergen', 'BERGEN & CO',      '#ffeec2', '#2a1f16', 58, 'jewellers since 1911');
             fascia('regent', 'REGENT',           '#fff3d2', '#7d1f1a', 84);
             fascia('boss',   'BOSS',             '#f2f0ec', '#141416', 96);
@@ -3386,9 +3386,9 @@ export default function build(world) {
             fascia('sbux',   'STARBUCKS',        '#e8f6ec', '#0d5c3f', 60, 'coffee');
             fascia('noodle', 'HOT POT & NOODLE', '#fff0d0', '#9a1f1a', 50, 'open till late');
             fascia('wales',  'Wales Corner',      '#f4f2ee', '#101114', 62);
-            fascia('seven',  '7-ELEVEN',          '#f6fff2', '#0d6b3a', 58, 'open 24 hours');
+            fascia('atelier','ATELIER SIX',       '#f2efe6', '#2b2f33', 52, 'womenswear · made here');
             fascia('pho',    'PHO HOA',           '#fff4d8', '#8a2418', 56, 'vietnamese · dine in');
-            fascia('books',  'HILL OF CONTENT',   '#f4ecd8', '#2a3a24', 44, 'booksellers');
+            fascia('facet',  'FACET',             '#fff2cf', '#231d2e', 60, 'diamonds · watches');
             fascia('bar',    'THE MITRE',         '#ffe6b8', '#241a12', 52, 'public bar · upstairs');
             fascia('maccas', "McDonald's",        '#ffd23a', '#2a1a10', 58);
             fascia('parking','PARKING',           '#eaf2ff', '#17497e', 70, '↙  entry');
@@ -4547,12 +4547,6 @@ export default function build(world) {
             scene.add(im);
         }
 
-        /* A room behind a shopfront, said once for the whole west side.
-
-           A pane with nothing behind it is a black rectangle, and a street of
-           black rectangles is the thing that makes a model look like a model.
-           Six metres of floor, a back wall with the light on it and a strip in
-           the ceiling is all it takes, and merged it costs nothing. */
         /* ---- one shop, on either street ----
 
            A shopfront is the same thing whichever way the street runs, so it
@@ -4561,32 +4555,58 @@ export default function build(world) {
            the world by one matrix. Building it twice, once per axis, is how
            the earlier signs came out mirrored.
 
-           What every unit gets: a stall riser and glass either side of a
-           doorway you can actually walk through, a blade banner hung under
-           the awning at right angles to the wall so you can read it coming
-           down the footpath, a room six metres deep with a lit ceiling and a
-           lit back wall, a fitout that belongs to the trade, and somebody
-           working in it. `SHOPFOLK` collects the people; they are stood up as
-           two instanced meshes at the end of the section, because forty
-           people modelled properly would be forty draws.
+           There are three trades on this street and no more, repeated down it
+           the way real ones are: a clothes shop, a jeweller, a restaurant.
+           Three rooms built properly beat eight sketched, because these are
+           rooms you walk into, and from the inside the only thing that counts
+           is whether there is anything in them. Each keeps its own floor, its
+           own walls and its own metal so the trade is legible from the far
+           footpath: pale ash and brass with cloth on rails, near-black
+           lacquer with lit cases in it, oiled boards under white tablecloths.
+
+           `SHOPFOLK` collects the people; they are stood up as two instanced
+           meshes at the end of the section, because forty people modelled
+           properly would be forty draws.
 
            The names are two tiers and the comment at each call site says
-           which: the ones I know are on these blocks — the burger shop, the
-           convenience store, the bank on Wales Corner, the boutique on City
-           Square, the coffee chain near Little Collins — and, for the rest,
-           invented tenants sized to the tenancy. I cannot check a street
-           directory from here, and a guess dressed up as a fact is worse than
-           an honest invention. */
+           which: the ones I know are on these blocks — the burger shop on the
+           bronze building, the coffee chain up by Little Collins — and, for
+           the rest, invented tenants sized to the tenancy. I cannot check a
+           street directory from here, and a guess dressed up as a fact is
+           worse than an honest invention. */
         const SHOPFOLK = [];
         const shopUnit = (face, t0, t1, axis, kind, sign) => {
             const span = Math.abs(t1 - t0), cz = (t0 + t1) / 2;
             if (span < 3.0) return;
+            /* A quarter turn the other way for the cross street. Turned the
+               way it was, the local x that means "into the shop" came out
+               pointing away from the building, and the two rooms on the
+               Little Collins frontage were built standing in the roadway with
+               their backs to the facade — which the walk read, correctly, as
+               a shop nobody can enter. */
             const M0 = axis === 'z' ? MX(face, 0, cz, 0, Math.PI, 0)
-                                    : MX(cz, 0, face, 0, Math.PI / 2, 0);
+                                    : MX(cz, 0, face, 0, -Math.PI / 2, 0);
             const D = 6.30, Y_SILL = 0.55, Y_HEAD = 3.90, Y_CEIL = 4.05;
             const HW = span / 2 - 0.30;                       // half the clear opening
-            const DW = 1.15;                                  // half the doorway
-            const DZ = HW - DW - 0.35;                        // where the door sits
+
+            /* Four numbers the whole fitout obeys, and the only reason any of
+               these rooms can be walked into. The walk rasterises every
+               visible mesh into a grid of about a metre and a half to the
+               cell, and a cell goes solid the moment anything at all stands in
+               it — so a way through narrower than two cells exists or does not
+               exist depending on where the grid's edges happen to fall. That
+               is what was keeping people out: a 2.3 m doorway is a metre and a
+               half of doorway plus two slivers, and the slivers were catching
+               the mullions. Hence an entrance 3.30 m in the clear, an aisle
+               the same width running from it to the back, and every stick of
+               furniture either beyond `ZL` on the far side or behind `XB`
+               where the room ends anyway. */
+            const DW = 1.65;                                  // half the entrance
+            const DZ = HW - 0.35 - DW;                        // its centre, a jamb off the wall
+            const ZW = -HW - 0.16;                            // the far wall's inner face
+            const ZL = DZ - DW;                               // the aisle's far edge
+            const XB = 5.10;                                  // where the back of the shop starts
+            const band = ZL - ZW;                             // the depth the fitout gets
 
             const g_ = (w, h, d, x, y, z) => put(boxG(w, h, d), x, y, z);
             const LF = (hex, x0, y0, z0, x1, y1, z1) => {
@@ -4608,15 +4628,26 @@ export default function build(world) {
                 const g = cylG(r0, r1, h, 8); put(g, x, y, z);
                 g.applyMatrix4(M0); P.shop.push(paint(g, hex)); return g;
             };
+            const LX = (hex, r, t, x, y, z) => {               // and one lying on its side
+                const g = cylG(r, r, t, 14); put(g, x, y, z, 0, 0, Math.PI / 2);
+                g.applyMatrix4(M0); P.shop.push(paint(g, hex)); return g;
+            };
+            const LS = (x, y, z, r, h) => {                    // a shade, lit, hung nose down
+                const g = coneG(r, h, 8); put(g, x, y, z, Math.PI, 0, 0);
+                g.applyMatrix4(M0); P.shopLit.push(shp(g, 'warm')); return g;
+            };
             const person = (x, z, ry, cloth, skin) => {
                 _v.set(x, 0, z).applyMatrix4(M0);
-                SHOPFOLK.push({ x: _v.x, z: _v.z, ry: ry + (axis === 'z' ? Math.PI : Math.PI / 2),
+                SHOPFOLK.push({ x: _v.x, z: _v.z, ry: ry + (axis === 'z' ? Math.PI : -Math.PI / 2),
                                 cloth, skin });
             };
+            const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0x2f4858];
+            const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c];
+            const pick = (a) => a[irr(0, a.length - 1)];
 
-            // ---- the shopfront: riser and glass either side of the door
+            // ---- the shopfront: a riser and glass either side of the entrance
             for (const s of [-1, 1]) {
-                const a = s * HW, b = s > 0 ? DZ + DW : -(DZ + DW);
+                const a = s * HW, b = s > 0 ? DZ + DW : ZL;
                 if (Math.abs(a - b) < 0.25) continue;
                 LF(0x2b2c2e, -0.16, 0, a, 0.10, Y_SILL, b);
                 LG(-0.04, Y_SILL, a, 0.04, Y_HEAD, b);
@@ -4628,21 +4659,21 @@ export default function build(world) {
                     LF(0x3a3b3d, -0.08, Y_SILL, z - 0.045, 0.10, Y_HEAD, z + 0.045);
                 }
             }
-            // ---- the doorway, and its leaf standing open into the shop
-            for (const s of [-1, 1]) {
-                LF(0x3a3b3d, -0.10, 0, s * (DZ + DW), 0.12, Y_HEAD, s * (DZ + DW - 0.10));
-            }
-            LF(0x3a3b3d, -0.10, 2.95, DZ - DW, 0.12, Y_HEAD, DZ + DW);
-            /* The leaf stands open along the jamb, running back into the
-               shop, and not — as it did — swung across the opening it is
-               supposed to have opened. The walk's cells are about a metre and
-               a half here, so a doorway has to be clear for its whole width or
-               there is no cell centre in it and the shop cannot be entered at
-               all: the door was the thing keeping everybody out. */
-            LG(0.10, 0.10, DZ - DW - 0.03, 1.85, 2.90, DZ - DW + 0.03);
-            LF(0x6a5a3a, 0.08, 0.10, DZ - DW - 0.06, 1.92, 2.92, DZ - DW - 0.02);
-            LF(0x6a5a3a, 1.80, 0.10, DZ - DW - 0.06, 1.92, 2.92, DZ - DW + 0.06);
-            LF(0x1e1f21, -0.30, 0.02, DZ - DW, 0.40, 0.08, DZ + DW);          // the mat
+            // ---- the entrance, its jambs turned outward and its leaf open
+            LF(0x3a3b3d, -0.10, 0, DZ + DW, 0.12, Y_HEAD, DZ + DW + 0.10);
+            LF(0x3a3b3d, -0.10, 0, ZL, 0.12, Y_HEAD, ZL - 0.10);
+            LF(0x3a3b3d, -0.10, 2.95, ZL, 0.12, Y_HEAD, DZ + DW);
+            /* The leaf stands open along the jamb, running back into the shop
+               and out of the opening it is supposed to have opened — and it
+               lies on the glass side of `ZL`, because a leaf three centimetres
+               into the clear width is three centimetres of clear width gone. */
+            LG(0.16, 0.16, ZL - 0.05, 1.92, 2.82, ZL - 0.02);
+            LF(0x6a5a3a, 0.10, 0.10, ZL - 0.08, 0.26, 2.92, ZL - 0.01);
+            LF(0x6a5a3a, 1.82, 0.10, ZL - 0.08, 1.98, 2.92, ZL - 0.01);
+            LF(0x6a5a3a, 0.10, 0.10, ZL - 0.08, 1.98, 0.30, ZL - 0.01);
+            LF(0x6a5a3a, 0.10, 2.78, ZL - 0.08, 1.98, 2.92, ZL - 0.01);
+            LF(0xb08a4e, 1.66, 0.94, ZL - 0.13, 1.76, 1.98, ZL - 0.08);
+            LF(0x1e1f21, -0.30, 0.02, ZL, 0.40, 0.08, DZ + DW);       // the mat
 
             // ---- the banner under the awning, at right angles to the wall
             LF(0x585a5e, -1.62, 3.30, DZ - 0.06, -0.20, 3.44, DZ + 0.06);
@@ -4655,155 +4686,292 @@ export default function build(world) {
                which takes a warm off-white to about a third of what it says,
                and then it is lit by a hemisphere and nothing else — the four
                real lights are all spent outdoors. A room that reads as a room
-               through glass at dusk has to start nearly white. */
-            LF(0xc9c3b7, 0.10, 0.06, -HW - 0.3, D, 0.14, HW + 0.3);
-            LF(0xf4f1e8, 0.10, 0.14, -HW - 0.3, D, Y_CEIL, -HW - 0.16);
-            LF(0xf4f1e8, 0.10, 0.14, HW + 0.16, D, Y_CEIL, HW + 0.3);
-            LF(0xffffff, 0.10, Y_CEIL - 0.12, -HW - 0.3, D, Y_CEIL, HW + 0.3);
-            LL('warm', D - 0.14, 0.30, -HW, D - 0.06, Y_CEIL - 0.30, HW);
+               through glass at dusk has to start nearly white, and the
+               jeweller, which wants to be dark, gets its darkness from having
+               almost nothing but lit cases in it rather than from paint. */
+            const PAL = kind === 'jewel'
+                ? { floor: 0x9d948a, wall: 0x726a60, ceil: 0x8d857b, cove: 'warm' }
+                : kind === 'restaurant'
+                ? { floor: 0xa87d4e, wall: 0xded3be, ceil: 0xf2ecdd, cove: 'warm' }
+                : { floor: 0xdbd4c6, wall: 0xf4f1e8, ceil: 0xfefcf5, cove: 'cool' };
+            LF(PAL.floor, 0.10, 0.06, -HW - 0.3, D, 0.14, HW + 0.3);
+            LF(PAL.wall, 0.10, 0.14, -HW - 0.3, D + 0.18, Y_CEIL, ZW);
+            LF(PAL.wall, 0.10, 0.14, HW + 0.16, D + 0.18, Y_CEIL, HW + 0.3);
+            LF(PAL.wall, D, 0.14, ZW, D + 0.18, Y_CEIL, HW + 0.16);
+            LF(PAL.ceil, 0.10, Y_CEIL - 0.12, -HW - 0.3, D + 0.18, Y_CEIL, HW + 0.3);
+            /* A lit band across the back rather than a lit back wall. Wall
+               to wall and floor to ceiling — which is what it was — it is a
+               lightbox with a room silhouetted against it, and everything the
+               fitout puts in front of it goes black. Held up at clerestory
+               height it does the one job it was for, which is that the back of
+               the room is visible from the footpath. */
+            LL(PAL.cove, D - 0.14, 2.58, ZW + 0.10, D - 0.06, Y_CEIL - 0.34, HW - 0.10);
             for (let i = 0; i < 3; i++) {
-                LL('cool', 1.1 + i * 1.9, Y_CEIL - 0.22, -HW + 0.25, 1.8 + i * 1.9, Y_CEIL - 0.12, HW - 0.25);
+                LL(PAL.cove, 1.1 + i * 1.9, Y_CEIL - 0.22, ZW + 0.25, 1.8 + i * 1.9, Y_CEIL - 0.12, HW - 0.05);
             }
 
             // ---- and what trade it is
-            const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0x2f4858];
-            const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c];
-            const pick = (a) => a[irr(0, a.length - 1)];
+            if (kind === 'clothes') {
+                /* Ash, brass and cloth. The window is two dressed forms on a
+                   low plinth; the length of the far wall is rail; the back of
+                   the room is a fitting room and a wrapping counter, which is
+                   the whole shape of every small clothes shop there has ever
+                   been. What varies with the tenancy is how much of the middle
+                   is free — a narrow bay gets the wall rail and nothing else,
+                   a wide one gets a table of folded stock and a second rail
+                   standing off the wall. */
+                const ASH = 0xd3c7ab, BRASS = 0xc7a457, DK = 0x6f6555;
+                const RAG = [0x36414d, 0x6d4a44, 0x2c3330, 0x8a7f6c, 0x463c52, 0x5c6b6a, 0xa89a86];
 
-            if (kind === 'cafe' || kind === 'bar') {
-                const bar = kind === 'bar';
-                LF(0x9c7f56, 1.5, 0.14, -HW + 0.4, 2.4, 1.06, HW - 3.0);      // the counter
-                LF(0x5c6064, 1.42, 1.06, -HW + 0.34, 2.48, 1.16, HW - 2.94);
-                LF(0xb8bcbe, 1.7, 1.16, HW - 3.2, 2.3, 1.82, HW - 2.3);       // machine / taps
-                LF(0x5c6064, 1.8, 1.82, HW - 3.1, 2.2, 1.94, HW - 2.4);
-                LF(0x6f6050, D - 0.30, 1.30, -HW + 0.6, D - 0.16, 3.10, HW - 0.6);
-                for (let i = 0; i < (bar ? 12 : 6); i++) {                     // bottles / cups
-                    LF(pick([0x7a5a2a, 0x2a4a3a, 0x6a2a2a, 0xd8d2c4]),
-                       D - 0.28, 1.66 + (i % 3) * 0.62, -HW + 1.0 + Math.floor(i / 3) * 0.9,
-                       D - 0.18, 1.94 + (i % 3) * 0.62, -HW + 1.28 + Math.floor(i / 3) * 0.9);
+                // the window: a plinth and two forms dressed differently
+                LF(ASH, 0.50, 0.14, ZW + 0.06, 2.20, 0.26, ZW + Math.min(1.20, band - 0.35));
+                const form = (x, z, cloth, skirt) => {
+                    for (const s of [-1, 1]) LC(0xe4ddcd, 0.055, 0.075, 0.74, x, 0.63, z + s * 0.085);
+                    if (skirt) LC(cloth, 0.15, 0.31, 0.58, x, 1.03, z);
+                    else { for (const s of [-1, 1]) LC(cloth, 0.085, 0.10, 0.80, x, 0.70, z + s * 0.085); }
+                    LC(0xe4ddcd, 0.16, 0.13, 0.46, x, 1.48, z);
+                    LC(cloth, 0.19, 0.17, 0.44, x, 1.50, z);
+                    LC(0xe4ddcd, 0.10, 0.19, 0.20, x, 1.82, z);
+                    LC(0xe4ddcd, 0.05, 0.07, 0.13, x, 1.98, z);
+                };
+                form(0.95, ZW + 0.60, 0x3f4a58, true);
+                form(1.75, ZW + 0.55, 0x6b5340, false);
+
+                // the wall rail, and what is hanging on it
+                LF(DK, 2.30, 1.93, ZW + 0.03, 4.92, 2.01, ZW + 0.12);
+                LF(BRASS, 2.35, 1.86, ZW + 0.50, 4.88, 1.91, ZW + 0.56);
+                for (let i = 0; i < 11; i++) {
+                    const x = 2.44 + i * 0.22;
+                    LF(pick(RAG), x, 0.99, ZW + 0.28, x + 0.15, 1.80, ZW + 0.72);
+                    LF(0xb8b4ac, x + 0.055, 1.78, ZW + 0.50, x + 0.085, 1.93, ZW + 0.54);
                 }
-                for (let i = 0; i < 3; i++) LC(0x6e5c46, 0.19, 0.16, 0.74, 3.1, 0.51, -HW + 0.9 + i * 0.85);
-                for (let i = 0; i < 2; i++) {                                  // a table and two chairs
-                    const tz = HW - 1.6 - i * 2.2;
-                    LC(0x6e5c46, 0.36, 0.09, 0.06, 4.6, 0.78, tz);
-                    LC(0x6e5c46, 0.05, 0.05, 0.72, 4.6, 0.40, tz);
-                    for (const s of [-1, 1]) {
-                        LF(0x87755c, 4.6 + s * 0.55, 0.14, tz - 0.22, 4.6 + s * 0.95, 0.46, tz + 0.22);
-                        LF(0x87755c, 4.6 + s * 0.90, 0.46, tz - 0.22, 4.6 + s * 0.98, 1.00, tz + 0.22);
+
+                // a table of folded stock, when the bay is deep enough for one
+                if (band >= 2.45) {
+                    const tz = ZW + 1.42, tz1 = ZW + 2.18;
+                    LF(ASH, 0.70, 0.62, tz, 2.20, 0.72, tz1);
+                    for (const x of [0.78, 2.06]) for (const z of [tz + 0.08, tz1 - 0.08]) {
+                        LF(DK, x - 0.04, 0.14, z - 0.04, x + 0.04, 0.62, z + 0.04);
+                    }
+                    for (let i = 0; i < 3; i++) {
+                        const x = 0.85 + i * 0.45;
+                        for (let s = 0; s < 3; s++) {
+                            LF(pick(RAG), x, 0.72 + s * 0.055, tz + 0.14,
+                                          x + 0.36, 0.77 + s * 0.055, tz1 - 0.14);
+                        }
                     }
                 }
+                // and a rail standing off the wall, when there is room to walk round it
+                if (band >= 3.05) {
+                    const rz = ZW + 2.15;
+                    for (const x of [2.62, 4.66]) {
+                        LC(0x8f8779, 0.028, 0.042, 1.60, x, 0.96, rz);
+                        LC(0x8f8779, 0.24, 0.26, 0.06, x, 0.19, rz);
+                    }
+                    LF(BRASS, 2.60, 1.72, rz - 0.03, 4.68, 1.77, rz + 0.03);
+                    for (let i = 0; i < 9; i++) {
+                        const x = 2.76 + i * 0.21;
+                        LF(pick(RAG), x, 0.88, rz - 0.22, x + 0.15, 1.68, rz + 0.22);
+                    }
+                }
+
+                // the full-length mirror, on the wall the rails face
+                LF(0x8a7442, 3.02, 0.16, HW + 0.05, 4.48, 2.30, HW + 0.16);
+                LL('cool', 3.12, 0.24, HW + 0.02, 4.38, 2.20, HW + 0.05);
+
+                // the fitting room, in the far back corner, curtained
+                LF(0xe6e1d4, 5.22, 0.14, ZW + 1.22, D, 2.44, ZW + 1.32);
+                LF(0xe6e1d4, 5.22, 2.30, ZW, 5.32, 2.44, ZW + 1.32);
+                for (let i = 0; i < 7; i++) {
+                    const x = 5.16 + (i % 2) * 0.11;
+                    LF(0x6d3a3e, x, 0.18, ZW + 0.04 + i * 0.175, x + 0.10, 2.28, ZW + 0.19 + i * 0.175);
+                }
+                LL('cool', D - 0.06, 0.40, ZW + 0.26, D - 0.02, 1.96, ZW + 1.02);
+                LC(0x8f8779, 0.14, 0.15, 0.06, 5.75, 0.47, ZW + 0.62);
+                LC(0x8f8779, 0.04, 0.05, 0.34, 5.75, 0.27, ZW + 0.62);
+
+                // the wrapping counter, and the light under its lip
+                const cz0 = ZW + 1.62, cz1 = Math.min(HW - 0.55, ZL + 1.30);
+                LF(ASH, 5.28, 0.14, cz0, 5.98, 1.02, cz1);
+                LF(DK, 5.20, 1.02, cz0 - 0.06, 6.06, 1.10, cz1 + 0.06);
+                LL('warm', 5.24, 0.24, cz0, 5.28, 0.42, cz1);
+                LF(0x3a3b3d, 5.46, 1.10, cz1 - 0.52, 5.82, 1.36, cz1 - 0.18);
+                LL('cool', 5.43, 1.16, cz1 - 0.49, 5.46, 1.33, cz1 - 0.21);
+                LF(0xd8cdb4, 5.34, 1.10, cz0 + 0.10, 5.60, 1.33, cz0 + 0.46);
+                LC(0xb08a4e, 0.055, 0.055, 0.16, 5.88, 1.18, cz0 + 0.28);
+
+                // spots on two tracks, because a clothes shop is lit at the wall
+                for (const tz of [ZW + 0.55, ZW + Math.min(1.95, band - 0.30)]) {
+                    LF(0x4a4844, 1.00, 3.90, tz - 0.03, 4.90, 3.96, tz + 0.03);
+                    for (let i = 0; i < 4; i++) {
+                        const x = 1.35 + i * 1.05;
+                        LC(0x3a3835, 0.055, 0.075, 0.18, x, 3.80, tz);
+                        LL('warm', x - 0.06, 3.66, tz - 0.06, x + 0.06, 3.71, tz + 0.06);
+                    }
+                }
+                person(6.12, cz0 + 0.55, -Math.PI / 2, pick(CLOTH), pick(SKIN));
+                person(3.40, ZW + Math.min(1.05, band - 0.5), Math.PI, pick(CLOTH), pick(SKIN));
+
+            } else if (kind === 'jewel') {
+                /* Almost nothing in the room, and all of it lit from inside.
+                   Cases in a horseshoe with its mouth to the aisle, a wall of
+                   small niches at the back with the safe beside them, and a
+                   velvet writing counter in the middle of the far run with a
+                   stool at each end of it. The emissive deck under the glass
+                   is what does the work: it lights the pieces without spending
+                   one of the four lights this world has, and at dusk it is the
+                   brightest thing on the block. */
+                const CASE = 0x2c2823, RIM = 0xa8904f, VEL = 0x46222a, STONE = 0xd9cdae;
+                const cabinet = (x0, z0, x1, z1) => {
+                    LF(CASE, x0, 0.14, z0, x1, 0.84, z1);
+                    LF(RIM, x0 - 0.02, 0.84, z0 - 0.02, x1 + 0.02, 0.90, z1 + 0.02);
+                    LL('warm', x0 + 0.05, 0.90, z0 + 0.05, x1 - 0.05, 0.96, z1 - 0.05);
+                    LG(x0, 0.96, z0, x1, 1.24, z1);
+                    LF(RIM, x0 - 0.02, 1.24, z0 - 0.02, x1 + 0.02, 1.30, z1 + 0.02);
+                };
+                const piece = (x, z) => {
+                    LC(0x1c1916, 0.05, 0.075, 0.10, x, 1.01, z);
+                    LC(STONE, 0.032, 0.018, 0.13, x, 1.12, z);
+                    LF(0xf2e8c8, x - 0.03, 1.17, z - 0.03, x + 0.03, 1.21, z + 0.03);
+                };
+                // the horseshoe: the far wall, and a return at each end of it
+                cabinet(1.10, ZW + 0.04, 2.50, ZW + 0.62);
+                cabinet(3.80, ZW + 0.04, 4.90, ZW + 0.62);
+                for (let i = 0; i < 4; i++) piece(1.28 + i * 0.36, ZW + 0.33);
+                for (let i = 0; i < 3; i++) piece(3.98 + i * 0.36, ZW + 0.33);
+                const rz1 = ZL - 0.24;
+                for (const x0 of [1.10, 4.30]) {
+                    cabinet(x0, ZW + 0.62, x0 + 0.60, rz1);
+                    const n = Math.max(1, Math.floor((rz1 - ZW - 0.62) / 0.40));
+                    for (let i = 0; i < n; i++) piece(x0 + 0.30, ZW + 0.82 + i * 0.40);
+                }
+                // the velvet counter, between the two halves of the far run
+                LF(CASE, 2.55, 0.14, ZW + 0.04, 3.75, 0.98, ZW + 0.74);
+                LF(VEL, 2.58, 0.98, ZW + 0.07, 3.72, 1.02, ZW + 0.71);
+                LF(0x1c1916, 2.72, 1.02, ZW + 0.20, 3.18, 1.05, ZW + 0.56);
+                LF(VEL, 2.75, 1.05, ZW + 0.23, 3.15, 1.08, ZW + 0.53);
                 for (let i = 0; i < 3; i++) {
-                    const g = coneG(0.16, 0.22, 8);
-                    put(g, 2.0, Y_CEIL - 0.75, -HW + 1.2 + i * 1.6, Math.PI, 0, 0);
-                    g.applyMatrix4(M0); P.shopLit.push(shp(g, 'warm'));
+                    LF(0xf2e8c8, 2.82 + i * 0.11, 1.08, ZW + 0.31, 2.86 + i * 0.11, 1.11, ZW + 0.45);
                 }
-                person(2.9, HW - 2.6, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(4.0, HW - 1.6, Math.PI / 2, pick(CLOTH), pick(SKIN));
-
-            } else if (kind === 'restaurant') {
-                LF(0x93764f, D - 1.5, 0.14, -HW + 0.5, D - 0.4, 1.10, HW - 2.6);   // the pass
-                LF(0x5c6064, D - 1.58, 1.10, -HW + 0.44, D - 0.32, 1.20, HW - 2.54);
-                LF(0xb0b4b6, D - 1.4, 1.20, -HW + 0.9, D - 0.6, 1.60, -HW + 2.2);
-                for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {           // tables of four
-                    const tx = 1.5 + r * 1.7, tz = -HW + 1.2 + c * (span - 3.0);
-                    LC(0x6e5c46, 0.44, 0.44, 0.07, tx, 0.76, tz);
-                    LC(0x5e5348, 0.06, 0.06, 0.70, tx, 0.40, tz);
-                    LC(0x5e5348, 0.30, 0.30, 0.05, tx, 0.07, tz);
-                    for (const d of [[-0.72, 0], [0.72, 0], [0, -0.72], [0, 0.72]]) {
-                        LF(0x8a7862, tx + d[0] - 0.20, 0.14, tz + d[1] - 0.20,
-                                     tx + d[0] + 0.20, 0.46, tz + d[1] + 0.20);
-                        LF(0x8a7862, tx + d[0] - 0.20, 0.46, tz + d[1] - 0.20,
-                                     tx + d[0] - 0.12, 1.00, tz + d[1] + 0.20);
-                    }
-                    LF(0xe8e4da, tx - 0.16, 0.83, tz - 0.16, tx + 0.16, 0.86, tz + 0.16);  // a plate
+                LC(0x2b2724, 0.028, 0.036, 0.075, 3.44, 1.06, ZW + 0.36);
+                LC(RIM, 0.024, 0.024, 0.02, 3.44, 1.11, ZW + 0.36);
+                // a stool at each end of it
+                for (const x of [2.42, 3.90]) {
+                    LC(VEL, 0.17, 0.15, 0.07, x, 0.66, ZW + 1.02);
+                    LC(0x2b2724, 0.03, 0.045, 0.48, x, 0.38, ZW + 1.02);
+                    LC(0x2b2724, 0.19, 0.20, 0.04, x, 0.16, ZW + 1.02);
                 }
-                LF(0x6f6050, D - 0.30, 1.40, -HW + 0.6, D - 0.18, 3.00, HW - 0.6);
+                // the back wall: small lit niches, and the safe beside them
+                LF(0x241f1c, 6.02, 0.82, ZW + 0.10, 6.18, 3.06, ZL);
+                const nn = Math.max(2, Math.floor((ZL - ZW - 0.30) / 0.56));
+                for (let r = 0; r < 3; r++) for (let c = 0; c < nn; c++) {
+                    const z = ZW + 0.26 + c * 0.56;
+                    LL('warm', 5.97, 1.04 + r * 0.62, z, 6.02, 1.46 + r * 0.62, z + 0.32);
+                }
+                const sz = (ZL + HW) / 2 + 0.05;
+                LF(0x4e4a42, 5.98, 0.26, sz - 0.80, 6.18, 2.24, sz + 0.80);
+                LX(0x9a9287, 0.66, 0.08, 5.96, 1.24, sz);
+                LX(0x82796c, 0.60, 0.12, 5.88, 1.24, sz);
+                LX(0x2f2a25, 0.09, 0.14, 5.79, 1.24, sz);
                 for (let i = 0; i < 4; i++) {
-                    const g = coneG(0.14, 0.20, 8);
-                    put(g, 2.2 + i * 1.5, Y_CEIL - 0.85, 0, Math.PI, 0, 0);
-                    g.applyMatrix4(M0); P.shopLit.push(shp(g, 'warm'));
+                    const a = Math.PI * i / 4;
+                    const g = boxG(0.05, 0.62, 0.05);
+                    put(g, 5.82, 1.24, sz, a, 0, 0);
+                    g.applyMatrix4(M0); P.shop.push(paint(g, 0xb0a795));
                 }
-                person(D - 2.2, HW - 1.4, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(2.6, -HW + 1.9, 0, pick(CLOTH), pick(SKIN));
-                person(3.4, HW - 1.4, Math.PI, pick(CLOTH), pick(SKIN));
+                // and a downlight over each arm of the horseshoe
+                for (let i = 0; i < 4; i++) LS(1.45 + i * 1.15, Y_CEIL - 0.66, ZW + 0.62, 0.10, 0.15);
+                person(3.15, ZW + Math.min(1.32, band - 0.42), Math.PI, pick(CLOTH), pick(SKIN));
+                person(5.30, ZL - 0.55, Math.PI / 2, pick(CLOTH), pick(SKIN));
 
-            } else if (kind === 'grocer') {
-                for (let r = 0; r < 3; r++) {                                   // aisles
-                    const x = 1.6 + r * 1.45;
-                    LF(0xdcd8cf, x, 0.14, -HW + 0.5, x + 0.55, 1.55, HW - 1.9);
-                    for (let sh = 0; sh < 4; sh++) {
-                        LF(0xc8c4bb, x - 0.06, 0.42 + sh * 0.36, -HW + 0.46, x + 0.61, 0.47 + sh * 0.36, HW - 1.86);
-                        for (let b = 0; b < 6; b++) {
-                            LF(pick([0xc8523a, 0x2f5f8a, 0xd8b23a, 0x3f7a4a, 0xe0e0dc]),
-                               x - 0.02, 0.47 + sh * 0.36, -HW + 0.7 + b * 0.62,
-                               x + 0.24, 0.72 + sh * 0.36, -HW + 1.0 + b * 0.62);
+            } else {
+                /* Oiled boards, a green banquette the length of the far wall,
+                   cloths on the tables and a pass across the back with the
+                   kitchen lit behind it. The tables sit against the banquette
+                   with their chairs on the aisle side, which is the only way
+                   a room seven metres wide seats anybody and still lets the
+                   walk down the middle of it — and it is also, as it happens,
+                   exactly how every narrow restaurant in this city is laid
+                   out. */
+                const TIM = 0x7a5636, GRN = 0x27423a, LIN = 0xf2efe6, STEEL = 0xb2b6b8;
+                // the banquette
+                LF(GRN, 0.65, 0.14, ZW, 4.90, 0.46, ZW + 0.58);
+                LF(GRN, 0.65, 0.46, ZW, 4.90, 1.14, ZW + 0.16);
+                LF(0x35564a, 0.65, 1.14, ZW, 4.90, 1.20, ZW + 0.18);
+                for (let i = 0; i < 6; i++) {
+                    LF(0x1d3229, 0.90 + i * 0.68, 0.62, ZW + 0.16, 0.98 + i * 0.68, 0.70, ZW + 0.20);
+                }
+                // tables against it: one of four, then two of two
+                const TBL = [[0.85, 2.15], [2.45, 3.25], [3.55, 4.35]];
+                const tz0 = ZW + 0.55, tz1 = ZW + 1.20;
+                for (const [x0, x1] of TBL) {
+                    LF(TIM, x0 + 0.06, 0.30, tz0 + 0.06, x1 - 0.06, 0.74, tz1 - 0.06);
+                    LF(LIN, x0, 0.74, tz0, x1, 0.78, tz1);
+                    LF(LIN, x0 + 0.03, 0.34, tz0 + 0.03, x1 - 0.03, 0.74, tz1 - 0.03);
+                    const seats = x1 - x0 > 1.0 ? [x0 + 0.33, x0 + 0.97] : [(x0 + x1) / 2];
+                    for (const sx of seats) {
+                        LC(0xf7f5ef, 0.115, 0.115, 0.018, sx, 0.79, ZW + 0.78);
+                        LC(0xf7f5ef, 0.115, 0.115, 0.018, sx, 0.79, ZW + 1.02);
+                        LC(0xcfdce0, 0.032, 0.026, 0.13, sx + 0.17, 0.85, ZW + 0.80);
+                        LC(0xcfdce0, 0.032, 0.026, 0.13, sx + 0.17, 0.85, ZW + 1.04);
+                        // a chair on the aisle side, and the menu on the cloth
+                        LF(0x6f5334, sx - 0.21, 0.14, ZW + 1.24, sx + 0.21, 0.44, ZW + 1.62);
+                        LF(0x6f5334, sx - 0.19, 0.44, ZW + 1.58, sx + 0.19, 0.92, ZW + 1.64);
+                        for (const c of [-0.18, 0.18]) {
+                            LF(0x5b432a, sx + c - 0.02, 0.14, ZW + 1.26, sx + c + 0.02, 0.44, ZW + 1.30);
                         }
+                        LF(0xe4d8bc, sx - 0.07, 0.78, ZW + 0.88, sx + 0.07, 0.98, ZW + 0.91);
+                    }
+                    LS((x0 + x1) / 2, 2.68, ZW + 0.88, 0.17, 0.22);
+                    LF(0x2a2724, (x0 + x1) / 2 - 0.012, 2.86, ZW + 0.868,
+                                 (x0 + x1) / 2 + 0.012, Y_CEIL - 0.12, ZW + 0.892);
+                }
+                // the pass, its stools, and the kitchen behind it
+                const bz = Math.min(ZL + 1.30, HW - 0.75);
+                LF(TIM, 5.14, 0.14, ZW, 5.84, 1.02, bz);
+                LF(0x2f2b26, 5.06, 1.02, ZW, 5.92, 1.10, bz + 0.06);
+                LL('warm', 5.10, 0.24, ZW, 5.14, 0.42, bz);
+                LF(0xb08a4e, 5.02, 0.52, ZW, 5.06, 0.58, bz);
+                for (const sz2 of [ZW + 0.55, ZW + 1.45]) {
+                    LC(0x6f5334, 0.18, 0.16, 0.07, 4.80, 0.70, sz2);
+                    LC(0x3a3835, 0.032, 0.048, 0.52, 4.80, 0.40, sz2);
+                    LC(0x3a3835, 0.20, 0.21, 0.04, 4.80, 0.16, sz2);
+                }
+                LF(STEEL, 5.88, 1.30, ZW, 6.00, 1.40, bz);            // the pass shelf
+                LF(STEEL, 6.02, 0.14, ZW, 6.26, 0.95, bz);            // the bench behind it
+                LF(0x9aa0a2, 6.00, 1.96, ZW + 0.20, 6.28, 2.46, ZW + 1.70);
+                for (let i = 0; i < 2; i++) {
+                    LF(STEEL, 6.04, 2.02 + i * 0.42, bz - 1.55, 6.26, 2.08 + i * 0.42, bz);
+                    for (let j = 0; j < 3; j++) {
+                        LF(pick([0x8f9396, 0xd8d2c4, 0x6a5a2a]),
+                           6.08, 2.08 + i * 0.42, bz - 1.42 + j * 0.42,
+                           6.22, 2.30 + i * 0.42, bz - 1.14 + j * 0.42);
                     }
                 }
-                LF(0xdcd8cf, 1.4, 0.14, HW - 1.7, 2.9, 1.08, HW - 0.5);        // the counter
-                LF(0x5c6064, 1.32, 1.08, HW - 1.76, 2.98, 1.18, HW - 0.44);
-                LL('cool', D - 0.34, 0.30, -HW + 0.5, D - 0.26, 2.60, HW - 0.5);  // the fridge wall
-                LG(D - 0.42, 0.30, -HW + 0.5, D - 0.36, 2.60, HW - 0.5);
-                person(2.3, HW - 1.9, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(3.6, -HW + 1.4, Math.PI / 2, pick(CLOTH), pick(SKIN));
-
-            } else if (kind === 'pharmacy' || kind === 'books') {
-                const books = kind === 'books';
-                for (let u = 0; u < 3; u++) {
-                    const z = -HW + 0.8 + u * ((span - 2.0) / 2.5);
-                    LF(books ? 0xa08356 : 0xe4e2dc, D - 1.9, 0.14, z - 0.42, D - 1.2, books ? 2.55 : 2.35, z + 0.42);
-                    for (let sh = 0; sh < 5; sh++) {
-                        LF(books ? 0xb09367 : 0xcfd4d2, D - 1.96, 0.42 + sh * 0.44, z - 0.46,
-                           D - 1.14, 0.48 + sh * 0.44, z + 0.46);
-                        for (let b = 0; b < 5; b++) {
-                            LF(pick(books ? [0x8a2f2a, 0x2a4a6a, 0x3a5a3a, 0xd8c88a, 0x4a3a5a]
-                                          : [0x6fb0d8, 0xe8e2c8, 0xd88a6a, 0x8ec49a]),
-                               D - 1.92, 0.48 + sh * 0.44, z - 0.38 + b * 0.16,
-                               D - 1.62, 0.80 + sh * 0.44, z - 0.28 + b * 0.16);
-                        }
-                    }
+                LL('cool', 6.27, 1.46, ZW + 0.15, 6.29, 2.12, bz - 0.15);
+                // the menu on the wall over the pass
+                LF(0x232a24, 5.16, 1.86, ZW, 5.82, 2.86, ZW + 0.05);
+                for (let i = 0; i < 5; i++) {
+                    LL('warm', 5.24, 2.62 - i * 0.17, ZW, 5.24 + (i % 2 ? 0.34 : 0.50), 2.70 - i * 0.17, ZW + 0.02);
                 }
-                LF(0xe4e2dc, 1.5, 0.14, HW - 1.9, 2.8, 1.06, HW - 0.5);
-                LF(0x5c6064, 1.42, 1.06, HW - 1.96, 2.88, 1.16, HW - 0.44);
-                person(2.2, HW - 2.1, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(4.2, -HW + 1.2, 0, pick(CLOTH), pick(SKIN));
-
-            } else if (kind === 'bank') {
-                LF(0xdedad2, D - 2.2, 0.14, -HW + 0.6, D - 1.1, 1.10, HW - 2.6);   // the teller line
-                LF(0x5c6064, D - 2.28, 1.10, -HW + 0.54, D - 1.02, 1.20, HW - 2.54);
-                for (let i = 0; i < 3; i++) {
-                    LG(D - 2.24, 1.20, -HW + 1.0 + i * ((span - 2.0) / 3), D - 2.18, 2.30,
-                       -HW + 1.0 + i * ((span - 2.0) / 3) + 0.06);
-                }
-                LL('cool', D - 1.0, 1.40, -HW + 0.8, D - 0.94, 3.00, HW - 0.8);
-                for (let i = 0; i < 4; i++) {                                   // the queue rail
-                    LC(0x9a9ea0, 0.05, 0.05, 0.95, 2.4, 0.62, -HW + 0.9 + i * 1.5);
-                }
-                LF(0x585a5e, 1.2, 0.14, HW - 1.4, 1.7, 2.20, HW - 0.4);          // the machine
-                LL('cool', 1.16, 1.35, HW - 1.25, 1.19, 1.75, HW - 0.55);
-                person(D - 2.9, -HW + 1.3, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(D - 2.9, HW - 1.5, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(2.9, 0, Math.PI / 2, pick(CLOTH), pick(SKIN));
-
-            } else {                                                            // fashion, phones
-                for (const s of [-1, 1]) {
-                    LF(0xf0ece4, 1.8, 0.14, s * (HW - 1.1), 2.7, 0.92, s * (HW - 2.0));
-                    LF(0x59524a, 2.05, 0.92, s * (HW - 1.3), 2.45, 1.24, s * (HW - 1.8));
-                }
-                LF(0xbe9c58, 4.3, 2.20, -HW + 0.8, 4.38, 2.28, HW - 0.8);        // the rail
-                for (let h = 0; h < 7; h++) {
-                    LF(pick([0x24242a, 0x3a3630, 0x1e2228, 0x2e2a26]),
-                       4.12, 1.25, -HW + 0.9 + h * ((span - 1.8) / 7),
-                       4.56, 2.20, -HW + 1.18 + h * ((span - 1.8) / 7));
-                }
-                LC(0xe8e0d2, 0.17, 0.13, 1.05, 2.3, 0.66, 0);                    // a form
-                LC(0xe8e0d2, 0.09, 0.17, 0.62, 2.3, 1.49, 0);
-                LF(0x4a4a4e, 2.05, 0.90, -0.30, 2.55, 1.65, 0.30);
-                LF(0xdedad2, 1.5, 0.14, HW - 1.9, 2.4, 1.02, HW - 0.7);
-                LL('warm', D - 0.30, 0.90, -HW + 0.6, D - 0.24, 3.10, HW - 0.6);
-                person(2.0, HW - 2.0, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(3.9, -HW + 1.4, Math.PI / 2, pick(CLOTH), pick(SKIN));
+                // and a menu on a stand where you come in
+                LF(0x4a3a2a, 0.46, 0.14, ZL - 0.44, 0.62, 1.16, ZL - 0.30);
+                LL('warm', 0.42, 0.72, ZL - 0.44, 0.46, 1.12, ZL - 0.30);
+                person(6.14, ZW + 1.10, -Math.PI / 2, pick(CLOTH), pick(SKIN));
+                person(1.60, ZW + 0.28, 0, pick(CLOTH), pick(SKIN));
+                person(2.85, ZW + Math.min(1.45, band - 0.35), Math.PI, pick(CLOTH), pick(SKIN));
             }
+        };
+        /* Where a unit's entrance falls, in the street's own numbers, so that
+           the base a bay sits on can stop either side of it. Run straight
+           through, that base is a knee-high step across the doorway — and a
+           knee-high step is the walk climbing into a shop instead of walking
+           into one. The three constants are `shopUnit`'s own, said once more
+           here rather than passed back out of it. */
+        const shopDoor = (t0, t1) => {
+            const span = Math.abs(t1 - t0), cz = (t0 + t1) / 2;
+            const HW = span / 2 - 0.30, DW = 1.65, DZ = HW - 0.35 - DW;
+            return [cz - DZ - DW, cz - DZ + DW];
         };
 
         /* ============================================================
@@ -4846,7 +5014,16 @@ export default function build(world) {
                inside the stone and the walk finds one block from the footpath
                to the parapet, which is a window display, not a shop. */
             F(A, C.lo, X0, Y_SHOP, ZS, XC, Y_TOP, ZC);
-            F(A, C.lo, X0, 0, ZS, XC - 7.5, Y_SHOP, ZC);
+            /* And the same seven and a half metres of it taken out behind the
+               Little Collins frontage, which the first version forgot: the
+               core ran up to that glass line unbroken, so the two rooms on
+               that face were built inside solid stone. A shop the walk finds
+               filled is not a shop. What is left of the core down there is the
+               strip west of the last tenancy and the party wall between the
+               two of them. */
+            F(A, C.lo, X0, 0, ZS, XC - 7.5, Y_SHOP, ZC + 7.5);
+            F(A, C.lo, X0, 0, ZC + 7.5, -39.4, Y_SHOP, ZC);
+            F(A, C.lo, -32.1, 0, ZC + 7.5, -31.7, Y_SHOP, ZC);
 
             // ---- the piers, both elevations, the glass sunk between them
             const runZ = Math.floor((ZS - ZF - R) / PITCH);
@@ -4896,17 +5073,17 @@ export default function build(world) {
             for (let i = 0; i < 2; i++) {
                 const z0 = ZF + R + 0.5 + i * 7.4, z1 = z0 + 6.8;
                 F(A, C.deep, XF + 0.02, 0, z0 - 0.25, XC, Y_SHOP, z0);
-                // the coffee chain on this corner is the one tenancy up here I
-                // am sure of; the rest are invented at the right size
-                const T = [['sbux', 'cafe'], ['pho', 'restaurant'], ['books', 'books']][i % 3];
+                // the trade rotates so no two neighbours are the same room
+                const T = [['bergen', 'jewel'], ['dior', 'clothes']][i % 2];
                 P.shopLit.push(shp(put(boxG(0.06, 0.52, z1 - z0 - 0.3), XF + 0.10, 4.24, (z0 + z1) / 2), T[0]));
                 shopUnit(XC, z0, z1, 'z', T[1], T[0]);
             }
             for (let i = 0; i < 2; i++) {
                 const x0 = XF - R - 0.5 - i * 7.6, x1 = x0 - 7.0;
                 F(A, C.deep, x0 + 0.25, 0, ZF + 0.02, x0, Y_SHOP, ZC);
-                const T = [['noodle', 'restaurant'], ['bar', 'bar'], ['seven', 'grocer'],
-                           ['optic', 'fashion'], ['chem', 'pharmacy'], ['cup', 'cafe']][i % 6];
+                // the coffee chain on this corner is the one tenancy up here I
+                // am sure of; the rest are invented at the right size
+                const T = [['pho', 'restaurant'], ['wool', 'clothes'], ['sbux', 'restaurant']][i % 3];
                 P.shopLit.push(shp(put(boxG(Math.abs(x1 - x0) - 0.3, 0.52, 0.06),
                                    (x0 + x1) / 2, 4.24, ZF + 0.10), T[0]));
                 shopUnit(ZC, x0, x1, 'x', T[1], T[0]);
@@ -4966,7 +5143,10 @@ export default function build(world) {
             const shopRun = (z0, z1, n, faces) => {
                 for (let i = 0; i < n; i++) {
                     const a = z0 - (z0 - z1) * (i / n) - 0.35, b = z0 - (z0 - z1) * ((i + 1) / n) + 0.35;
-                    F(A, 0x232326, XF + 0.02, 0, a, XC, 0.40, b);
+                    const [d0, d1] = shopDoor(a, b);
+                    F(A, 0x232326, XF + 0.02, 0, Math.max(a, b), XC, 0.40, d1);
+                    F(A, 0x232326, XF + 0.02, 0, d0, XC, 0.40, Math.min(a, b));
+                    F(A, 0x232326, XF + 0.02, 0, d0, XC, 0.14, d1);
                     F(A, 0x2c2a26, XF + 0.04, 0, a + 0.35, XC, 4.10, a + 0.50);
                     const T = faces[i % faces.length];
                     P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4), XF + 0.10, 4.42, (a + b) / 2), T[0]));
@@ -5012,7 +5192,7 @@ export default function build(world) {
                 }
                 F(A, E.h, XF - 0.96, Y_TOP + 1.05, ZS - 0.2, XC, Y_TOP + 1.48, ZN + 0.2);
                 F(A, E.f, XF - 0.24, Y_TOP + 1.48, ZS, XF + 0.20, Y_TOP + 3.10, ZN);
-                shopRun(ZS, ZN, 2, [['sbux', 'cafe'], ['books', 'books']]);
+                shopRun(ZS, ZN, 2, [['sbux', 'restaurant'], ['facet', 'jewel']]);
             }
 
             // ---- the brown Victorian in the middle
@@ -5060,7 +5240,7 @@ export default function build(world) {
                     put(g, XF - 0.02, Y_TOP + 3.10, z);
                     FG(A, V.h, g);
                 }
-                shopRun(ZS, ZN, 3, [['pho', 'restaurant'], ['bar', 'bar'], ['chem', 'pharmacy']]);
+                shopRun(ZS, ZN, 3, [['linen', 'clothes'], ['cup', 'restaurant'], ['boss', 'clothes']]);
             }
 
             // ---- and the sixties slab at the Collins end
@@ -5083,7 +5263,7 @@ export default function build(world) {
                 F(A, S6.f, XF, Y0, ZN, XC, Y_TOP, ZN + 0.5);
                 F(A, S6.h, XF - 0.30, Y_TOP, ZS, XC, Y_TOP + 0.44, ZN);
                 F(A, S6.l, XF - 0.10, Y_TOP + 0.44, ZS, XF + 0.16, Y_TOP + 1.60, ZN);
-                shopRun(ZS, ZN, 3, [['seven', 'grocer'], ['coco', 'cafe'], ['boss', 'fashion']]);
+                shopRun(ZS, ZN, 3, [['kozmin', 'jewel'], ['noodle', 'restaurant'], ['atelier', 'clothes']]);
             }
         }
 
@@ -5254,25 +5434,32 @@ export default function build(world) {
                                            B.z1 + 2.05), 'stpaul'));
 
                     } else {
+                        /* The bank's order is set out from `z0` toward `z1`,
+                           which is northward — subtracted, as the rest of this
+                           block still is, its columns walked south out of the
+                           building and stood in the middle of the rendered
+                           block's shopfronts, one of them square in a doorway.
+                           Only this bay is corrected here, because only this
+                           bay's stonework lands on a shop. */
                         F(A, 0xcfc4a8, B.x1, 5.20, B.z0, XC, B.top, B.z1);
                         F(A, 0xcfc4a8, B.x1, 0, B.z0, XC - 7.5, 5.20, B.z1);
                         F(A, 0x8d8272, XF - 0.10, 0, B.z0, XC, 1.10, B.z1);
                         for (let i = 0; i <= 4; i++) {                    // a giant order
-                            const z = B.z0 - span * (i / 4);
+                            const z = B.z0 + span * (i / 4);
                             F(A, 0xe0d6ba, XF - 0.62, 1.10, z + 0.55, XC, B.top - 2.4, z - 0.55);
                             F(A, 0xefe6cc, XF - 0.80, B.top - 2.4, z + 0.72, XC, B.top - 1.8, z - 0.72);
                         }
                         for (let f = 0; f < 3; f++) {
                             const y = 2.2 + f * 4.6;
                             for (let i = 0; i < 4; i++) {
-                                const zc = B.z0 - span * ((i + 0.5) / 4);
+                                const zc = B.z0 + span * ((i + 0.5) / 4);
                                 W(A, XC, y, zc + 1.05, XC + 0.07, y + 3.30, zc - 1.05);
                                 F(A, 0xb7ab90, XF - 0.20, y - 0.22, zc + 1.28, XC, y, zc - 1.28);
                             }
                         }
                         F(A, 0xe0d6ba, XF - 0.46, B.top - 1.8, B.z0, XC, B.top - 1.2, B.z1);
                         for (let i = 0; i < 16; i++) {
-                            const z = B.z0 - 0.3 - i * ((span - 0.6) / 15);
+                            const z = B.z0 + 0.3 + i * ((span - 0.6) / 15);
                             F(A, 0xefe6cc, XF - 0.96, B.top - 1.2, z + 0.13, XF - 0.10, B.top - 0.5, z - 0.13);
                         }
                         F(A, 0xefe6cc, XF - 1.14, B.top - 0.5, B.z0 - 0.2, XC, B.top, B.z1 + 0.2);
@@ -5280,19 +5467,34 @@ export default function build(world) {
                     }
 
                     /* the shops under every one of them, because this side of
-                       the street is shops the whole way and always has been */
+                       the street is shops the whole way and always has been —
+                       except the bank, whose ground floor is a banking chamber
+                       standing on a metre of rusticated stone with a giant
+                       order coming down into it. There is no room for a
+                       shopfront in that and there never was one: a shop the
+                       walk cannot get into is worse than no shop, so this bay
+                       keeps its stone and skips the fitout. */
+                    if (B.kind === 'bank') continue;
+                    /* Northward, which is the direction this list of bays
+                       runs: subtracted rather than added, the whole run of
+                       shopfronts landed one bay south of the building it
+                       belongs to, and the first block's shops were standing
+                       inside the tower on the Collins corner. */
                     const n = Math.max(1, Math.round(span / 9.0));
+                    const step = (B.z1 - B.z0) / n;
                     for (let i = 0; i < n; i++) {
-                        const a = B.z0 - span * (i / n) - 0.35, b = B.z0 - span * ((i + 1) / n) + 0.35;
-                        F(A, 0x232326, XF + 0.02, 0, a, XC, 0.40, b);
-                        F(A, 0x2c2a26, XF + 0.04, 0, a + 0.35, XC, 4.10, a + 0.50);
-                        /* The burger shop and the convenience store are on this
-                           block and go where the photograph puts them; the
-                           others are invented at the right size for the bay. */
-                        const T = B.kind === 'bronze' ? [['maccas', 'cafe'], ['seven', 'grocer'], ['pho', 'restaurant']][i % 3]
-                                : B.kind === 'fin'    ? [['bar', 'bar'], ['optic', 'fashion'], ['cup', 'cafe']][i % 3]
-                                : B.kind === 'render' ? [['noodle', 'restaurant'], ['books', 'books'], ['chem', 'pharmacy']][i % 3]
-                                :                       [['bergen', 'fashion'], ['coco', 'cafe']][i % 2];
+                        const a = B.z0 + step * i + 0.35, b = B.z0 + step * (i + 1) - 0.35;
+                        const [d0, d1] = shopDoor(a, b);
+                        F(A, 0x232326, XF + 0.02, 0, Math.max(a, b), XC, 0.40, d1);
+                        F(A, 0x232326, XF + 0.02, 0, d0, XC, 0.40, Math.min(a, b));
+                        F(A, 0x232326, XF + 0.02, 0, d0, XC, 0.14, d1);
+                        F(A, 0x2c2a26, XF + 0.04, 0, a - 0.35, XC, 4.10, a - 0.50);
+                        /* The burger shop is on this block and goes where the
+                           photograph puts it; the others are invented at the
+                           right size for the bay. */
+                        const T = B.kind === 'bronze' ? [['maccas', 'restaurant'], ['wool', 'clothes']][i % 2]
+                                : B.kind === 'fin'    ? [['bar', 'restaurant'], ['bergen', 'jewel']][i % 2]
+                                :                       [['coco', 'restaurant'], ['facet', 'jewel']][i % 2];
                         P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4),
                                            XF + 0.10, 4.42, (a + b) / 2), T[0]));
                         shopUnit(XC, a, b, 'z', T[1], T[0]);
