@@ -3651,6 +3651,31 @@ export default function build(world) {
                         map: signMap, emissive: 0xffffff, emissiveMap: signEmis,
                         emissiveIntensity: 1.35, roughness: 0.32,
                     }),
+            /* Two more for the tower in section 25, because `body` is a wall
+               and Eureka has no walls. Its curtain wall wants to be glossy and
+               nearly black and the gold wants to be the brightest thing south
+               of the river, and neither of those is a precast facade at
+               roughness three quarters.
+
+               Both are metalness one tenth and no higher, for the reason the
+               canopy steel above already had to learn: there is no environment
+               map in this world, so a metallic surface has nothing to reflect
+               and goes to black wherever the sun does not strike it square.
+               What makes this glass read as glass is the gradient painted up
+               its own height, not the material. */
+            euGlass: stdMat(0xffffff, {
+                        vertexColors: true, roughness: 0.22, metalness: 0.10,
+                    }),
+            /* And a third of a stop of emissive on the gold, which is not a
+               cheat but the only way a crown lit from behind stays gold. The
+               sun is west-north-west and low; the crown's south and east faces
+               see none of it, and the fog it stands in is warm. Without this
+               the top ten storeys went the same grey as the shaft from the one
+               place in the world anybody looks at them from. */
+            euGold: stdMat(0xffffff, {
+                        vertexColors: true, roughness: 0.30, metalness: 0.10,
+                        emissive: 0xc98a33, emissiveIntensity: 0.42,
+                    }),
         };
         /* Canvas y counts down from the top and uv v counts up from the
            bottom, and three uploads a CanvasTexture flipped so the two meet:
@@ -3755,6 +3780,17 @@ export default function build(world) {
                face that has to carry from four hundred metres. */
             a108Lo:   0x22405e, a108Hi:   0x86b2d6, a108Band: 0xc6dbec,
             a108Gold: 0xd8a238, a108Soff: 0xf0cd6e, a108Base: 0x39434e,
+            /* Eureka's own eight, and they are the building's argument rather
+               than its materials: blue for the flag, white for its cross, red
+               for what was spilled under it, gold for what everybody was
+               there for. Written brighter than they look, because every hex
+               in this file is read through the double conversion section 0
+               owns up to and then graded again by TONE — a blue-black typed
+               as blue-black comes out as nothing at all. */
+            euGlassLo: 0x22406e, euGlassHi: 0x5389c9, euBand: 0x6d8098,
+            euWhite:  0xeef1f2, euWhiteLo: 0xc6ccd0, euRed: 0xcf3327,
+            euGoldLo: 0xe0ac3d, euGoldHi: 0xffde90, euGoldBand: 0xe7ba58,
+            euBase:   0x6c6f70,
         };
 
         /* Every surface accumulates into one of these and is merged once at
@@ -3789,6 +3825,10 @@ export default function build(world) {
             // of it in two arrays, because at that range the only decision
             // that survives is which of the two colours a surface is.
             a108: [], a108g: [],
+            // Eureka Tower, three hundred metres south over the river: its
+            // painted work, its curtain wall, and the ten storeys of gold on
+            // top of it — see section 25
+            eu: [], euG: [], euGold: [],
         };
 
         /* A box from two opposite corners rather than from a centre and three
@@ -5589,6 +5629,178 @@ export default function build(world) {
             }
         }
 
+        /* ============================================================
+           25 · Eureka Tower, three hundred metres south over the river
+
+           Stand at Flinders and Swanston looking down Princes Bridge and the
+           tallest thing in the view is not in the city at all: it is in
+           Southbank, close to the far bank, and it is two hundred and
+           ninety-seven metres to a flat roof. Fender Katsalidis, 2006, and the
+           whole building is one argument about 1854 — blue-black glass for the
+           flag, a white cross up its face, a red stripe for the blood, and ten
+           storeys of gold-plated glass on top for the reason anybody was on
+           the goldfields in the first place. The gold is the thing: from
+           anywhere in this city you find Eureka by looking for a warm block
+           sitting on a cold shaft.
+
+           It is three hundred metres away and the fog has a fifth of it, so
+           everything here is spent on the four things that survive that
+           distance — the slender upright silhouette with the two white cores
+           stepping out at its ends, the fine ruled floor lines, the two
+           stripes, and the crown. There are no window frames on this building
+           and no lit rooms in it, because at three hundred metres in daylight
+           there is no such thing as either.
+           ============================================================ */
+        {
+            const A = P.eu, G = P.euG, GD = P.euGold;
+
+            /* Where it stands. The real bearing from this crossing is about
+               thirty degrees west of south and the better part of half a
+               kilometre out, but Southbank in this world is compressed the way
+               the rest of the far side is, and what has to be true is the
+               relationship rather than the survey: Eureka in front and close
+               to the south bank, Australia 108 standing further back, and
+               Eureka the westerly of the two, which is the order this crossing
+               reads them in. Slid off the line of the bridge until it stands
+               over the station's western shoulder the way it does in life. */
+            const EX = -118, EZ = 296;
+            /* The slab: much wider than it is deep, and the broad faces look
+               north and south, which is why the face this world sees is the
+               broad one. Forty-three and a half by twenty-six is slender
+               enough that the tower reads as a blade rather than a tower —
+               eleven to one on the narrow axis. */
+            const HW = 21.75, HD = 13.0;
+            const H = 297.3;                    // to the roof, and the mast is not in it
+            const Y_POD = 21.0;                 // the car park podium it grows out of
+            const FF = 3.20, Y_F0 = 25.4;       // ninety-odd residential floors, near enough
+            const Y_GOLD = 265.3;               // ten storeys of gold, and the shaft stops here
+
+            // The whole building is set out from its own centre and lives out
+            // there, so the helpers here take local metres and put them where
+            // the tower is rather than making every line carry the offset.
+            const bx = (arr, hex, x0, y0, z0, x1, y1, z1) =>
+                F(arr, hex, EX + x0, y0, EZ + z0, EX + x1, y1, EZ + z1);
+
+            /* Nothing on this tower is laid over anything else, and that is a
+               depth-buffer decision rather than a modelling one. Three hundred
+               metres out, with the app's near plane at a centimetre, a
+               twenty-four-bit depth buffer resolves about half a metre — so a
+               panel set a hundred millimetres proud of the wall behind it is
+               not a panel, it is a field of speckle that crawls as you turn
+               your head, which is exactly what the first cut of this did. So
+               every panel on this facade butts the panels around it instead:
+               two surfaces sharing an edge cannot fight, however far away they
+               are, and a building whose whole detail is flat panels of colour
+               loses nothing by being built the way it is actually built. The
+               podium and the crown are the only things that step, and they
+               step in metres. */
+
+            /* ---- the podium. Eureka does not meet the ground the way it
+                    meets the sky: there are levels of car park and a lobby
+                    under it, wider than the tower and dark at the bottom, and
+                    without them the shaft reads as a slab somebody stood on
+                    the grass. ---- */
+            bx(A, CF.spandrel,  -30.4, 0, -22.4, 30.4, 4.6, 22.4);
+            bx(A, CF.euBase,    -30.0, 4.6, -22.0, 30.0, Y_POD, 22.0);
+            bx(A, CF.euWhiteLo, -31.0, Y_POD, -23.0, 31.0, Y_POD + 1.2, 23.0);
+
+            /* ---- the curtain wall.
+
+                   Nothing on this facade stands proud of anything. The first
+                   cut of it had every slab edge projecting a metre and a
+                   third, which is what it took to keep the depth buffer from
+                   speckling at this range — and from the footpath, which is
+                   below every one of those ninety soffits, the tower read as a
+                   stack of shelves rather than as a wall of glass. Eureka is a
+                   flat building. So the wall is laid up instead: three
+                   columns across the face, and up each column a vision pane
+                   and a spandrel and a vision pane, every box butting the box
+                   below it. Flush geometry cannot fight, and there is nothing
+                   for the sun to catch an underside of.
+
+                   Three columns and not one, because the white and the red run
+                   between them. The stripes are cut out of the wall rather
+                   than laid over it, so they come up unbroken from the podium
+                   to the gold — and running the floor lines straight across
+                   them, which is what the first cut did, turns the whole
+                   argument of this building into two dashed lines.
+
+                   Every pane is graded against the tower's whole height rather
+                   than its own, which is the one thing `pane` has to be told
+                   here: ninety panes each grading from black to sky over three
+                   metres is a barcode, and one gradient carried up two hundred
+                   and sixty-five metres is what a curtain wall actually does —
+                   nearly black at the bottom where it has the roofs of
+                   Southbank in it, taking the sky by the time it reaches the
+                   gold. ---- */
+            const RD0 = 15.6, RD1 = 18.2;                  // the red, near the east edge
+            const WH0 = -8.0, WH1 = -0.5;                  // and the white, off centre
+            const COLS = [[-HW, WH0], [WH1, RD0], [RD1, HW]];
+            const VIS = 2.66;                              // glass, and the rest of the floor is slab
+
+            const gp = (x0, y0, x1, y1, lo, hi, gy0, gy1) => {
+                const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), HD * 2);
+                put(g, EX + (x0 + x1) / 2, (y0 + y1) / 2, EZ);
+                G.push(pane(g, lo, hi, gy0, gy1));
+                return g;
+            };
+
+            const NF = Math.floor((Y_GOLD - Y_F0) / FF);
+            for (const [a, b] of COLS) {
+                gp(a, 0, b, Y_F0, CF.euGlassLo, CF.euGlassHi, 0, Y_GOLD);
+                for (let f = 0; f < NF; f++) {
+                    const y = Y_F0 + f * FF;
+                    gp(a, y, b, y + VIS, CF.euGlassLo, CF.euGlassHi, 0, Y_GOLD);
+                    bx(A, CF.euBand, a, y + VIS, -HD, b, y + FF, HD);
+                }
+                gp(a, Y_F0 + NF * FF, b, Y_GOLD, CF.euGlassLo, CF.euGlassHi, 0, Y_GOLD);
+            }
+            bx(A, CF.euWhite, WH0, 0, -HD, WH1, Y_GOLD, HD);
+            bx(A, CF.euRed,   RD0, 0, -HD, RD1, Y_GOLD, HD);
+
+            /* ---- the cores. Two white blades on the narrow ends, standing
+                    out past the slab and set well in from its broad faces, and
+                    they are the whole reason the silhouette has shoulders
+                    rather than corners. They over-run the roof by four metres:
+                    the height everybody quotes is to the roof of the crown,
+                    and these go past it. ---- */
+            for (const s of [-1, 1]) {
+                bx(A, CF.euWhite, s * (HW - 1.2), 0, -8.6, s * (HW + 5.0), H + 4.0, 8.6);
+            }
+
+            /* ---- the crown. Ten storeys of gold-plated glass, cantilevered a
+                    little past the shaft on all four sides so that it sits on
+                    the tower rather than being painted onto it, with a pale
+                    soffit under the overhang to say where it starts. Laid up
+                    the same way the shaft is and graded the same way, and it
+                    is the only warm thing in the southern half of this world:
+                    from the crossing you find Eureka by looking for it. ---- */
+            const GW = HW + 1.2, GD_ = HD + 2.5;
+            bx(A, CF.euWhiteLo, -GW - 0.3, Y_GOLD - 0.60, -GD_ - 0.3, GW + 0.3, Y_GOLD, GD_ + 0.3);
+            const gpG = (y0, y1) => {
+                const g = boxG(GW * 2, Math.abs(y1 - y0), GD_ * 2);
+                put(g, EX, (y0 + y1) / 2, EZ);
+                GD.push(pane(g, CF.euGoldLo, CF.euGoldHi, Y_GOLD, H));
+                return g;
+            };
+            const NG = Math.floor((H - Y_GOLD) / FF);
+            for (let f = 0; f < NG; f++) {
+                const y = Y_GOLD + f * FF;
+                gpG(y, y + VIS);
+                bx(A, CF.euGoldBand, -GW, y + VIS, -GD_, GW, y + FF, GD_);
+            }
+            gpG(Y_GOLD + NG * FF, H);
+
+            /* ---- the roof, which is flat, and the little that stands on it.
+                    The mast is kept to almost nothing on purpose: at this range
+                    it is two pixels wide, and a spire built any bigger than the
+                    truth is the fastest way to make a tower somebody knows look
+                    like a tower somebody guessed at. ---- */
+            bx(A, CF.euWhiteLo, -GW, H, -GD_, GW, H + 0.7, GD_);
+            bx(A, CF.spandrel,  -7.5, H + 0.7, -4.5, 3.5, H + 3.7, 4.5);
+            bx(A, CF.mullion,   -0.55, H + 0.7, -0.55, 0.55, H + 15.4, 0.55);
+        }
+
         /* ------------------------------------------------------------
            21k · Australia 108 — Fender Katsalidis, 2020. Three hundred and
                  seventeen metres of blue glass standing in Southbank half a
@@ -5880,6 +6092,12 @@ export default function build(world) {
                        the bank are what actually stops anybody. */
                     [P.gGlass, M21.glass], [P.gTrim, M21.rail],
                 ]],
+                // and the one thing in this list that is not on this block at
+                // all: three draws for three hundred metres of tower, which is
+                // what a building made of colour rather than of texture buys.
+                ['eurekatower_00', [
+                    [P.eu, M21.body], [P.euG, M21.euGlass], [P.euGold, M21.euGold],
+                ], []],
             ];
             for (const [name, solid, ghosted] of OBJECTS) {
                 const group = new THREE.Group();
