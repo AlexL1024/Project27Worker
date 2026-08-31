@@ -9744,4 +9744,625 @@ export default function build(world) {
            So the quays and the flights collide, and the roadway still says
            where the walk is. */
     }
+
+    /* ============================================================
+       28 · what the footpath is actually full of
+
+       The paving was a grey ribbon with trees standing in it and nothing
+       else. Everything a person walks past on Swanston Street was missing:
+       the planters at the kerb with their clipped shrubs, the bins in pairs,
+       the hoops with bicycles locked to them, the share scooters — one of
+       them, as always, lying on its side — the bollards, the benches, the
+       pink phone pillar, the grey cabinets with stickers all over them, the
+       boards outside the cafés, the plates on their posts and the grates set
+       into the paving. That clutter is most of the difference between a
+       street and a plane with buildings standing on it.
+
+       Three meshes, for the whole of it.
+
+       Two are instanced kits rather than instanced objects: a unit box and a
+       unit tube, each carrying its own colour per instance. A bin is four
+       tubes, a sandwich board is six boxes, a scooter is both — so a
+       thousand pieces of street furniture come out of the pair in two draws.
+       It is a stranger way to build than one geometry per kind of thing, and
+       on a budget this tight it is the only way this much of it fits.
+
+       The third is merged and solid, and holds what has real bulk: the beds,
+       the benches, the leaning rails, the cabinets, the phone boxes, and the
+       hoops with their bikes. Those are the things nobody should be able to
+       walk through. Everything instanced is left out of the walk grid by
+       `ground.js` — which is the right answer for the rest of it. You pass a
+       bin; you do not climb one.
+
+       Everything solid stays within about a metre and a half of the kerb.
+       Only the instanced things go anywhere else — a board against the
+       building line, a scooter dropped in the middle of the paving — because
+       those are the ones the walk never sees. The footpath is seven metres
+       wide and the grid rasterises at 1.365 m to the cell: fill the middle of
+       it with solids and Swanston Street stops being walkable, which is a
+       worse fault than an empty footpath.
+       ============================================================ */
+    {
+        /* The paint chips. Read through `srgb` like everything else in this
+           file, which means read twice — see section 0 — so these are
+           written a shade brighter than the eye wants and land where the
+           bollards and bins already standing in section 16 land. */
+        const FC = {
+            iron:    0x7e858c,     // galvanised street steel, the grey of everything
+            ironLo:  0x4c5359,
+            dark:    0x3d4348,     // the near-black of a bin drum, a bollard
+            band:    0xc9cdd0,     // the reflective collar near the top of one
+            yellow:  0xb8a52c,     // a recycling lid
+            green:   0x4f7b64,     // the bottle green a utility cabinet is painted
+            grey:    0x9a9c98,     // and the grey one beside it
+            leaf:    0x6d8e4b,     // clipped shrub, into the sun
+            leafLo:  0x4f6c36,     // and the side of it that never is
+            soil:    0x4a4238,
+            timber:  0xc0955f,     // bench slats
+            pink:    0xff8ec6,     // Telstra
+            white:   0xe4e0d6,
+            deck:    0x6f777e,     // a share scooter
+            deckAcc: 0xc8c2b4,
+            tyre:    0x2b2f32,
+            frame:   0xa6aaad,     // a bicycle, aluminium
+            frameB:  0xa46854,     // and the one somebody sprayed maroon
+            frameC:  0x4d8b9d,
+            blue:    0x4f88c9,     // a street name blade
+            red:     0xd0604c,
+            board:   0x35312b,     // an A-frame's chalkboard
+            boardRim:0x8a6c47,
+            card:    0xa89272,     // cardboard, gone soft in the weather
+            cup:     0xdad4c6,
+            sticker: 0xcf6a3a,
+        };
+        const _fc = new Map();
+        const FCOL = (hex) => { let c = _fc.get(hex); if (!c) { c = srgb(hex); _fc.set(hex, c); } return c; };
+        const fpaint = (g, hex) => {
+            const c = FCOL(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+
+        /* Everything below is written in the frame of the thing being built:
+           local +x runs along the footpath, local +z points at the road, and
+           local y = 0 is the top of the paving. One description of a bin
+           stands up on either side of either street. */
+        let FRAME = new THREE.Matrix4();
+        const stand = (x, z, yaw, rx, rz, dy) => {
+            FRAME = MX(x, KERB_H + (dy || 0), z, 0, yaw, 0);
+            if (rx || rz) FRAME.multiply(MX(0, 0, 0, rx || 0, 0, rz || 0));
+        };
+
+        const IB = [], IBC = [], IT = [], ITC = [], SOLID = [];
+        const iBox = (hex, w, h, d, x, y, z, rx, ry, rz) => {
+            IB.push(new THREE.Matrix4().multiplyMatrices(FRAME, MX(x, y, z, rx, ry, rz, w, h, d)));
+            IBC.push(hex);
+        };
+        const iTube = (hex, r, h, x, y, z, rx, ry, rz) => {
+            IT.push(new THREE.Matrix4().multiplyMatrices(FRAME, MX(x, y, z, rx, ry, rz, r * 2, h, r * 2)));
+            ITC.push(hex);
+        };
+        const sBox = (hex, w, h, d, x, y, z, rx, ry, rz) => {
+            const g = boxG(w, h, d); put(g, x, y, z, rx, ry, rz);
+            SOLID.push(fpaint(g.applyMatrix4(FRAME), hex));
+        };
+        const sTube = (hex, r, h, x, y, z, rx, ry, rz) => {
+            const g = cylG(r, r, h, 10); put(g, x, y, z, rx, ry, rz);
+            SOLID.push(fpaint(g.applyMatrix4(FRAME), hex));
+        };
+        const sBall = (hex, r, x, y, z, flat) => {
+            const g = sphG(r, 9, 6); put(g, x, y, z, 0, rr(0, 6.28), 0, 1, flat || 0.78, 1);
+            SOLID.push(fpaint(g.applyMatrix4(FRAME), hex));
+        };
+        const sRing = (hex, R, r, x, y, z, ry) => {
+            const g = new THREE.TorusGeometry(R, r, 5, 14); put(g, x, y, z, 0, ry || 0, 0);
+            SOLID.push(fpaint(g.applyMatrix4(FRAME), hex));
+        };
+
+        /* A tube between two points, which is how a bicycle is described and
+           the only way a frame comes out looking like a frame rather than a
+           set of boxes. */
+        const _sa = new THREE.Vector3(), _sb = new THREE.Vector3(), _sd = new THREE.Vector3();
+        const _sq = new THREE.Quaternion(), _sy = new THREE.Vector3(0, 1, 0), _s1 = new THREE.Vector3(1, 1, 1);
+        const strut = (ax, ay, az, bx, by, bz) => {
+            _sa.set(ax, ay, az); _sb.set(bx, by, bz);
+            _sd.subVectors(_sb, _sa);
+            const len = Math.max(_sd.length(), 1e-4);
+            _sq.setFromUnitVectors(_sy, _sd.divideScalar(len));
+            return { len, m: new THREE.Matrix4().compose(_sa.lerp(_sb, 0.5), _sq, _s1) };
+        };
+        const sLeg = (hex, r, ax, ay, az, bx, by, bz) => {
+            const s = strut(ax, ay, az, bx, by, bz);
+            const g = cylG(r, r, s.len, 7);
+            SOLID.push(fpaint(g.applyMatrix4(s.m).applyMatrix4(FRAME), hex));
+        };
+        const iLeg = (hex, r, ax, ay, az, bx, by, bz) => {
+            const s = strut(ax, ay, az, bx, by, bz);
+            IT.push(new THREE.Matrix4().multiplyMatrices(FRAME, s.m)
+                .multiply(new THREE.Matrix4().makeScale(r * 2, s.len, r * 2)));
+            ITC.push(hex);
+        };
+
+        /* ---- the things themselves ----------------------------------- */
+
+        // A planter bed: steel edging, wet soil, and three or four clipped
+        // shrubs that have been cut square once and then left to it.
+        const planter = (len) => {
+            const d = 1.05, w = 0.07;
+            sBox(FC.ironLo, len, 0.44, w, 0, 0.22, d / 2);
+            sBox(FC.ironLo, len, 0.44, w, 0, 0.22, -d / 2);
+            sBox(FC.ironLo, w, 0.44, d, len / 2, 0.22, 0);
+            sBox(FC.ironLo, w, 0.44, d, -len / 2, 0.22, 0);
+            sBox(FC.soil, len - 0.13, 0.34, d - 0.13, 0, 0.17, 0);
+            const n = Math.max(2, Math.round(len / 1.15));
+            for (let i = 0; i < n; i++) {
+                const x = -len / 2 + len * ((i + 0.5) / n) + rr(-0.12, 0.12);
+                const r = rr(0.30, 0.44);
+                sBall(rnd() < 0.4 ? FC.leafLo : FC.leaf, r, x, 0.34 + r * 0.62, rr(-0.14, 0.14));
+                if (rnd() < 0.55) sBall(FC.leaf, r * 0.72, x + rr(-0.2, 0.2), 0.34 + r * 1.05, rr(-0.2, 0.2));
+            }
+        };
+
+        // The bench outside a shop: two cast ends, five slats and a back.
+        const bench = () => {
+            for (const s of [-0.78, 0.78]) {
+                sBox(FC.ironLo, 0.07, 0.43, 0.52, s, 0.215, 0);
+                sBox(FC.ironLo, 0.07, 0.40, 0.06, s, 0.63, -0.20, 0.22);
+            }
+            for (let i = 0; i < 4; i++) sBox(FC.timber, 1.72, 0.045, 0.10, 0, 0.45, -0.19 + i * 0.14);
+            for (let i = 0; i < 3; i++) sBox(FC.timber, 1.72, 0.045, 0.10, 0, 0.60 + i * 0.14, -0.24 - i * 0.032, 0.22);
+        };
+
+        // A leaning rail, which is what this city puts where a bench will not fit.
+        const leanRail = (len) => {
+            for (const s of [-len / 2 + 0.1, len / 2 - 0.1]) {
+                sTube(FC.iron, 0.045, 0.76, s, 0.38, 0.06, 0.14);
+                sTube(FC.iron, 0.035, 0.42, s, 0.21, -0.16, -0.5);
+            }
+            sTube(FC.iron, 0.05, len, 0, 0.74, 0.11, 0, 0, Math.PI / 2);
+            sTube(FC.iron, 0.035, len - 0.3, 0, 0.44, 0.07, 0, 0, Math.PI / 2);
+        };
+
+        // The tall public bins, which come in pairs — one for rubbish, one
+        // for the bottles, and only the lid says which.
+        const binPair = () => {
+            [[-0.42, FC.dark], [0.42, FC.yellow]].forEach(([x, lid], i) => {
+                const yaw = rr(-0.2, 0.2);
+                iTube(FC.dark, 0.31, 1.02, x, 0.51, 0, 0, yaw, 0);
+                iTube(FC.ironLo, 0.335, 0.07, x, 0.035, 0);
+                iTube(FC.band, 0.325, 0.045, x, 0.86, 0);
+                iTube(lid, 0.35, 0.13, x, 1.085, 0);
+                iBox(0x1a1c1e, 0.30, 0.17, 0.05, x + Math.sin(yaw) * 0.3, 0.95, 0.30, 0, yaw, 0);
+                if (i === 1) iBox(FC.white, 0.16, 0.20, 0.02, x + Math.sin(yaw) * 0.32, 0.62, 0.315, 0, yaw, 0);
+            });
+        };
+
+        // And the wheelie bin a shop has left out and not brought back in.
+        const wheelie = () => {
+            iBox(FC.green, 0.60, 0.94, 0.70, 0, 0.53, 0, 0.06);
+            iBox(rnd() < 0.5 ? FC.yellow : FC.red, 0.63, 0.09, 0.73, 0, 1.03, -0.02, 0.06);
+            for (const s of [-0.24, 0.24]) iTube(FC.dark, 0.085, 0.06, s, 0.085, -0.30, 0, 0, Math.PI / 2);
+            iBox(FC.dark, 0.06, 0.30, 0.06, 0, 1.14, -0.30);
+        };
+
+        // A bike hoop — the flattened staple this city bolts to its footpaths.
+        const hoop = () => {
+            for (const s of [-0.36, 0.36]) sTube(FC.iron, 0.032, 0.60, s, 0.30, 0);
+            for (const s of [-1, 1]) sLeg(FC.iron, 0.032, s * 0.36, 0.60, 0, s * 0.24, 0.72, 0);
+            sTube(FC.iron, 0.032, 0.50, 0, 0.72, 0, 0, 0, Math.PI / 2);
+            for (const s of [-0.36, 0.36]) sTube(FC.ironLo, 0.055, 0.05, s, 0.025, 0);
+        };
+
+        /* A bicycle locked to one, leaning the way a locked bicycle leans.
+           Built without a rider: the fleet that used to run in this world had
+           one modelled into the geometry and the fleet is gone. */
+        const bicycle = (hex) => {
+            const RW = -0.53, FW = 0.55, BB = -0.06, SEAT = -0.24, HEAD = 0.40;
+            sRing(FC.tyre, 0.325, 0.028, RW, 0.325, 0);
+            sRing(FC.tyre, 0.325, 0.028, FW, 0.325, 0);
+            sTube(FC.frame, 0.055, 0.035, RW, 0.325, 0, 0, 0, Math.PI / 2);
+            sTube(FC.frame, 0.055, 0.035, FW, 0.325, 0, 0, 0, Math.PI / 2);
+            sLeg(hex, 0.030, BB, 0.29, 0, SEAT + 0.02, 1.00, 0);          // seat tube
+            sLeg(hex, 0.030, BB, 0.29, 0, HEAD, 0.94, 0);                 // down tube
+            sLeg(hex, 0.028, SEAT + 0.02, 0.97, 0, HEAD + 0.02, 1.00, 0); // top tube
+            sLeg(hex, 0.022, BB, 0.29, 0, RW, 0.325, 0);                  // chain stay
+            sLeg(hex, 0.020, SEAT + 0.02, 0.96, 0, RW, 0.325, 0);         // seat stay
+            sLeg(hex, 0.024, HEAD + 0.02, 0.98, 0, FW, 0.325, 0);         // fork
+            sTube(FC.dark, 0.055, 0.10, SEAT - 0.02, 1.05, 0);            // saddle
+            sBox(FC.dark, 0.26, 0.05, 0.11, SEAT - 0.02, 1.07, 0, 0, 0, -0.14);
+            sTube(FC.dark, 0.018, 0.44, HEAD + 0.05, 1.03, 0, Math.PI / 2, 0, 0);
+            sTube(FC.frame, 0.028, 0.14, BB, 0.29, 0, Math.PI / 2, 0, 0); // the crank
+        };
+
+        /* A share scooter. Upright on its stand, or — and the photograph has
+           one — lying flat on the paving where somebody dropped it. Either
+           way it is the same eleven pieces; the frame it stands in is the
+           only thing that differs. */
+        const scooter = (acc) => {
+            iBox(FC.deck, 0.56, 0.055, 0.17, 0, 0.155, 0);
+            iBox(FC.deck, 0.10, 0.09, 0.19, -0.26, 0.14, 0);
+            for (const [s, y] of [[-0.28, 0.115], [0.26, 0.115]]) {
+                iTube(FC.tyre, 0.115, 0.055, s, y, 0, Math.PI / 2, 0, 0);
+                iTube(FC.deckAcc, 0.05, 0.06, s, y, 0, Math.PI / 2, 0, 0);
+            }
+            iLeg(FC.deck, 0.026, 0.24, 0.18, 0, 0.17, 1.03, 0);
+            iBox(acc, 0.09, 0.26, 0.13, 0.185, 0.66, 0, 0, 0, 0.06);
+            iTube(FC.deck, 0.017, 0.46, 0.17, 1.05, 0, Math.PI / 2, 0, 0);
+            for (const s of [-0.20, 0.20]) iTube(FC.dark, 0.024, 0.10, 0.17, 1.05, s, Math.PI / 2, 0, 0);
+            iBox(FC.deckAcc, 0.10, 0.07, 0.05, 0.17, 1.11, 0);
+            iTube(FC.ironLo, 0.014, 0.20, -0.20, 0.09, 0.06, 0.5);        // the stand
+        };
+
+        // The pink pillar. There is one of these on nearly every block of
+        // this street and it is the most recognisable thing standing on it.
+        const phoneBox = () => {
+            sBox(FC.ironLo, 0.80, 0.09, 0.52, 0, 0.045, 0);
+            sBox(FC.pink, 0.72, 2.24, 0.44, 0, 1.16, 0);
+            sBox(FC.white, 0.60, 1.16, 0.03, 0, 1.42, 0.225);
+            sBox(FC.dark, 0.34, 0.46, 0.04, 0, 1.34, 0.245);
+            sBox(FC.dark, 0.07, 0.26, 0.05, -0.20, 1.34, 0.245);
+            sBox(FC.white, 0.82, 0.20, 0.52, 0, 2.36, 0);
+            sBox(FC.pink, 0.74, 0.10, 0.46, 0, 2.50, 0);
+            sBox(FC.white, 0.46, 0.30, 0.03, 0, 2.02, 0.228);
+            sBox(FC.pink, 0.30, 0.16, 0.03, 0, 0.44, 0.228);
+        };
+
+        // The steel boxes: a signal controller, a comms cabinet, whatever the
+        // grey one on the corner is. Stickered, and sprayed at least once.
+        const cabinet = (tall) => {
+            const w = tall ? 0.58 : 0.86, h = tall ? 1.52 : 1.24, d = tall ? 0.40 : 0.48;
+            const body = tall ? FC.green : FC.grey;
+            sBox(FC.ironLo, w + 0.08, 0.09, d + 0.08, 0, 0.045, 0);
+            sBox(body, w, h, d, 0, 0.09 + h / 2, 0);
+            sBox(FC.ironLo, w + 0.05, 0.06, d + 0.05, 0, 0.12 + h, 0);
+            sBox(FC.ironLo, 0.03, h - 0.16, 0.02, 0, 0.09 + h / 2, d / 2 + 0.005);
+            for (let i = 0; i < irr(2, 5); i++) {
+                sBox(rnd() < 0.5 ? FC.sticker : FC.white,
+                     rr(0.07, 0.16), rr(0.08, 0.15), 0.012,
+                     rr(-w / 2 + 0.12, w / 2 - 0.12), rr(0.5, h - 0.1), d / 2 + 0.006);
+            }
+            if (rnd() < 0.6) sBox(FC.dark, w * 0.7, 0.22, 0.012, rr(-0.1, 0.1), rr(0.6, 1.0), d / 2 + 0.008, 0, 0, rr(-0.2, 0.2));
+        };
+
+        // The board outside a café, angled at the footpath so it can be read
+        // from up the street rather than from in front of it.
+        const aFrame = () => {
+            for (const s of [-1, 1]) {
+                iBox(FC.boardRim, 0.66, 0.94, 0.035, 0, 0.47, s * 0.15, s * 0.19);
+                iBox(FC.board, 0.56, 0.80, 0.015, 0, 0.47, s * 0.165, s * 0.19);
+                for (let i = 0; i < 3; i++) {
+                    iBox(FC.white, rr(0.16, 0.40), 0.035, 0.006, rr(-0.06, 0.06),
+                         0.62 - i * 0.17, s * 0.185, s * 0.19);
+                }
+            }
+            iTube(FC.boardRim, 0.02, 0.60, 0, 0.90, 0, Math.PI / 2, 0, 0);
+        };
+
+        // Plates on a post: a one-way arrow, a no-standing, a clearway, and
+        // the blue blade with the street's name on it.
+        const signPost = (blade) => {
+            iTube(FC.iron, 0.042, 2.72, 0, 1.36, 0);
+            iTube(FC.ironLo, 0.075, 0.10, 0, 0.05, 0);
+            let y = 2.28;
+            const n = irr(1, 2);
+            for (let i = 0; i < n; i++) {
+                const kind = rnd();
+                if (kind < 0.36) {                       // a one-way arrow
+                    iBox(FC.white, 0.62, 0.24, 0.022, 0, y, 0.03);
+                    iBox(FC.dark, 0.40, 0.055, 0.010, -0.04, y, 0.043);
+                    iBox(FC.dark, 0.11, 0.11, 0.010, 0.19, y, 0.043, 0, 0, 0.78);
+                } else if (kind < 0.72) {                // no standing
+                    iBox(FC.white, 0.30, 0.44, 0.022, 0, y, 0.03);
+                    iBox(FC.red, 0.24, 0.05, 0.010, 0, y + 0.10, 0.043);
+                    iBox(FC.dark, 0.20, 0.05, 0.010, 0, y - 0.06, 0.043);
+                } else {                                 // a clearway plate
+                    iBox(FC.white, 0.34, 0.52, 0.022, 0, y, 0.03);
+                    iBox(FC.red, 0.26, 0.26, 0.012, 0, y + 0.09, 0.043);
+                    iBox(FC.dark, 0.24, 0.06, 0.010, 0, y - 0.16, 0.043);
+                }
+                y -= 0.60;
+            }
+            if (blade) {
+                iBox(FC.blue, 0.98, 0.21, 0.025, 0.30, 2.60, 0, 0, 0, 0);
+                iBox(FC.white, 0.92, 0.04, 0.028, 0.30, 2.68, 0);
+                iBox(FC.white, 0.92, 0.04, 0.028, 0.30, 2.52, 0);
+            }
+        };
+
+        // What is set into the paving rather than standing on it.
+        const grate = () => {
+            iBox(FC.ironLo, 1.02, 0.05, 0.44, 0, 0.015, 0);
+            for (let i = 0; i < 6; i++) iBox(0x1c1e20, 0.075, 0.03, 0.32, -0.38 + i * 0.152, 0.030, 0);
+        };
+        const lid = () => {
+            iTube(FC.ironLo, 0.34, 0.05, 0, 0.015, 0);
+            iTube(FC.iron, 0.26, 0.03, 0, 0.028, 0);
+            iBox(FC.ironLo, 0.34, 0.02, 0.05, 0, 0.036, 0, 0, rr(0, 3), 0);
+        };
+
+        // And the mess. A little of it says a city; much of it says a tip.
+        const mess = (kind) => {
+            if (kind === 0) {                            // a dropped cup
+                iTube(FC.cup, 0.042, 0.115, 0, 0.058, 0, rr(-0.1, 1.5), rr(0, 3), 0);
+                iTube(FC.white, 0.045, 0.02, 0, 0.12, 0);
+            } else if (kind === 1) {                     // a box flattened by a doorway
+                iBox(FC.card, 0.72, 0.025, 0.52, 0, 0.014, 0, 0, rr(0, 3), 0);
+                iBox(FC.card, 0.50, 0.025, 0.38, rr(-0.2, 0.2), 0.040, rr(-0.2, 0.2), 0, rr(0, 3), 0);
+            } else {                                     // a pallet of stock
+                const yaw = rr(-0.4, 0.4);
+                for (let i = 0; i < 5; i++) iBox(FC.card, 1.14, 0.045, 0.10, 0, 0.11, -0.35 + i * 0.175, 0, yaw, 0);
+                for (const s of [-0.5, 0, 0.5]) iBox(FC.card, 0.12, 0.10, 0.82, s, 0.05, 0, 0, yaw, 0);
+                for (let i = 0; i < irr(2, 4); i++) {
+                    iBox(rnd() < 0.5 ? FC.card : FC.white, rr(0.5, 0.9), rr(0.22, 0.34), rr(0.4, 0.6),
+                         rr(-0.2, 0.2), 0.28 + i * 0.30, rr(-0.1, 0.1), 0, yaw + rr(-0.3, 0.3), 0);
+                }
+            }
+        };
+
+        /* ---- where all of it goes ------------------------------------
+
+           A footpath, described the way you walk one: which axis it runs
+           along, where its kerb is, and which way the buildings are. `out`
+           is always measured in from the kerb, so one recipe stands up on
+           four sides of four streets without a single mirrored copy. */
+        const WALKS = [
+            // Swanston, both sides, the whole of its built length. The west
+            // side stops at Flinders Street: south of it the footpath climbs
+            // onto the station's granite plinth, which is not a footpath.
+            { ax: 'z', kerb: -SW, into: -1, a0: -396, a1: -18 },
+            { ax: 'z', kerb: SW, into: 1, a0: -396, a1: 112 },
+        ];
+        /* and the three cross streets, both kerbs of each, out to about where
+           the modelled frontage gives way to the merged backdrop. `NST`
+           carries half-widths, so the kerb is the centre plus or minus one
+           and the footpath is on the far side of it. */
+        for (const S of NST) {
+            WALKS.push({ ax: 'x', kerb: S.z + S.h, into: 1, a0: -102, a1: 102 });
+            WALKS.push({ ax: 'x', kerb: S.z - S.h, into: -1, a0: -102, a1: 102 });
+        }
+
+        // Where a thing goes, and which way it looks. A footpath's furniture
+        // faces the road, because that is where it is read from.
+        const site = (w, a, out) => {
+            const p = w.kerb + w.into * out;
+            return w.ax === 'z' ? { x: p, z: a, yaw: -w.into * Math.PI / 2 }
+                                : { x: a, z: p, yaw: w.into < 0 ? 0 : Math.PI };
+        };
+        const put_ = (w, a, out, yawOff, rx, rz, dy) => {
+            const s = site(w, a, out);
+            stand(s.x, s.z, s.yaw + (yawOff || 0), rx, rz, dy);
+        };
+
+        /* What has to be left alone.
+
+           The tram poles stand at 1.2 to 1.4 m off the Swanston kerb, which
+           is exactly where a planter wants to be; the crossings have to stay
+           clear at every corner, kerb ramps included; and the Town Hall's
+           frontage is being rebuilt tonight by somebody else, so nothing
+           solid goes in front of it. */
+        const POLEZ = [];
+        for (let i = 0; i < 6; i++) { const z = -20 - i * 26; POLEZ.push(z, -z); }
+        for (let i = 0; i < 9; i++) { const z = -130 - i * 26; if (z >= NZ_END) POLEZ.push(z); }
+
+        const barred = (w, a) => {
+            if (w.ax === 'z') {
+                for (const X of XSEC) if (Math.abs(a - X.z) < X.h + 4.0) return true;
+                for (const z of POLEZ) if (Math.abs(a - z) < 2.1) return true;
+                return false;
+            }
+            return Math.abs(a) < SW + 4.5;
+        };
+        // The Town Hall's footpath, and the run on the east side where
+        // section 16 has already stood a line of bollards.
+        const noSolid = (w, a) => w.ax === 'z' && w.into > 0 && a > -316 && a < -262;
+        const preBollard = (w, a) => w.ax === 'z' && w.into > 0 && a > -54 && a < -18;
+
+        // How far the nearest crossing is, which is the one number the whole
+        // distribution turns on.
+        const toCorner = (w, a) => {
+            if (w.ax !== 'z') return Math.abs(a) - SW;
+            let best = 1e9;
+            for (const X of XSEC) best = Math.min(best, Math.abs(a - X.z) - X.h);
+            return best;
+        };
+
+        /* The menu, weighted twice: once for a corner and once for the middle
+           of a block, and mixed between the two by how close this spot is to
+           a crossing. It is the whole reason the street does not read as a
+           grid — bins and signs and boxes gather where the crossings are, and
+           two thirds of the way down a block there is a planter and nothing
+           else for twenty metres. */
+        const MENU = [
+            ['planter', 1.9, 0.5], ['bins', 0.4, 1.5], ['hoops', 1.0, 0.6],
+            ['scooters', 0.9, 1.0], ['bench', 0.75, 0.25], ['rail', 0.35, 0.5],
+            ['cabinet', 0.5, 1.25], ['aframe', 0.85, 0.35], ['sign', 0.6, 1.5],
+            ['drain', 0.55, 0.8], ['wheelie', 0.35, 0.25], ['mess', 0.45, 0.4],
+        ];
+
+        let messes = 0;
+        const place = (w, a, tight) => {
+            let total = 0;
+            for (const m of MENU) total += lerp(m[1], m[2], tight);
+            let r = rnd() * total, kind = MENU[0][0];
+            for (const m of MENU) { r -= lerp(m[1], m[2], tight); if (r <= 0) { kind = m[0]; break; } }
+            const solidOK = !noSolid(w, a);
+
+            switch (kind) {
+                case 'planter': {
+                    if (!solidOK) return 0;
+                    const len = rr(2.0, 3.4);
+                    put_(w, a, rr(0.92, 1.12));
+                    planter(len);
+                    return len;
+                }
+                case 'bench':
+                    if (!solidOK) return 0;
+                    put_(w, a, rr(1.05, 1.35), rr(-0.06, 0.06));
+                    bench();
+                    return 1.9;
+                case 'rail':
+                    if (!solidOK) return 0;
+                    put_(w, a, rr(0.85, 1.05));
+                    leanRail(rr(2.0, 3.0));
+                    return 2.6;
+                case 'cabinet':
+                    if (!solidOK) return 0;
+                    put_(w, a, rr(1.0, 1.35), rr(-0.12, 0.12));
+                    cabinet(rnd() < 0.5);
+                    if (rnd() < 0.35) { put_(w, a + 1.15, rr(1.0, 1.3), rr(-0.1, 0.1)); cabinet(true); return 2.2; }
+                    return 1.2;
+                case 'hoops': {
+                    if (!solidOK) return 0;
+                    const n = irr(2, 4);
+                    for (let i = 0; i < n; i++) {
+                        const at = a + i * 1.35;
+                        put_(w, at, rr(0.95, 1.15));
+                        hoop();
+                        if (rnd() < 0.6) {
+                            put_(w, at + rr(-0.25, 0.25), rr(0.90, 1.20), rr(-0.25, 0.25),
+                                 rr(0.10, 0.21) * (rnd() < 0.5 ? -1 : 1));
+                            bicycle(pickOf([FC.frame, FC.frameB, FC.frameC, FC.dark]));
+                        }
+                    }
+                    return (n - 1) * 1.35;
+                }
+                case 'scooters': {
+                    const n = irr(1, 3);
+                    for (let i = 0; i < n; i++) {
+                        const at = a + i * rr(0.7, 1.1);
+                        const acc = pickOf([0xc23a2e, 0x2f6f4a, 0xc9a32b, 0x2b4f86]);
+                        if (rnd() < 0.24) {
+                            // and one on its side, which is the thing the
+                            // photograph actually shows
+                            put_(w, at, rr(1.7, 3.4), rr(0, 6.28), Math.PI / 2, 0, 0.10);
+                            scooter(acc);
+                        } else {
+                            put_(w, at, rr(0.75, 1.15), rr(-0.4, 0.4));
+                            scooter(acc);
+                        }
+                    }
+                    return (n - 1) * 0.9;
+                }
+                case 'bins':
+                    put_(w, a, rr(0.85, 1.05), rr(-0.2, 0.2));
+                    binPair();
+                    return 1.1;
+                case 'wheelie':
+                    put_(w, a, FP - rr(0.6, 1.1), rr(-0.5, 0.5) + Math.PI);
+                    wheelie();
+                    return 0.8;
+                case 'aframe':
+                    put_(w, a, FP - rr(0.9, 1.6), rr(-0.7, 0.7));
+                    aFrame();
+                    return 0.9;
+                case 'sign':
+                    put_(w, a, rr(0.45, 0.70), rr(-0.15, 0.15));
+                    signPost(rnd() < 0.3);
+                    return 0.4;
+                case 'drain':
+                    if (rnd() < 0.55) { put_(w, a, rr(0.32, 0.45)); grate(); return 1.1; }
+                    put_(w, a, rr(0.9, 2.6), rr(0, 3)); lid(); return 0.7;
+                case 'mess':
+                    if (messes > 26) return 0;
+                    messes++;
+                    if (rnd() < 0.42) { put_(w, a, rr(0.8, 4.2), rr(0, 6.28)); mess(0); return 0.2; }
+                    if (rnd() < 0.6) { put_(w, a, FP - rr(0.5, 1.2), rr(0, 6.28)); mess(1); return 0.7; }
+                    put_(w, a, FP - rr(0.9, 1.5), rr(-0.5, 0.5)); mess(2);
+                    return 1.3;
+            }
+            return 0;
+        };
+
+        for (const w of WALKS) {
+            let a = w.a0 + rr(0, 9);
+            while (a < w.a1) {
+                const tight = smoothstep(40, 7, toCorner(w, a));
+                if (!barred(w, a)) a += place(w, a, tight);
+                a += lerp(rr(3.6, 10.5), rr(1.6, 4.2), tight);
+            }
+        }
+
+        /* And the bollard line, which is laid down the kerb rather than drawn
+           out of the menu above — because that is how it goes in. A council
+           does not scatter bollards; it runs a line of them across a corner,
+           stops for a crossing or a loading bay, and starts again. So a run
+           of thirty or seventy metres, then a gap of ten or twenty, up both
+           sides of Swanston and out along the three cross streets — and never
+           where section 16 has already stood a line of its own. */
+        for (const w of WALKS) {
+            let a = w.a0 + rr(0, 14);
+            while (a < w.a1) {
+                const run = w.ax === 'z' ? rr(26, 74) : rr(14, 38);
+                const out = rr(0.50, 0.58);
+                for (let at = a; at < a + run && at < w.a1; at += 2.2) {
+                    if (barred(w, at) || preBollard(w, at)) continue;
+                    put_(w, at, out);
+                    iTube(FC.dark, 0.115, 0.94, 0, 0.47, 0);
+                    iTube(FC.band, 0.122, 0.055, 0, 0.79, 0);
+                }
+                a += run + rr(6, 21);
+            }
+        }
+
+        /* The four phone boxes, sited by hand rather than drawn out of the
+           menu. There is one on nearly every block of the real street and
+           there is one in the photograph; a landmark that lands where the
+           dice put it is not a landmark. */
+        for (const [x, z, yaw] of [
+            [-(SW + 1.55), -103.0, Math.PI / 2],       // west side, short of Flinders Lane
+            [SW + 1.55, -60.0, -Math.PI / 2],          // east, along the cathedral's railing
+            [SW + 1.60, -196.0, -Math.PI / 2],         // east, at the City Square end
+            [-(SW + 1.55), -255.0, Math.PI / 2],       // west, north of Collins
+        ]) {
+            stand(x, z, yaw + rr(-0.05, 0.05));
+            phoneBox();
+        }
+
+        /* ---- and out of all that, three meshes ---------------------- */
+
+        // three only lets an instance's own colour reach the fragment when
+        // the material declares vertexColors — and a material that declares
+        // it over geometry with no colour attribute draws black, because a
+        // missing attribute reads as zero. So both kits carry a white one.
+        const white = (g) => {
+            const n = g.attributes.position.count, a = new Float32Array(n * 3);
+            a.fill(1);
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+        // Metalness stays near zero on all three. There is no envMap in this
+        // world, and a metallic standard material without one renders black —
+        // which is how a street of galvanised steel becomes a street of holes.
+        const kitMat = () => new THREE.MeshStandardMaterial({
+            vertexColors: true, roughness: 0.58, metalness: 0.04,
+        });
+
+        const boxIM = new THREE.InstancedMesh(white(boxG(1, 1, 1)), kitMat(), IB.length);
+        /* Eight sides, which is what section 16's bollards are cut from and as
+           many as anything 230 mm across earns at walking distance. Twelve
+           costs forty thousand triangles across the street and shows on
+           nothing. */
+        const tubeIM = new THREE.InstancedMesh(white(cylG(0.5, 0.5, 1, 8)), kitMat(), IT.length);
+        const tint = new THREE.Color();
+        IB.forEach((m, i) => { boxIM.setMatrixAt(i, m); boxIM.setColorAt(i, tint.copy(FCOL(IBC[i]))); });
+        IT.forEach((m, i) => { tubeIM.setMatrixAt(i, m); tubeIM.setColorAt(i, tint.copy(FCOL(ITC[i]))); });
+        for (const m of [boxIM, tubeIM]) {
+            m.instanceMatrix.needsUpdate = true;
+            if (m.instanceColor) m.instanceColor.needsUpdate = true;
+            scene.add(m);
+        }
+
+        const kerbside = merged(SOLID, new THREE.MeshStandardMaterial({
+            vertexColors: true, roughness: 0.60, metalness: 0.04,
+        }));
+        scene.add(kerbside);
+        /* Not `world.ground`, and not `world.part` either. The grid is sized
+           off the declared grounds and a new one would coarsen the whole
+           city's walk; and a single mesh holding every planter on Swanston
+           Street is not one object anybody would want to pick up — it is
+           scenery that happens to be solid, which is exactly what it is left
+           as. Splitting it into eighty parts is eighty meshes, and there are
+           three to spend here. */
+    }
 }
