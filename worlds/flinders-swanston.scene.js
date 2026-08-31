@@ -59,6 +59,12 @@
 //      City Square with its neighbours down to Flinders Lane, and opposite
 //      the Town Hall the cream tower on Little Collins with three older
 //      frontages beside it. Sections 22 and 23.
+//    · the cross streets — Collins, Little Collins and Flinders Lane, east
+//      and west of Swanston — filled by a seeded generator rather than by a
+//      photograph, because there is no photograph of them. Five archetypes,
+//      random widths and heights, a shop you can walk into under every
+//      building near the intersection and a merged backdrop past it.
+//      Invention, and said to be. Section 26.
 //    · nothing on either frontage is painted. Every window is an opening with
 //      a pane at the back of it, every cornice is courses and brackets, and
 //      the colour is on the vertices — so a whole building is one draw and
@@ -4815,9 +4821,15 @@ export default function build(world) {
                pointing away from the building, and the two rooms on the
                Little Collins frontage were built standing in the roadway with
                their backs to the facade — which the walk read, correctly, as
-               a shop nobody can enter. */
+               a shop nobody can enter.
+
+               Which is why there are two of them now. A cross street has a
+               frontage on each side and they look at each other, so 'x' is
+               the one whose shop runs north out of the glass and 'X' the one
+               whose shop runs south. Same room, opposite quarter turn. */
             const M0 = axis === 'z' ? MX(face, 0, cz, 0, Math.PI, 0)
-                                    : MX(cz, 0, face, 0, -Math.PI / 2, 0);
+                    : axis === 'X' ? MX(cz, 0, face, 0, Math.PI / 2, 0)
+                                   : MX(cz, 0, face, 0, -Math.PI / 2, 0);
             const D = 6.30, Y_SILL = 0.55, Y_HEAD = 3.90, Y_CEIL = 4.05;
             const HW = span / 2 - 0.30;                       // half the clear opening
 
@@ -4870,7 +4882,9 @@ export default function build(world) {
             };
             const person = (x, z, ry, cloth, skin) => {
                 _v.set(x, 0, z).applyMatrix4(M0);
-                SHOPFOLK.push({ x: _v.x, z: _v.z, ry: ry + (axis === 'z' ? Math.PI : -Math.PI / 2),
+                SHOPFOLK.push({ x: _v.x, z: _v.z,
+                                ry: ry + (axis === 'z' ? Math.PI
+                                        : axis === 'X' ? Math.PI / 2 : -Math.PI / 2),
                                 cloth, skin });
             };
             const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0x2f4858];
@@ -5761,6 +5775,298 @@ export default function build(world) {
                     }
                     F(A, 0xa88a68, X0 - 0.2, 5.0 + 8 * 3.05, ZS, X1 + 0.2, 5.0 + 8 * 3.05 + 1.1, ZF - 0.2);
                     P.shopLit.push(shp(put(boxG(1.9, 4.6, 0.06), X1 - 2.6, 12.0, ZF - 0.10), 'parking'));
+                }
+            }
+        }
+
+        /* ------------------------------------------------------------
+           26 · the cross streets
+
+           Collins, Little Collins and Flinders Lane run east and west out of
+           Swanston, and until now they ran out of buildings about ninety
+           metres from the corner: two kerbs, a pair of rails, and then bare
+           ground all the way to the fog. Standing at the Town Hall and
+           looking east down Collins you could see the edge of the world.
+
+           Everything in this section is invention and is meant to be. The
+           accuracy budget went on the four blocks around the intersection,
+           where the photographs are; what these streets need is not another
+           surveyed facade but somewhere for the eye to stop. So: a generator,
+           seeded off the same `rnd` as the rest of the file, laying a run of
+           buildings along every clear stretch of frontage. Five archetypes,
+           because five is about how many kinds of thing actually stand on a
+           Melbourne cross street — a boom-era brick terrace, an Edwardian
+           stuccoed chambers, a sixties slab, a brick warehouse, and a piece
+           of dark modern infill where one of the others burnt down. Widths,
+           heights, depths, bay rhythms and openings all come off `rnd`, so
+           the four streets are different from each other and the same every
+           time the world loads.
+
+           Two decisions worth writing down.
+
+           The first is that heights fall off with distance from Swanston.
+           Not for the look of it — for the walk. A street that keeps its
+           full height to the horizon reads as a canyon and gives the eye
+           nothing to aim at; a street that steps down says the city ends
+           somewhere, which is true.
+
+           The second is granularity. Every building inside about ninety
+           metres of Swanston is its own array, its own mesh and its own
+           part, which is the expensive choice and the right one: a building
+           you cannot pick up and move is not a building, it is wallpaper,
+           and the near field is where somebody in edit mode is standing.
+           Past that, a whole run merges into one backdrop object, because at
+           a hundred and twenty metres nobody is moving anything — they are
+           looking down a street. The shops underneath go into the shared
+           `P.shop` arrays and cost no draw at all.
+           ------------------------------------------------------------ */
+        {
+            const NEAR = 88.0;          // out to here a building is its own object
+
+            /* The trades, and the signs that go with them. Every one of these
+               names is invented — a jeweller called Facet, a noodle place —
+               because these are streets I have no photograph of and a guess
+               dressed up as an address is worse than an honest invention. */
+            const TRADE = [
+                ['wool', 'clothes'], ['linen', 'clothes'], ['dior', 'clothes'],
+                ['boss', 'clothes'], ['coco', 'clothes'], ['atelier', 'clothes'],
+                ['regent', 'clothes'],
+                ['bergen', 'jewel'], ['facet', 'jewel'], ['kozmin', 'jewel'],
+                ['cup', 'restaurant'], ['pho', 'restaurant'], ['bar', 'restaurant'],
+                ['sbux', 'restaurant'], ['noodle', 'restaurant'],
+            ];
+
+            /* `emph` is the whole difference between a nineteenth-century
+               facade and a nineteen-sixties one, and it is one letter: 'v'
+               puts the piers in front of the spandrels and the wall reads
+               vertical, 'h' does the reverse and it reads as stacked trays,
+               'c' drops both and leaves a mullion grid on glass. */
+            const ARCH = [
+                { p: 0.24, fh: 3.95, nf: [3, 5],  bay: 3.00, wf: 0.46, mull: 2, emph: 'v',
+                  sill: true,  arch: true,  body: [0x8f6a52, 0x9a6f50, 0x7d5c48], trim: 0xe4d9c0 },
+                { p: 0.21, fh: 3.85, nf: [3, 6],  bay: 3.35, wf: 0.54, mull: 2, emph: 'v',
+                  sill: true,  arch: false, body: [0xd6c9ac, 0xcabd9e, 0xdfd4b8], trim: 0xefe7d2 },
+                { p: 0.20, fh: 3.15, nf: [5, 10], bay: 2.45, wf: 0.76, mull: 3, emph: 'h',
+                  sill: false, arch: false, body: [0xcfcfc8, 0xc2c4be, 0xd6d3c8], trim: 0xb4b4ab },
+                { p: 0.20, fh: 4.25, nf: [2, 4],  bay: 3.70, wf: 0.62, mull: 2, emph: 'v',
+                  sill: false, arch: true,  body: [0x7a4f3c, 0x6d4636, 0x855744], trim: 0x9c8c74 },
+                { p: 0.15, fh: 3.35, nf: [6, 12], bay: 2.25, wf: 0.88, mull: 1, emph: 'c',
+                  sill: false, arch: false, body: [0x3a3f45, 0x33383e, 0x444a52], trim: 0x2a2e33 },
+            ];
+            const pickArch = () => {
+                const r = rnd(); let a = 0;
+                for (const t of ARCH) { a += t.p; if (r <= a) return t; }
+                return ARCH[0];
+            };
+
+            /* Where the door lands in a tenancy. `shopDoor` above answers for
+               a frontage that runs the other way: the local z that carries
+               the door maps to −x on the south-facing streets and to +x on
+               the north-facing ones, so the sign of the offset follows the
+               facade's own normal or the plinth comes out unbroken on one
+               side of every street and cut twice on the other. */
+            const xDoor = (a, b, o) => {
+                const c = (a + b) / 2 + o * (Math.abs(b - a) / 2 - 2.30);
+                return [c - 1.65, c + 1.65];
+            };
+
+            const crossBuilding = (A, zf, o, x0, x1, detail) => {
+                const w = x1 - x0;
+                if (w < 9.0) return;
+                const t = pickArch();
+                const near = Math.min(Math.abs(x0), Math.abs(x1));
+                const fall = 1 - smoothstep(40, 155, near) * 0.52;
+                const nf = Math.max(2, Math.round(irr(t.nf[0], t.nf[1]) * fall));
+                const HG = 5.10, fh = t.fh, H = HG + nf * fh;
+                const zc = zf - o * 0.62;                 // the plane the openings sit in
+                const zb = zf - o * rr(19, 29);           // the back
+                const body = t.body[irr(0, t.body.length - 1)], trim = t.trim;
+
+                F(A, body, x0, HG, zc, x1, H, zb);                    // the mass over the shops
+                F(A, body, x0, 0, zf - o * 7.5, x1, HG, zb);          // and behind them
+                F(A, body, x0, 0, zf, x0 + 0.42, HG, zf - o * 7.5);   // the party walls, which
+                F(A, body, x1 - 0.42, 0, zf, x1, HG, zf - o * 7.5);   // are what a shop is between
+
+                // ---- the facade above
+                const nbay = Math.max(2, Math.round(w / t.bay));
+                const bw = w / nbay, ow = bw * t.wf, gap = bw - ow;
+                const pierZ = t.emph === 'h' ? zf - o * 0.34 : zf;
+                const spanZ = t.emph === 'h' ? zf : zf - o * 0.30;
+                for (let f = 0; f < nf; f++) {
+                    const yb = HG + f * fh;
+                    const y0 = yb + (t.emph === 'c' ? 0.24 : 0.82);
+                    const y1 = yb + fh - (t.emph === 'c' ? 0.24 : 0.52);
+                    for (let k = 0; k < nbay; k++) {
+                        const cx = x0 + bw * (k + 0.5), oa = cx - ow / 2, ob = cx + ow / 2;
+                        W(A, oa, y0, zc, ob, y1, zc + o * 0.06);
+                        for (let m = 1; m < t.mull; m++) {
+                            const mx = oa + ow * (m / t.mull);
+                            F(A, CF.mullion, mx - 0.04, y0, zc, mx + 0.04, y1, zc + o * 0.13);
+                        }
+                        if (t.sill) F(A, trim, oa - 0.16, y0 - 0.18, zc, ob + 0.16, y0, zf + o * 0.10);
+                        if (t.arch && f === nf - 1) {
+                            F(A, trim, oa - 0.12, y1, zc, ob + 0.12, y1 + 0.24, zf + o * 0.05);
+                            F(A, trim, oa + ow * 0.20, y1 + 0.24, zc, ob - ow * 0.20, y1 + 0.42, zf + o * 0.03);
+                        }
+                    }
+                    F(A, t.emph === 'h' ? trim : body,
+                       x0, Math.max(HG, yb - 0.28), zc, x1, yb + (t.emph === 'h' ? 0.88 : 0.52), spanZ);
+                }
+                for (let k = 0; k <= nbay; k++) {
+                    const px = x0 + bw * k;
+                    const pa = Math.max(x0, px - gap / 2), pb = Math.min(x1, px + gap / 2);
+                    if (pb - pa < 0.12) continue;
+                    F(A, t.emph === 'h' ? body : trim, pa, HG, zc, pb, H, pierZ);
+                }
+
+                // ---- the cornice, its brackets, and the parapet standing on it
+                if (t.arch) for (let k = 0; k < nbay * 2; k++) {
+                    const cx = x0 + w * ((k + 0.5) / (nbay * 2));
+                    F(A, trim, cx - 0.13, H - 0.58, zf + o * 0.44, cx + 0.13, H, zf);
+                }
+                F(A, trim, x0 - 0.32, H, zf + o * 0.58, x1 + 0.32, H + 0.62, zc);
+                F(A, body, x0 - 0.18, H + 0.62, zf + o * 0.28, x1 + 0.18, H + 0.62 + rr(0.9, 2.1), zf - o * 0.50);
+                if (detail && rnd() < 0.7) {                  // a lift overrun on the roof
+                    const px = x0 + rr(0.25, 0.75) * w, pw = rr(2.4, 4.6);
+                    const pz = rr(3.0, 7.0), pd = rr(3.0, 6.0);
+                    F(A, 0x8c887e, px - pw / 2, H, zc - o * pz, px + pw / 2, H + rr(1.6, 3.0), zc - o * (pz + pd));
+                }
+
+                // ---- the ground floor
+                const zg = zc;
+                if (!detail) {
+                    /* A backdrop building gets a glazed base and a verandah
+                       and nothing else. Nobody is walking down there, and a
+                       fitout you cannot reach is geometry spent on nothing. */
+                    F(A, 0x232326, x0, 0, zf + o * 0.02, x1, 0.45, zg);
+                    W(A, x0 + 0.6, 0.60, zg, x1 - 0.6, 3.72, zg - o * 0.06);
+                    F(A, 0x33322e, x0, 3.55, zf + o * 2.00, x1, 3.72, zf + o * 0.06);
+                    F(A, body, x0, 3.72, zf, x1, HG, zc);
+                    return;
+                }
+                F(A, body, x0, 3.90, zf, x1, HG, zc);        // the band the signs go on
+                const n = Math.max(1, Math.round((w - 0.9) / 9.5));
+                const step = (w - 0.9) / n;
+                const fitted = irr(0, n - 1);                // one room you can walk into per building
+                for (let i = 0; i < n; i++) {
+                    const a = x0 + 0.45 + step * i + 0.30;
+                    const b = x0 + 0.45 + step * (i + 1) - 0.30;
+                    if (b - a < 3.2) continue;
+                    const T = TRADE[irr(0, TRADE.length - 1)];
+                    if (i === fitted) {
+                        const [d0, d1] = xDoor(a, b, o);      // broken for the doorway
+                        F(A, 0x232326, a, 0, zf + o * 0.02, d0, 0.40, zg);
+                        F(A, 0x232326, d1, 0, zf + o * 0.02, b, 0.40, zg);
+                        F(A, 0x232326, d0, 0, zf + o * 0.02, d1, 0.14, zg);
+                    } else {
+                        F(A, 0x232326, a, 0, zf + o * 0.02, b, 0.40, zg);
+                    }
+                    F(A, 0x2c2a26, a - 0.34, 0, zf + o * 0.04, a - 0.16, 4.05, zg);
+                    if (i === n - 1) F(A, 0x2c2a26, b + 0.16, 0, zf + o * 0.04, b + 0.34, 4.05, zg);
+
+                    /* The verandah, and the banner hanging off its edge —
+                       which is the thing you actually read from across the
+                       street, because a sign flat on a wall under an awning
+                       is a sign nobody standing under the awning can see. */
+                    F(A, 0x33322e, a - 0.12, 3.55, zf + o * 2.30, b + 0.12, 3.72, zf + o * 0.06);
+                    F(A, 0x7a2a22, a - 0.12, 3.10, zf + o * 2.38, b + 0.12, 3.72, zf + o * 2.24);
+                    const bn = new THREE.PlaneGeometry(Math.abs(b - a) - 0.30, 0.46);
+                    put(bn, (a + b) / 2, 3.40, zf + o * 2.405, 0, o > 0 ? 0 : Math.PI, 0);
+                    P.shopLit.push(shp(bn, T[0]));
+                    const sg = new THREE.PlaneGeometry(Math.abs(b - a) - 0.40, 0.52);
+                    put(sg, (a + b) / 2, 4.50, zf + o * 0.06, 0, o > 0 ? 0 : Math.PI, 0);
+                    P.shopLit.push(shp(sg, T[0]));
+
+                    if (i === fitted) {
+                        shopUnit(zg, a, b, o > 0 ? 'X' : 'x', T[1], T[0]);
+                    } else {
+                        /* and a shallow tenancy for the rest: glass, a back
+                           wall three metres in, and the light on behind it.
+                           Nobody is going to walk into every shop on four
+                           streets, but every one of them has to look from the
+                           footpath as though they could. */
+                        F(A, 0x2b2c2e, a, 0, zg, b, 0.55, zg + o * 0.10);
+                        W(A, a, 0.55, zg, b, 3.90, zg - o * 0.06);
+                        F(A, 0x3a3b3d, a, 2.95, zg, b, 3.05, zg - o * 0.11);
+                        const nm = Math.max(1, Math.round((b - a) / 1.40));
+                        for (let m = 0; m <= nm; m++) {
+                            const mx = a + (b - a) * (m / nm);
+                            F(A, 0x3a3b3d, mx - 0.045, 0.55, zg, mx + 0.045, 3.90, zg - o * 0.10);
+                        }
+                        F(A, 0x5a5348, a, 0, zg - o * 3.10, b, 4.05, zg - o * 3.30);
+                        const li = new THREE.PlaneGeometry(Math.abs(b - a) - 0.60, 1.50);
+                        put(li, (a + b) / 2, 2.10, zg - o * 3.04, 0, o > 0 ? 0 : Math.PI, 0);
+                        P.shopLit.push(shp(li, 'warm'));
+                        /* and something standing in front of it, because a lit
+                           back wall on its own is a lightbox and reads as one.
+                           A counter across the room and two shades over it is
+                           the least a shop can have and still be a shop. */
+                        F(A, 0x3b332b, a + 0.7, 0, zg - o * 2.30, b - 0.7, 0.95, zg - o * 2.85);
+                        F(A, 0x6d6355, a + 0.6, 0.95, zg - o * 2.24, b - 0.6, 1.05, zg - o * 2.91);
+                        for (const u of [0.32, 0.68]) {
+                            const sh = coneG(0.20, 0.26, 8);
+                            put(sh, a + (b - a) * u, 2.55, zg - o * 2.55, Math.PI, 0, 0);
+                            P.shopLit.push(shp(sh, 'warm'));
+                            F(A, 0x2a2721, a + (b - a) * u - 0.02, 2.68, zg - o * 2.53,
+                                       a + (b - a) * u + 0.02, 4.05, zg - o * 2.57);
+                        }
+                    }
+                }
+            };
+
+            /* The clear stretches, read off what is already standing: the
+               Town Hall holds Collins from 18.5 to 84.5, the hotel holds it
+               from 49 to 88 on the other side, the car park and the Wales
+               tower hold the west end, the cathedral holds the Flinders Lane
+               corner, and the two west-side blocks are about thirty metres
+               deep off Swanston. Everything else on these four streets is
+               fair game. */
+            const RUNS = [
+                /* The cathedral's block is not the cathedral: it runs east
+                   to a hundred and twelve and north to Flinders Lane, and
+                   both of its street frontages are already standing. So
+                   these two runs start on the far corner rather than on
+                   Swanston. Likewise the long west-side wall, which holds
+                   Flinders Lane from the corner out to sixty-eight. */
+                ['fsne',  -20.5,   1,  114.0,  152.0],   // Flinders St, north side, past the cathedral block
+                ['flse',  -102.8, -1,  114.0,  152.0],   // Flinders Lane, south side
+                ['flsw',  -102.8, -1,  -70.0, -152.0],
+                ['flne',  -127.2,  1,   88.0,  152.0],   // Flinders Lane, north side
+                ['flnw',  -127.2,  1,  -70.0, -152.0],
+                ['cose',  -209.5, -1,   88.0,  152.0],   // Collins, south side
+                ['cosw',  -209.5, -1,  -68.0, -152.0],
+                ['cone',  -250.5,  1,   84.5,  152.0],   // Collins, north side
+                ['conw',  -250.5,  1,  -48.0, -152.0],
+                ['lcse',  -332.4, -1,   84.5,  152.0],   // Little Collins, south side
+                ['lcsw',  -332.4, -1,  -48.0, -152.0],
+                ['lcne',  -357.6,  1,   18.5,  152.0],   // Little Collins, north side
+                ['lcnw',  -357.6,  1,  -18.5, -152.0],
+            ];
+            for (const [tag, zf, o, xa, xb] of RUNS) {
+                const dir = Math.sign(xb - xa), back = [];
+                let x = xa, i = 0;
+                while ((xb - x) * dir >= 11.0) {
+                    const w = Math.min(rr(12.5, 26.0), (xb - x) * dir);
+                    const a = dir > 0 ? x : x - w, b = dir > 0 ? x + w : x;
+                    if (Math.min(Math.abs(a), Math.abs(b)) <= NEAR) {
+                        const A = [];
+                        crossBuilding(A, zf, o, a + 0.30, b - 0.30, true);
+                        if (A.length) {
+                            const m = merged(A, M21.body);
+                            m.receiveShadow = true;
+                            scene.add(m);
+                            world.part(`${tag}${String(i).padStart(2, '0')}_00`, m);
+                        }
+                    } else {
+                        crossBuilding(back, zf, o, a + 0.30, b - 0.30, false);
+                    }
+                    x += dir * w; i++;
+                }
+                if (back.length) {
+                    const m = merged(back, M21.body);
+                    m.receiveShadow = true;
+                    scene.add(m);
+                    world.part(`${tag}far_00`, m);
                 }
             }
         }
