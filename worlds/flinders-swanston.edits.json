@@ -34,6 +34,14 @@
         0
       ],
       "rotationY" : 0
+    },
+    "westin_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 1.08
     }
   }
 }
