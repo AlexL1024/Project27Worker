@@ -6401,6 +6401,10 @@ export default function build(world) {
        it: their targets are re-picked every half second within half a metre
        of the chips, so they shoulder each other off the pile and take short
        hops to get back on, and none of them ever quite wins.
+
+       The pigeons are not in flocks at all, and the loose gulls out on the
+       roadway are not either, because that is not how either bird uses this
+       street — see where they are placed, below.
        ============================================================ */
     {
         const bcol = (g, hex) => {
@@ -6429,19 +6433,83 @@ export default function build(world) {
             }
             return merge(parts);
         };
-        /* And a feral pigeon, which is rounder, lower, greyer and has the one
-           green-purple patch on its neck that is the whole reason anybody
-           looks at a pigeon twice. */
+
+        /* And a feral pigeon, which is rounder, lower and greyer than a gull,
+           and which earns more geometry than the gull does for one reason: a
+           gull is mostly seen at twenty metres across the plaza, and a pigeon
+           is seen at two, standing on the paving you are about to walk over.
+           At two metres a bird made of four merged spheres is not a bird, it
+           is a grey pebble with legs, which is what these were. It is still
+           one merged geometry stood up fifty times, so everything below has to
+           earn the triangles it spends. */
         const pigeonG = () => {
             const parts = [];
-            let g = sphG(0.098, 9, 7); put(g, 0, 0.135, 0, 0, 0, 0, 1.0, 0.90, 1.55); parts.push(bcol(g, 0x7d8288));
-            g = sphG(0.086, 9, 7); put(g, 0, 0.150, -0.030, 0, 0, 0, 1.0, 0.74, 1.20); parts.push(bcol(g, 0x5c6167));
-            g = sphG(0.050, 8, 6); put(g, 0, 0.208, 0.098); parts.push(bcol(g, 0x6a7076));
-            g = sphG(0.040, 8, 6); put(g, 0, 0.172, 0.070, 0, 0, 0, 1.0, 0.70, 1.0); parts.push(bcol(g, 0x2f6b52));
-            g = coneG(0.017, 0.062, 6); put(g, 0, 0.206, 0.148, Math.PI / 2, 0, 0); parts.push(bcol(g, 0x33363a));
-            g = boxG(0.052, 0.018, 0.125); put(g, 0, 0.126, -0.175, -0.16, 0, 0); parts.push(bcol(g, 0x6a7076));
+            const P = (g, hex) => parts.push(bcol(g, hex));
+            let g;
+
+            /* The body, leaning forward off the legs, with the darker saddle
+               riding just proud of it over the back and the pale rump under the
+               tail. Everything that follows has to stand clear of this
+               ellipsoid rather than inside it — the reason the old bird was one
+               grey blob is that its wing and its neck patch were both smaller
+               than the body they were drawn on and never once came out of it. */
+            g = sphG(0.092, 9, 7); put(g, 0, 0.130, -0.028, 0, 0, 0, 0.94, 0.88, 1.46); P(g, 0x7d8288);
+            g = sphG(0.088, 7, 6); put(g, 0, 0.158, -0.045, 0, 0, 0, 0.94, 0.66, 1.20); P(g, 0x5c6167);
+            g = sphG(0.048, 5, 4); put(g, 0, 0.118, -0.130, 0, 0, 0, 1.0, 0.66, 0.92); P(g, 0xc7c3ba);
+
+            // the folded wing: a flat plane laid down each flank, standing two
+            // centimetres off the body so it reads as a wing and not as shading,
+            // and the two black bars across it that say rock dove
+            for (const s of [-1, 1]) {
+                g = sphG(0.078, 6, 5);
+                put(g, s * 0.072, 0.140, -0.036, 0, 0, s * -0.04, 0.30, 0.62, 1.12); P(g, 0x8f959c);
+                for (const w of [[0.083, -0.088], [0.088, -0.044]]) {
+                    g = boxG(0.024, 0.042, 0.011);
+                    put(g, s * w[0], 0.138, w[1], 0, 0, s * -0.04); P(g, 0x2f3338);
+                }
+            }
+
+            /* The neck, which the old bird did not have at all: the head sat
+               straight on the shoulders and the green patch was a sphere inside
+               a bigger sphere. Two short tapered drums instead, leaning forward
+               out of the shoulders, green low and purple over it, because that
+               is the way the iridescence actually runs — up the neck, not
+               around it in a collar. */
+            g = cylG(0.036, 0.048, 0.078, 7); put(g, 0, 0.186, 0.044, 0.38, 0, 0); P(g, 0x35604b);
+            g = cylG(0.040, 0.037, 0.042, 7); put(g, 0, 0.228, 0.060, 0.38, 0, 0); P(g, 0x4c4059);
+            g = sphG(0.050, 8, 6); put(g, 0, 0.250, 0.086); P(g, 0x6a7076);
+
+            // the bill, and the white cere swollen over the base of it, which is
+            // the one marking on this bird that nothing else on the corner has
+            g = coneG(0.014, 0.044, 6); put(g, 0, 0.244, 0.152, Math.PI / 2, 0, 0); P(g, 0x33363a);
+            g = sphG(0.012, 5, 4); put(g, 0, 0.256, 0.128, 0, 0, 0, 0.95, 0.85, 0.80); P(g, 0xd7d2c6);
+
+            /* The eye, and it is worth two discs rather than a sphere. A sphere
+               cheap enough to instance fifty times is a hexagon at this size and
+               reads as a bolt head; a nine-sided disc set flat into the side of
+               the skull reads as a circle, and the bead standing two millimetres
+               proud of it reads as an eye. Slightly over life size on purpose —
+               honest scale here is four pixels of nothing. */
+            for (const s of [-1, 1]) {
+                g = cylG(0.0092, 0.0092, 0.007, 9);
+                put(g, s * 0.0425, 0.260, 0.110, 0, 0, Math.PI / 2); P(g, 0xcfc6b4);
+                g = cylG(0.0056, 0.0056, 0.007, 7);
+                put(g, s * 0.0455, 0.260, 0.110, 0, 0, Math.PI / 2); P(g, 0x141517);
+            }
+
+            /* The tail: a seven-sided cone squashed flat, narrow end buried in
+               the body and the fan trailing back and down, with the dark
+               terminal band across the end of it. A slab could never do the one
+               thing a tail does here, which is spread when the bird brakes out
+               of a hop and close again when it walks. */
+            g = cylG(0.024, 0.090, 0.165, 7);
+            put(g, 0, 0.113, -0.196, Math.PI / 2 - 0.16, 0, 0, 1.0, 1.0, 0.17); P(g, 0x6f757b);
+            g = cylG(0.084, 0.091, 0.026, 7);
+            put(g, 0, 0.1020, -0.2646, Math.PI / 2 - 0.16, 0, 0, 1.0, 1.0, 0.17); P(g, 0x2b2e32);
+
             for (const sx of [-0.034, 0.034]) {
-                g = cylG(0.009, 0.009, 0.082, 5); put(g, sx, 0.046, 0.010); parts.push(bcol(g, 0xc45a4a));
+                g = cylG(0.009, 0.009, 0.082, 5); put(g, sx, 0.046, 0.010); P(g, 0xc45a4a);
+                g = boxG(0.032, 0.011, 0.048); put(g, sx, 0.008, 0.026); P(g, 0xc45a4a);
             }
             return merge(parts);
         };
@@ -6449,35 +6517,40 @@ export default function build(world) {
         /* Where they are. The chips are on the plaza in front of the station
            canopy, which is exactly where a dropped box of chips ends up. */
         const CHIP = { x: 31.5, z: -142.5 };
-        const FLOCKS = [
-            { kind: 0, n: 7,  x: CHIP.x, z: CHIP.z, r: 1.9, fight: true },
-            { kind: 0, n: 9,  x: 27.0,  z: 44.0,   r: 10.0 },
-            { kind: 0, n: 5,  x: -6.0,  z: -104.0, r: 7.0 },
-            { kind: 0, n: 4,  x: 62.0,  z: 96.0,   r: 9.0 },
-            { kind: 1, n: 14, x: 30.0,  z: -196.0, r: 5.5 },
-            { kind: 1, n: 11, x: 14.6,  z: -62.0,  r: 4.4 },
-            { kind: 1, n: 12, x: 74.0,  z: 30.0,   r: 6.5 },
-            { kind: 1, n: 9,  x: -14.8, z: -274.0, r: 4.0 },
-        ];
+
         const BIRDS = [];
+        /* One bird, placed on its own, with its own patch of ground. `hr` is
+           how far it will wander from where it was put down; `gy` is the
+           surface it is standing on, because the footpath is a kerb above the
+           roadway and a bird on the crossing is not a bird on the paving. */
+        const addBird = (kind, x, z, r) => {
+            const b = {
+                kind, fight: false, hx: x, hz: z, hr: r,
+                x, z, tx: x, tz: z, ry: rr(0, 6.283), y: 0, gy: KERB_H,
+                st: irr(0, 2), t: rr(0.1, 1.4), sp: rr(0.55, 1.05) * (kind ? 0.72 : 1.0),
+                bob: rr(0, 6.283), road: false, ex: x, ez: z,
+            };
+            BIRDS.push(b);
+            return b;
+        };
+
+        /* The gulls that do stand in flocks: the fight on the plaza, and three
+           loose groups over the river end and Federation Square. */
+        const FLOCKS = [
+            { n: 7, x: CHIP.x, z: CHIP.z, r: 1.9, fight: true },
+            { n: 9, x: 27.0,  z: 44.0,   r: 10.0 },
+            { n: 5, x: -6.0,  z: -104.0, r: 7.0 },
+            { n: 4, x: 62.0,  z: 96.0,   r: 9.0 },
+        ];
         for (const f of FLOCKS) {
             for (let i = 0; i < f.n; i++) {
                 const a = rr(0, 6.283), rad = f.r * Math.sqrt(rnd());
-                BIRDS.push({
-                    kind: f.kind, fight: !!f.fight, hx: f.x, hz: f.z, hr: f.r,
-                    x: f.x + Math.cos(a) * rad, z: f.z + Math.sin(a) * rad,
-                    tx: f.x, tz: f.z, ry: rr(0, 6.283), y: 0,
-                    st: irr(0, 2), t: rr(0.1, 1.4), sp: rr(0.55, 1.05) * (f.kind ? 0.72 : 1.0),
-                    bob: rr(0, 6.283),
-                });
+                const b = addBird(0, f.x, f.z, f.r);
+                b.fight = !!f.fight;
+                b.x = f.x + Math.cos(a) * rad;
+                b.z = f.z + Math.sin(a) * rad;
             }
         }
-        const nG = BIRDS.filter((b) => b.kind === 0).length;
-        const nP = BIRDS.length - nG;
-        const gullIM = new THREE.InstancedMesh(gullG(), bmat(), nG);
-        const pigIM = new THREE.InstancedMesh(pigeonG(), bmat(), nP);
-        scene.add(gullIM); scene.add(pigIM);
-        world.ghost(gullIM); world.ghost(pigIM);
 
         // the chips they are arguing over, and the box they came out of
         {
@@ -6494,9 +6567,115 @@ export default function build(world) {
             scene.add(chips); world.ghost(chips);
         }
 
+        /* The pigeons, which are not a flock and never were. Four tight
+           clusters is what a bird system looks like when it has been written as
+           a bird system; what a Swanston Street footpath actually looks like is
+           one pigeon here, two more a few metres on, then nothing for twenty
+           metres, all the way up the street. So every one of them is placed on
+           its own and gets its own metre or two of paving to work over, and
+           about a third of them are given one companion within a stride, which
+           is the "twos" in ones and twos. */
+        const PIG = [];
+        const pigSpot = (x, z, gy) => {
+            PIG.push({ x, z, gy });
+            if (rnd() < 0.34) {
+                const a = rr(0, 6.283), rad = rr(0.6, 1.7);
+                PIG.push({ x: x + Math.cos(a) * rad, z: z + Math.sin(a) * rad, gy });
+            }
+        };
+        // both footpaths, one bird to each thirty metre band of the street,
+        // alternating sides so neither one goes empty for long
+        for (let i = 0; i < 20; i++) {
+            const side = (i % 2) ? 1 : -1;
+            pigSpot(side * (SW + rr(1.1, 6.2)), -330 + (i + rr(0.1, 0.9)) * 27.9, KERB_H);
+        }
+        // the City Square plaza, which has spilled food on it and a wall to sit on
+        for (let i = 0; i < 6; i++) {
+            pigSpot(rr(SQ.X0 + 1.6, SQ.X1 - 2.2), rr(SQ.Z1 + 4.5, SQ.Z0 - 4.5), KERB_H);
+        }
+        // and out on the scramble crossing, which they hold until the phase changes
+        for (let i = 0; i < 4; i++) pigSpot(rr(-9.5, 9.5), rr(-11.0, 11.0), 0);
+        // with a few more along Flinders Street either side of the corner
+        for (let i = 0; i < 4; i++) {
+            const side = (i % 2) ? 1 : -1;
+            pigSpot((i < 2 ? -1 : 1) * rr(24, 96), side * (FL + rr(1.4, 5.4)), KERB_H);
+        }
+        /* Where a bird runs to when something big comes past. Out to the edge
+           of its own carriageway, clear of both rails — except for one standing
+           inside the intersection, which goes diagonally into a corner of it,
+           because on a scramble crossing the corner is the only asphalt that no
+           tram passes through. */
+        const escapeTo = (b, ax) => {
+            if (b.x > -12.0 && b.x < 12.0 && b.z > -14.0 && b.z < 14.0) {
+                b.ex = (b.x >= 0 ? 1 : -1) * rr(8.8, 10.8);
+                b.ez = (b.z >= 0 ? 1 : -1) * rr(9.4, 12.4);
+            } else if (ax === 'z') {
+                b.ex = (b.x >= 0 ? 1 : -1) * rr(9.0, 10.9);
+                b.ez = b.z + rr(-2.6, 2.6);
+            } else {
+                b.ez = (b.z >= 0 ? 1 : -1) * rr(10.6, 12.7);
+                b.ex = b.x + rr(-2.6, 2.6);
+            }
+        };
+        for (const p of PIG) {
+            const b = addBird(1, p.x, p.z, rr(0.55, 1.9));
+            b.gy = p.gy;
+            // the ones down on the asphalt are the ones a tram can reach
+            if (p.gy === 0) { b.road = true; escapeTo(b, 'z'); }
+        }
+
+        /* And the gulls that are not in a flock, which is most of the gulls you
+           actually see here: single birds standing in the middle of the road,
+           on the tram tracks, on the crossing, walking about on wet asphalt as
+           though the traffic were somebody else's problem. They are on the
+           roadway, so they stand at y = 0 rather than up on the kerb.
+
+           When a moving tram comes down the lane one of these is standing in,
+           it runs for its escape point with a flutter in it, waits there, and
+           then walks back to where it was. Nothing about that is a scripted
+           flight: it is the ordinary walk state machine with one more state in
+           front of it, so a gull that has been startled is still a gull. */
+        const STREET_GULLS = [
+            { ax: 'z', x: 3.6,  z: -86 },
+            { ax: 'z', x: -3.4, z: -18 },
+            { ax: 'z', x: 4.2,  z: -170 },
+            { ax: 'z', x: -3.9, z: 40 },
+            { ax: 'z', x: 2.4,  z: 96 },
+            { ax: 'z', x: -4.6, z: -198 },
+            { ax: 'z', x: 5.8,  z: -132 },
+            { ax: 'z', x: -1.2, z: 8 },
+            { ax: 'z', x: 7.4,  z: 168 },
+            { ax: 'z', x: -6.8, z: 206 },
+            { ax: 'x', x: -44,  z: -4.2 },
+            { ax: 'x', x: 52,   z: 4.6 },
+            { ax: 'x', x: -78,  z: 4.0 },
+            { ax: 'x', x: 33,   z: -4.8 },
+        ];
+        for (const s of STREET_GULLS) {
+            const b = addBird(0, s.x, s.z, rr(1.3, 2.8));
+            b.gy = 0;
+            b.road = true;
+            escapeTo(b, s.ax);
+        }
+
+        const nG = BIRDS.filter((b) => b.kind === 0).length;
+        const nP = BIRDS.length - nG;
+        const gullIM = new THREE.InstancedMesh(gullG(), bmat(), nG);
+        const pigIM = new THREE.InstancedMesh(pigeonG(), bmat(), nP);
+        scene.add(gullIM); scene.add(pigIM);
+        world.ghost(gullIM); world.ghost(pigIM);
+
         /* Nothing in here allocates. The matrix and its three parts are made
            once and composed into every bird every frame, which is the whole
-           reason ninety of them cost what they cost. */
+           reason a hundred of them cost what they cost. The tram test is the
+           same deal: it reads positions that are already there and compares
+           numbers, so a gull noticing a tram costs no memory at all.
+
+           A stationary tram is not frightening — a gull will stand beside one
+           dwelling at Stop 13 all day — so the test asks for speed as well as
+           nearness, which is also what keeps a bird from fluttering in place
+           for the whole of a red phase. */
+        const SCARE_ALONG = 21.0, SCARE_ACROSS = 5.2;
         const _bm = new THREE.Matrix4();
         const _bp = new THREE.Vector3();
         const _bq = new THREE.Quaternion();
@@ -6507,9 +6686,27 @@ export default function build(world) {
             let gi = 0, pi = 0;
             for (const b of BIRDS) {
                 b.t -= dt;
+                if (b.road) {
+                    let near = false;
+                    for (let i = 0; i < TRAMS.length; i++) {
+                        const T = TRAMS[i];
+                        if (T.v < 2.0) continue;
+                        const tp = T.mesh.position;
+                        const along = T.ax === 'z' ? tp.z - b.z : tp.x - b.x;
+                        if (along > SCARE_ALONG || along < -SCARE_ALONG) continue;
+                        const across = T.ax === 'z' ? tp.x - b.x : tp.z - b.z;
+                        if (across < SCARE_ACROSS && across > -SCARE_ACROSS) { near = true; break; }
+                    }
+                    if (near) {
+                        if (b.st !== 3) { b.st = 3; b.tx = b.ex; b.tz = b.ez; }
+                        if (b.t < 0.6) b.t = rr(0.6, 1.2);
+                    }
+                }
                 if (b.t <= 0) {
                     /* A bird that has arrived decides again. The fighters skip
-                       standing still: there is a chip under somebody else. */
+                       standing still: there is a chip under somebody else. A
+                       gull coming off a startle falls through here too, which
+                       is how it walks itself back out into the road. */
                     b.st = b.fight ? (rnd() < 0.45 ? 2 : 0)
                                    : (rnd() < 0.44 ? 1 : (rnd() < 0.82 ? 0 : 2));
                     if (b.st === 0) {
@@ -6529,7 +6726,7 @@ export default function build(world) {
                 const dx = b.tx - b.x, dz = b.tz - b.z;
                 const d = Math.hypot(dx, dz);
                 if (b.st !== 1 && d > 0.04) {
-                    const v = (b.st === 2 ? 2.6 : 1.0) * b.sp;
+                    const v = (b.st === 3 ? 4.4 : b.st === 2 ? 2.6 : 1.0) * b.sp;
                     const k = Math.min(1, (v * dt) / d);
                     b.x += dx * k; b.z += dz * k;
                     // turn towards where it is going rather than snapping
@@ -6537,14 +6734,19 @@ export default function build(world) {
                     let turn = want - b.ry;
                     while (turn > Math.PI) turn -= 6.283;
                     while (turn < -Math.PI) turn += 6.283;
-                    b.ry += turn * Math.min(1, dt * 9.0);
+                    b.ry += turn * Math.min(1, dt * (b.st === 3 ? 16.0 : 9.0));
                 }
-                b.y = b.st === 2 ? Math.sin(Math.PI * clamp(1 - b.t / 0.42, 0, 1)) * 0.32 : 0;
-                b.bob += dt * (b.st === 1 ? 7.5 : 3.0);
-                const pitch = b.st === 1 ? 0.75 + Math.sin(b.bob) * 0.30 : Math.sin(b.bob) * 0.05;
+                /* Startled, it is half running and half flapping — off the
+                   ground and back on it twice a stride — and once it is clear
+                   it puts its feet down and stands there watching instead. */
+                b.y = b.st === 3 ? (d > 0.30 ? Math.abs(Math.sin(b.bob)) * 0.26 : 0)
+                    : b.st === 2 ? Math.sin(Math.PI * clamp(1 - b.t / 0.42, 0, 1)) * 0.32 : 0;
+                b.bob += dt * (b.st === 3 ? 16.0 : b.st === 1 ? 7.5 : 3.0);
+                const pitch = b.st === 3 ? -0.16
+                    : b.st === 1 ? 0.75 + Math.sin(b.bob) * 0.30 : Math.sin(b.bob) * 0.05;
 
                 _be.set(pitch, b.ry, 0);
-                _bm.compose(_bp.set(b.x, KERB_H + b.y, b.z), _bq.setFromEuler(_be), _bs);
+                _bm.compose(_bp.set(b.x, b.gy + b.y, b.z), _bq.setFromEuler(_be), _bs);
                 if (b.kind === 0) gullIM.setMatrixAt(gi++, _bm); else pigIM.setMatrixAt(pi++, _bm);
             }
             gullIM.instanceMatrix.needsUpdate = true;
