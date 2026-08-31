@@ -80,9 +80,14 @@
 //      a pane at the back of it, every cornice is courses and brackets, and
 //      the colour is on the vertices — so a whole building is one draw and
 //      still has relief you can walk up to.
-//    · the escalators go down and stop. What is at the bottom of that shaft
-//      is a lined concrete room and nothing else: the station that used to be
-//      under this world has been taken out.
+//    · the escalators go down, and at the bottom of them is Town Hall
+//      Station: a hundred and eighty metres of Metro Tunnel cavern under
+//      Swanston Street, fifteen metres down, with a concourse between two
+//      platforms, a lattice of orange arches and gold lanterns over it, full
+//      height platform screen doors and an HCMT standing at each face with
+//      its doors open. Both shafts reach it, by a link hall each. Nothing
+//      down there is lit by a real light and nothing down there moves.
+//      Section 28.
 //
 //  Ported from a hand-built page that owned its own renderer and ran on
 //  three r128. What that page did with a canvas, a slider and eleven camera
@@ -7131,17 +7136,23 @@ export default function build(world) {
 
             /* ---- the bottom of the shaft.
 
-                   There is no station down here. The flight arrives at a bare
-                   concrete landing fifteen metres under the paving and stops,
-                   and the only thing this box is for is that it is a floor and
-                   four walls: somebody who rides all the way down and keeps
-                   walking has to be stopped by something, and the alternative
-                   to a wall is falling out of the world. Lined right up to the
-                   underside of the plaza slab, so the sides of the shaft are
-                   concrete the whole way rather than a hole in the air with
-                   escalators hanging in it — and lit by nothing, because the
-                   world's four lights are all spent above ground and the point
-                   of the opening in the paving is that it is dark.
+                   The flight arrives at a concrete landing fifteen metres
+                   under the paving, and until section 28 was written that was
+                   the end of it: a floor and four walls, because somebody who
+                   rides all the way down and keeps walking has to be stopped
+                   by something and the alternative to a wall is falling out of
+                   the world. Three of those walls still are that. The fourth,
+                   the one you are facing as you step off, has the way through
+                   to the station cut out of it now — seven and a half metres
+                   of opening, the width of the flight, straight ahead of
+                   anybody arriving.
+
+                   Lined right up to the underside of the plaza slab either
+                   side of the opening, so the shaft is concrete the whole way
+                   rather than a hole in the air with escalators hanging in it,
+                   and lit by nothing: the world's four lights are all spent
+                   above ground, and what carries down here now is the light
+                   coming back through the opening.
 
                    Held clear of the flight at every side: the trusses reach a
                    little past the void in x and the escalators overrun it in
@@ -7156,7 +7167,12 @@ export default function build(world) {
                 C_(IX0 - T, SQ.HALL, IZN - T, IX0, TOP, IZS + T);              // west
                 C_(IX1, SQ.HALL, IZN - T, IX1 + T, TOP, IZS + T);              // east
                 C_(IX0 - T, SQ.HALL, IZN - T, IX1 + T, TOP, IZN);              // the head end
-                C_(IX0 - T, SQ.HALL, IZS, IX1 + T, TOP, IZS + T);              // and the far one
+                // and the far one, which is now two jambs and a head over the
+                // way into the north link hall — see section 28l
+                const OX0 = 26.6, OX1 = 34.2, OH = SQ.HALL + 3.6;
+                C_(IX0 - T, SQ.HALL, IZS, OX0, TOP, IZS + T);
+                C_(OX1, SQ.HALL, IZS, IX1 + T, TOP, IZS + T);
+                C_(OX0, OH, IZS, OX1, TOP, IZS + T);
             }
         }
 
@@ -7415,13 +7431,15 @@ export default function build(world) {
                 guard(36.60, 46.10);
             }
 
-            /* ---- the bottom of the shaft, and it is the same nothing that is
-                    at the bottom of the other one: a lined concrete room
-                    fifteen metres under the footpath, four walls and a floor,
-                    and where the concourse would be there is a wall. The
-                    station under this world was taken out and inventing half
-                    of it here to make the descent feel finished would be a
-                    worse answer than the wall.
+            /* ---- the bottom of the shaft, and it is the same room as the one
+                    at the bottom of the other flight: fifteen metres under the
+                    footpath, four walls and a floor. The far wall used to be
+                    where the concourse would have been and was a wall anyway,
+                    because the station under this world had been taken out.
+                    It has the way through to the south link hall cut out of it
+                    now — the same seven metres of opening the City Square end
+                    has, dead ahead of the flight, because this is the same
+                    station and it is section 28 that put it back.
 
                     Lined the whole way up to the soffit of the footpath slab,
                     so the sides of the shaft are concrete rather than a hole
@@ -7439,7 +7457,12 @@ export default function build(world) {
                 C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX0, TOP, FQ.IZS + T);               // west
                 C_(FQ.IX1, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZS + T);               // east
                 C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZN);               // the head end
-                C_(FQ.IX0 - T, FQ.HALL, FQ.IZS, FQ.IX1 + T, TOP, FQ.IZS + T);               // and the far one
+                // and the far one, which is now two jambs and a head over the
+                // way into the south link hall — see section 28l
+                const OX0 = 26.0, OX1 = 33.0, OH = FQ.HALL + 3.6;
+                C_(FQ.IX0 - T, FQ.HALL, FQ.IZS, OX0, TOP, FQ.IZS + T);
+                C_(OX1, FQ.HALL, FQ.IZS, FQ.IX1 + T, TOP, FQ.IZS + T);
+                C_(OX0, OH, FQ.IZS, OX1, TOP, FQ.IZS + T);
 
                 for (let i = 0; i < 6; i++) {
                     const zz = 21.5 + i * 3.4;
@@ -13778,5 +13801,1204 @@ export default function build(world) {
            scenery that happens to be solid, which is exactly what it is left
            as. Splitting it into eighty parts is eighty meshes, and there are
            three to spend here. */
+    }
+/* ============================================================
+       29 · Town Hall Station — the cavern under Swanston Street
+
+       Until now the two flights in section 21 went down fifteen metres and
+       stopped, and the note at the top of this file said what was at the
+       bottom of them: a lined concrete room and nothing else, because the
+       station that used to be under this world had been taken out. This puts
+       it back, and joins both shafts to it.
+
+       It is the Metro Tunnel cavern as built — a central concourse between two
+       side platforms, blade columns carrying a longitudinal beam each side, a
+       crossing lattice of orange arches with stacked gold lanterns hung where
+       they cross, dark timber linings over the platform vaults and aluminium
+       slats over the middle, full-height platform screen doors, and an HCMT
+       standing at each face with its doors open.
+
+       Four things about it are this world's rather than a reference page's.
+
+       The section is compressed. A real Metro Tunnel cavern is twenty-five
+       metres down and fourteen metres from its floor to its crown; both
+       flights in section 21 land at −15 and there is a street over the top, so
+       the vault here springs at the tunnel soffit and crowns at 11.2, which
+       leaves under four metres of ground between the crown and the Swanston
+       Street asphalt. Four metres is thin cover for a box this wide, and it is
+       what there is: the alternative was to move the bottom of two flights
+       that already work.
+
+       Nothing here is lit. The world's four real-time lights are all spent
+       above ground — section 4 — so every lamp down here is an emissive
+       material and `world.bloom` carries the shine: the lantern cores, the
+       cone lamps over the platforms, the light line along the screen doors,
+       the signs, the screens, the strips in the carriages. The cavern is lit
+       the way a photograph of it is lit, by the things in it that glow.
+
+       Nothing moves, either. The walk rasterises the world once when it loads,
+       so a train that pulls out is a train you are still standing inside.
+       Both stand at their faces with the doors open, which is anyway the one
+       moment of a station everybody pictures.
+
+       And everything over head height is ghosted — the vault, the arches, the
+       lanterns, the beams, the signs, the tunnels. Not to save work: the walk
+       keeps four vertical spans per cell and merges anything closer together
+       than 1.4 m, and a column over this concourse already spends two of them
+       on the roadway at y = 0 and the floor at y = −15. A solid sheet over a
+       room is also a lid the walk will not stand under. You cannot reach any
+       of it; it is scenery, and says so.
+
+       The plan, north (−z) to south (+z):
+
+           City Square shaft (x 25–35) ─┐
+                                        └── north link hall ──┐
+                        z −142  end wall · tunnel portals ─────┤
+                                platform 1 (west · Sunbury)    │
+                                concourse                      │
+                                platform 2 (east · Pakenham)   │
+                        z  +38  end wall · tunnel portals ─────┤
+                                        ┌── south link hall ──┘
+           Federation Square shaft ─────┘
+
+       Two link halls rather than two doorways, because the shafts come down at
+       x 25–35 — under City Square and under the Flinders Street footpath —
+       and the cavern is under the roadway at x 0. Twenty-five metres of
+       passage at each end is what the real station has and what the geometry
+       needs. Each runs past the end of the cavern and turns in through the end
+       wall rather than entering from the side, because the running tunnels
+       leave through the end walls: a passage at platform level crossing the
+       track centreline would be a passage through a tunnel.
+
+       Not `world.ground()`, and that matters more here than anywhere else in
+       this file. Everything visible collides whether a world declares it or
+       not; what `world.ground` also does is size the walk's grid, from the
+       union of everything declared that is not a flat sheet at level 0. A
+       180 m floor at y = −15 is neither flat nor at level 0 — declared, it
+       would become the thing the grid is measured from, and the whole city's
+       collision would collapse onto the station. Section 27 has the same note
+       for the riverbanks, and section 21c for the plaza. So: added to the
+       scene, registered as parts, and never declared.
+       ============================================================ */
+    {
+        /* ---- the plan, in metres, with y measured from the concourse floor.
+                The whole station is built in that frame and the groups it goes
+                into are dropped to SQ.HALL at the end, so every number below
+                reads as a height above the floor you are standing on. ---- */
+        const FY = SQ.HALL;                    // −15: where both flights land
+        const ZN = -142.0, ZS = 38.0;          // the end walls, inner faces
+        const CX = 5.2;                        // the blade column line
+        const PX = 11.4;                       // the platform screen doors
+        const TX = 13.15;                      // the track centre
+        const WX = 15.7;                       // the tunnel side wall
+        const BAY = 6.0;                       // the structural bay
+        const VR = 14.4, VY = -3.2;            // the vault: radius, centre height
+        const HW = 4.2;                        // half-width of the link halls
+        const HH = 3.6;                        // and their ceiling
+        const RAILY = -1.13;                   // railhead, so a train floor is at 0
+        const CAR = 22.4, CARS = 7;            // one HCMT: seven cars, 157 m
+        const BORE = 5.8;                      // how far a tunnel is drawn past an end wall
+        const TZ = (ZN + ZS) / 2;              // where both trains stand
+
+        /* Door centres. Three double doorways a car, and the two trains stop
+           at the same place, so one list answers for the screen doors on both
+           platforms as well as for the doors in both trains. */
+        const DOORZ = [];
+        for (let i = 0; i < CARS; i++) {
+            const zc = TZ + (i - (CARS - 1) / 2) * CAR;
+            for (const o of [-7.6, 0, 7.6]) DOORZ.push(zc + o);
+        }
+        DOORZ.sort((a, b) => a - b);
+
+        /* ---- geometry into arrays, merged per material at the end: the shape
+                section 21 has, with a second array wherever a material has a
+                ghosted half, because a ghost and a solid cannot share a mesh.
+                Fifteen materials and twenty-four meshes carry the whole
+                station, its two link halls and both trains. ---- */
+        const A = {
+            crete: [], floor: [], dark: [], steel: [], pane: [],
+            gCrete: [], gBatten: [], gSteel: [], gOrange: [], gAmber: [],
+            gGlow: [], gLed: [], gSign: [],
+        };
+
+        /* A box from two opposite corners, in any order — everything down here
+           is measured off the floor, the column line or the track centre and
+           never off its own middle.
+
+           And the repeat baked into the uvs per piece, for the two materials
+           that carry a tiling map. A merged mesh has one material and one
+           repeat but a hundred differently-sized faces on it, so a floor tile
+           laid on the 180 m concourse and the same tile laid on a 4 m link
+           hall come out as a metre of granite and a centimetre of pinstripe
+           unless the scale is put into the attribute on the way in. The same
+           thing section 21's batten cladding has to do, for the same reason. */
+        const TILE = 4.55, PANEL = 6.0;
+        const bx = (arr, x0, y0, z0, x1, y1, z1) => {
+            const w = Math.abs(x1 - x0), h = Math.abs(y1 - y0), d = Math.abs(z1 - z0);
+            const g = boxG(w, h, d);
+            put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+            if (arr === A.floor) uvScale(g, Math.max(0.25, w) / TILE, Math.max(0.25, d) / TILE);
+            else if (arr === A.crete || arr === A.gCrete) {
+                uvScale(g, Math.max(0.4, Math.max(w, d)) / PANEL, Math.max(0.4, h) / PANEL);
+            }
+            if (arr) arr.push(g);
+            return g;
+        };
+        /* A strut between two points, which is what the arches are made of.
+           Turned by a basis rather than by three Euler angles: an arch here
+           climbs in y, sweeps across in x and travels in z all at once, and an
+           Euler triple for that is a bug waiting in the third rotation. */
+        const _mm = new THREE.Matrix4(), _p0 = new THREE.Vector3(), _p1 = new THREE.Vector3();
+        const _up = new THREE.Vector3(0, 1, 0);
+        const strut = (arr, w, h, x0, y0, z0, x1, y1, z1) => {
+            _p0.set(x0, y0, z0); _p1.set(x1, y1, z1);
+            const g = boxG(w, h, _p0.distanceTo(_p1));
+            _mm.lookAt(_p0, _p1, _up);
+            _mm.setPosition((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+            g.applyMatrix4(_mm);
+            arr.push(g);
+            return g;
+        };
+        /* Colour on the vertices, for the trains. A white body, a navy skirt,
+           yellow door surrounds, a silver roof, a blue floor and grey seats
+           are one material and one draw rather than six — the same trick the
+           frontages in section 21 are built with, for the same reason. */
+        const _tint = new Map();
+        const TONE = (hex) => {
+            let c = _tint.get(hex);
+            if (!c) { c = srgb(hex); _tint.set(hex, c); }
+            return c;
+        };
+        const col = (arr, hex, g) => {
+            const c = TONE(hex), n = g.attributes.position.count;
+            const a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            g.setAttribute('color', new THREE.Float32BufferAttribute(a, 3));
+            arr.push(g);
+            return g;
+        };
+        const cbx = (arr, hex, x0, y0, z0, x1, y1, z1) =>
+            col(arr, hex, bx(null, x0, y0, z0, x1, y1, z1));
+
+        const uvRect = (g, u0, v0, u1, v1) => {
+            const uv = g.attributes.uv;
+            for (let i = 0; i < uv.count; i++) {
+                uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+            }
+            return g;
+        };
+
+        /* ------------------------------------------------------------
+           28a · the signs, all of them, on one sheet
+
+           Every lit surface with words on it — the exit signs over the
+           concourse, the destination signs over the platforms, the station
+           name on the columns, the departure screens, the wayfinding in the
+           link halls, the destination box on the front of a train, the light
+           strips in the carriages — is a rectangle of this atlas on a thin
+           box. One material, one draw, and the sheet drawn twice: once as
+           albedo and once as what glows, so a sign is bright without spending
+           one of the four lights.
+
+           Laid out on a grid of eight columns by sixteen rows, so a rect is
+           four small integers rather than four fractions somebody has to keep
+           in step — and so each one can be given the shape of the sign that
+           will wear it. A 3:1 exit sign on a 1.5:1 rectangle of atlas is an
+           exit sign with its lettering stretched to twice its width, which is
+           the sort of thing that reads as wrong long before anybody works out
+           why.
+           ------------------------------------------------------------ */
+        const RC = (c, r, cw, rh) => [c / 8, r / 16, (c + cw) / 8, (r + rh) / 16];
+        const SG = {
+            exit1: RC(0, 0, 3, 2), exit2: RC(3, 0, 3, 2),
+            ptv: RC(6, 0, 1, 1), mind: RC(7, 0, 1, 1), tunnel: RC(6, 1, 2, 1),
+            plat1: RC(0, 2, 4, 2), plat2: RC(4, 2, 4, 2),
+            name: RC(0, 4, 3, 4), pid: RC(3, 4, 2, 2),
+            dest1: RC(5, 4, 3, 1), dest2: RC(5, 5, 3, 1),
+            info: RC(3, 6, 4, 4), num1: RC(7, 6, 1, 2), num2: RC(7, 8, 1, 2),
+            way: RC(0, 10, 5, 2), poster: RC(0, 12, 2, 4), strip: RC(2, 12, 6, 1),
+        };
+        const stnSheet = (lit) => tex(2048, 2048, (g, W, H) => {
+            const R = (k) => [SG[k][0] * W, SG[k][1] * H,
+                              (SG[k][2] - SG[k][0]) * W, (SG[k][3] - SG[k][1]) * H];
+            const F = (weight, size) => `${weight} ${size}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+            g.fillStyle = lit ? '#000000' : '#14161a'; g.fillRect(0, 0, W, H);
+            const YEL = lit ? '#ffd21f' : '#e0b512';
+            const WHT = lit ? '#ffffff' : '#e6e9ee';
+            const BLU = lit ? '#1d63bd' : '#17498b';
+
+            // the two exit signs: black, a yellow name and an up arrow, which
+            // is PTV wayfinding and is what hangs over the real concourse
+            const exit = (k, num, line, sub) => {
+                const [x, y, w, h] = R(k);
+                g.fillStyle = lit ? '#0b0d10' : '#101216'; g.fillRect(x + 5, y + 5, w - 10, h - 10);
+                g.fillStyle = YEL; g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(700, h * 0.26); g.fillText(`Exit ${num}`, x + w * 0.06, y + h * 0.28);
+                g.fillStyle = WHT; g.font = F(400, h * 0.17);
+                g.fillText(line, x + w * 0.06, y + h * 0.53);
+                g.fillStyle = BLU; g.fillRect(x + w * 0.05, y + h * 0.66, w * 0.68, h * 0.22);
+                g.fillStyle = WHT; g.font = F(500, h * 0.125);
+                g.fillText(sub, x + w * 0.08, y + h * 0.775);
+                g.strokeStyle = YEL; g.lineWidth = h * 0.05; g.lineCap = 'round';
+                const ax = x + w * 0.87, ay = y + h * 0.40, r = h * 0.20;
+                g.beginPath(); g.moveTo(ax, ay + r); g.lineTo(ax, ay - r);
+                g.moveTo(ax - r * 0.7, ay - r * 0.3); g.lineTo(ax, ay - r * 1.05);
+                g.lineTo(ax + r * 0.7, ay - r * 0.3); g.stroke();
+            };
+            exit('exit1', 1, 'City Square', 'Collins Street  ·  Town Hall');
+            exit('exit2', 2, 'Federation Square', 'Flinders Street  ·  Trams');
+
+            // the destination signs over each platform, white with the line
+            // colour down the middle, read from the concourse
+            const plat = (k, num, dest, via, left) => {
+                const [x, y, w, h] = R(k);
+                g.fillStyle = lit ? '#f6f7f4' : '#eceee9'; g.fillRect(x + 4, y + 4, w - 8, h - 8);
+                g.fillStyle = lit ? '#1a1c1e' : '#25282b'; g.textBaseline = 'middle';
+                g.textAlign = 'center';
+                g.font = F(500, h * 0.46);
+                g.fillText(left ? '←' : '→', x + w * (left ? 0.07 : 0.93), y + h * 0.52);
+                g.font = F(600, h * 0.52);
+                g.fillText(num, x + w * (left ? 0.17 : 0.83), y + h * 0.52);
+                g.fillStyle = BLU;
+                g.fillRect(x + w * (left ? 0.24 : 0.755), y + h * 0.16, w * 0.008, h * 0.68);
+                g.fillStyle = lit ? '#1a1c1e' : '#25282b';
+                g.textAlign = left ? 'left' : 'right';
+                const tx = x + w * (left ? 0.27 : 0.73);
+                g.font = F(500, h * 0.26); g.fillText(dest, tx, y + h * 0.36);
+                g.font = F(300, h * 0.185); g.fillText(via, tx, y + h * 0.70);
+            };
+            plat('plat1', '1', 'Sunbury', 'via State Library', false);
+            plat('plat2', '2', 'Pakenham', 'Cranbourne · via Anzac', true);
+
+            // the station name plate on the blade columns, with the two exits
+            // under it: the sign you read from a carriage window
+            {
+                const [x, y, w, h] = R('name');
+                g.fillStyle = lit ? '#f7f8f5' : '#eef0eb'; g.fillRect(x + 4, y + 4, w - 8, h - 8);
+                g.fillStyle = BLU; g.fillRect(x + 4, y + 4, w - 8, h * 0.05);
+                g.fillStyle = lit ? '#191b1d' : '#24272a';
+                g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(600, h * 0.17); g.fillText('Town Hall', x + w * 0.07, y + h * 0.20);
+                g.fillStyle = lit ? '#0b0d10' : '#101216';
+                g.fillRect(x + 4, y + h * 0.33, w - 8, h * 0.63);
+                g.fillStyle = YEL; g.font = F(600, h * 0.115);
+                g.fillText('← Exit 1', x + w * 0.07, y + h * 0.45);
+                g.fillStyle = WHT; g.font = F(300, h * 0.082);
+                g.fillText('City Square · Collins St', x + w * 0.09, y + h * 0.56);
+                g.fillStyle = YEL; g.font = F(600, h * 0.115);
+                g.fillText('Exit 2 →', x + w * 0.07, y + h * 0.72);
+                g.fillStyle = WHT; g.font = F(300, h * 0.082);
+                g.fillText('Federation Sq · Flinders St', x + w * 0.09, y + h * 0.83);
+            }
+
+            // a departure screen, stopped at one minute of one evening
+            {
+                const [x, y, w, h] = R('pid');
+                g.fillStyle = lit ? '#f4f6f8' : '#e8eaed'; g.fillRect(x, y, w, h);
+                g.fillStyle = lit ? '#123a63' : '#0e2c4b'; g.fillRect(x, y, w, h * 0.16);
+                g.fillStyle = WHT; g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(600, h * 0.10); g.fillText('4:52pm   Sunbury', x + w * 0.04, y + h * 0.08);
+                g.fillStyle = lit ? '#0f2338' : '#0b1b2b';
+                g.fillRect(x + w * 0.71, y + h * 0.02, w * 0.27, h * 0.12);
+                g.fillStyle = lit ? '#ffd34d' : '#d8b03c'; g.font = F(600, h * 0.085);
+                g.fillText('Now', x + w * 0.76, y + h * 0.08);
+                g.fillStyle = lit ? '#4a5560' : '#3d4750'; g.font = F(400, h * 0.060);
+                g.fillText('7 cars  ·  stopping all stations', x + w * 0.04, y + h * 0.23);
+                const stops = ['State Library', 'Parkville', 'Arden', 'Footscray', 'Sunshine', 'Sunbury'];
+                g.strokeStyle = BLU; g.lineWidth = h * 0.012;
+                g.beginPath(); g.moveTo(x + w * 0.08, y + h * 0.33);
+                g.lineTo(x + w * 0.08, y + h * 0.90); g.stroke();
+                for (let i = 0; i < stops.length; i++) {
+                    const yy = y + h * (0.34 + i * 0.112);
+                    g.beginPath(); g.arc(x + w * 0.08, yy, h * 0.018, 0, 7);
+                    g.fillStyle = i === 0 ? BLU : (lit ? '#8a949c' : '#767f86'); g.fill();
+                    g.fillStyle = lit ? '#2e3338' : '#262b30'; g.font = F(400, h * 0.066);
+                    g.fillText(stops[i], x + w * 0.14, yy);
+                }
+            }
+
+            // the wayfinding in the link halls: which way the platforms are
+            {
+                const [x, y, w, h] = R('way');
+                g.fillStyle = lit ? '#0b0d10' : '#101216'; g.fillRect(x + 4, y + 4, w - 8, h - 8);
+                g.fillStyle = YEL; g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(700, h * 0.38); g.fillText('Platforms 1–2', x + w * 0.07, y + h * 0.38);
+                g.fillStyle = WHT; g.font = F(300, h * 0.23);
+                g.fillText('Sunbury  ·  Pakenham  ·  Cranbourne', x + w * 0.07, y + h * 0.72);
+                g.strokeStyle = YEL; g.lineWidth = h * 0.07; g.lineCap = 'round';
+                const ax = x + w * 0.90, ay = y + h * 0.5, r = h * 0.24;
+                g.beginPath(); g.moveTo(ax, ay - r); g.lineTo(ax, ay + r);
+                g.moveTo(ax - r * 0.7, ay - r * 0.3); g.lineTo(ax, ay - r * 1.05);
+                g.lineTo(ax + r * 0.7, ay - r * 0.3); g.stroke();
+            }
+
+            // the destination box on the front of a train
+            const dest = (k, text) => {
+                const [x, y, w, h] = R(k);
+                g.fillStyle = lit ? '#0a0c0f' : '#0e1013'; g.fillRect(x, y, w, h);
+                g.fillStyle = lit ? '#ffb648' : '#c98f33';
+                g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.font = F(700, h * 0.42); g.fillText(text, x + w / 2, y + h * 0.52);
+            };
+            dest('dest1', 'SUNBURY');
+            dest('dest2', 'PAKENHAM');
+
+            /* The Information and Help Point box on the concourse, and the one
+               place on this sheet where the lit half is drawn darker than the
+               albedo rather than brighter. Everything else here is a lightbox
+               — an exit sign, a screen, a destination panel — and wants to
+               read as one. This is a glazed kiosk four and a half metres
+               across: at the same emissive as a sign it was a slab of white
+               light at the end of the concourse with the bloom pass making a
+               lantern of it. */
+            {
+                const [x, y, w, h] = R('info');
+                g.fillStyle = lit ? '#83867f' : '#e4e6e2'; g.fillRect(x, y, w, h);
+                g.strokeStyle = lit ? '#17181a' : '#1d1f21'; g.lineWidth = w * 0.008;
+                for (const u of [0.32, 0.64]) {
+                    g.beginPath(); g.moveTo(x + u * w, y); g.lineTo(x + u * w, y + h); g.stroke();
+                }
+                g.strokeRect(x + w * 0.004, y + h * 0.004, w * 0.992, h * 0.992);
+                g.fillStyle = lit ? '#2a2f49' : '#22263a'; g.fillRect(x, y + h * 0.06, w, h * 0.20);
+                g.fillStyle = WHT; g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(600, h * 0.10); g.fillText('i   Information', x + w * 0.04, y + h * 0.16);
+                g.fillText('Help Point', x + w * 0.68, y + h * 0.16);
+                g.fillStyle = lit ? '#7c8994' : '#c9d6e0'; g.fillRect(x + w * 0.05, y + h * 0.34, w * 0.22, h * 0.52);
+                g.fillStyle = lit ? '#5e6266' : '#8a8f93'; g.fillRect(x + w * 0.68, y + h * 0.34, w * 0.16, h * 0.56);
+                g.fillStyle = lit ? '#1d3e6e' : '#17325a'; g.fillRect(x + w * 0.70, y + h * 0.40, w * 0.12, h * 0.16);
+                g.fillStyle = lit ? '#c4372a' : '#9c2c22'; g.fillRect(x + w * 0.72, y + h * 0.62, w * 0.06, h * 0.06);
+            }
+
+            // a plain lit strip, for coves, light lines and carriage ceilings
+            {
+                const [x, y, w, h] = R('strip');
+                g.fillStyle = lit ? '#f2f6ff' : '#cfd8e2'; g.fillRect(x, y + h * 0.16, w, h * 0.68);
+            }
+            // the platform number tiles over the screen doors
+            const numTile = (k, n) => {
+                const [x, y, w, h] = R(k);
+                g.fillStyle = lit ? '#f4f4f1' : '#e7e7e3'; g.fillRect(x + 3, y + 3, w - 6, h - 6);
+                g.fillStyle = lit ? '#232527' : '#2c2e30';
+                g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.font = F(600, h * 0.62); g.fillText(n, x + w / 2, y + h * 0.54);
+            };
+            numTile('num1', '1'); numTile('num2', '2');
+            // the network map on the concourse wall
+            {
+                const [x, y, w, h] = R('poster');
+                g.fillStyle = lit ? '#f6f6f2' : '#e9e9e5'; g.fillRect(x, y, w, h);
+                g.fillStyle = BLU; g.fillRect(x, y, w, h * 0.07);
+                const lines = ['#f2611c', '#2c7bc4', '#3aa757', '#c0399f', '#e8b400'];
+                for (let i = 0; i < 24; i++) {
+                    g.strokeStyle = lines[i % lines.length]; g.lineWidth = h * 0.011;
+                    const y0 = y + h * (0.16 + (i % 12) * 0.062);
+                    g.beginPath();
+                    g.moveTo(x + w * 0.08, y0);
+                    g.lineTo(x + w * (0.30 + (i % 4) * 0.14), y0);
+                    g.lineTo(x + w * (0.48 + (i % 5) * 0.09), y0 + h * (i % 2 ? 0.09 : -0.07));
+                    g.stroke();
+                }
+                g.fillStyle = lit ? '#1a1c1e' : '#24262a';
+                g.textAlign = 'left'; g.textBaseline = 'middle';
+                g.font = F(600, h * 0.05); g.fillText('Metropolitan network', x + w * 0.08, y + h * 0.95);
+            }
+            // the roundel, the one thing on the wall that is not words
+            {
+                const [x, y, w, h] = R('ptv');
+                g.fillStyle = BLU; g.fillRect(x + 3, y + 3, w - 6, h - 6);
+                g.strokeStyle = WHT; g.lineWidth = h * 0.09;
+                g.beginPath(); g.arc(x + w / 2, y + h / 2, h * 0.28, 0, 7); g.stroke();
+                g.fillStyle = WHT; g.fillRect(x + w * 0.14, y + h * 0.44, w * 0.72, h * 0.12);
+            }
+            // the yellow line, and the sign at the tunnel end of a platform
+            {
+                let [x, y, w, h] = R('mind');
+                g.fillStyle = lit ? '#f4c400' : '#c99f0d'; g.fillRect(x, y, w, h);
+                g.fillStyle = '#101216'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.font = F(700, h * 0.20); g.fillText('MIND THE GAP', x + w / 2, y + h / 2);
+                [x, y, w, h] = R('tunnel');
+                g.fillStyle = lit ? '#a81f1f' : '#851a1a'; g.fillRect(x, y, w, h);
+                g.fillStyle = WHT; g.font = F(700, h * 0.28);
+                g.fillText('NO ENTRY  ·  TUNNEL', x + w / 2, y + h * 0.36);
+                g.font = F(300, h * 0.19);
+                g.fillText('Authorised staff only', x + w / 2, y + h * 0.72);
+            }
+        });
+        const stnMap = stnSheet(false), stnEmis = stnSheet(true);
+        /* A sign is a thin box with a rect of the sheet on every face of it.
+           Canvas y counts down and uv v counts up, so the rect is turned over
+           on the way in — the conversion section 21 owns up to, and the same
+           reason: without it every sign shows a different quarter of the
+           sheet, and the ones that came out blank were the lucky ones. */
+        const sgn = (arr, k, x0, y0, z0, x1, y1, z1) => {
+            const g = bx(null, x0, y0, z0, x1, y1, z1);
+            uvRect(g, SG[k][0] + 0.001, 1 - SG[k][3] + 0.002,
+                      SG[k][2] - 0.001, 1 - SG[k][1] - 0.002);
+            arr.push(g);
+            return g;
+        };
+
+        /* ------------------------------------------------------------
+           28b · the other textures, and the materials
+
+           Every one of them carries a little emissive. That is not a
+           stylistic choice: with no light under the paving and no bounce in a
+           forward renderer, a room lit by a hemisphere and an ambient alone
+           reads as a photograph of a room with the lamp switched off. A fifth
+           of a stop across the concrete and the floor is the light the ceiling
+           would be throwing, said in the only currency this world has left.
+
+           And nothing here goes through `wet()`. It adds fourteen points of
+           metalness, and a metallic standard material in a world with no
+           environment map has nothing to reflect: it renders black wherever no
+           light falls square on it, which fifteen metres down is everywhere.
+           Section 21 had to learn that on a canopy; it is the whole room here.
+           ------------------------------------------------------------ */
+        const creteTex = tex(512, 512, (g, W, H) => {
+            g.fillStyle = '#b6b4ae'; g.fillRect(0, 0, W, H);
+            for (let i = 0; i < 240; i++) {
+                const x = rr(0, W), y = rr(0, H), r = rr(14, 70);
+                const rg = g.createRadialGradient(x, y, 0, x, y, r);
+                const t = rnd() < 0.5 ? '150,148,143' : '198,196,190';
+                rg.addColorStop(0, `rgba(${t},${rr(0.05, 0.14)})`);
+                rg.addColorStop(1, `rgba(${t},0)`);
+                g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+            }
+            for (let i = 0; i < 2400; i++) {
+                g.fillStyle = `rgba(${rnd() < 0.5 ? '128,126,120' : '228,226,220'},${rnd() * 0.14})`;
+                g.fillRect(rr(0, W), rr(0, H), 1.6, 1.6);
+            }
+            g.strokeStyle = 'rgba(112,110,104,0.30)'; g.lineWidth = 2;
+            for (let i = 1; i < 4; i++) {
+                g.beginPath(); g.moveTo(i * W / 4, 0); g.lineTo(i * W / 4, H); g.stroke();
+            }
+            g.strokeStyle = 'rgba(112,110,104,0.18)';
+            g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+        }, 1, 1);
+
+        const floorTex = tex(512, 512, (g, W, H) => {
+            g.fillStyle = '#bcbab5'; g.fillRect(0, 0, W, H);
+            const n = 4, s = W / n;
+            for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+                const v = 178 + Math.floor(rnd() * 18);
+                g.fillStyle = `rgb(${v},${v},${v - 4})`;
+                g.fillRect(i * s + 1, j * s + 1, s - 2, s - 2);
+                for (let k = 0; k < 170; k++) {
+                    g.fillStyle = `rgba(${rnd() < 0.5 ? '124,122,118' : '240,239,235'},${rnd() * 0.17})`;
+                    g.fillRect(i * s + rr(0, s), j * s + rr(0, s), 1.3, 1.3);
+                }
+            }
+            g.strokeStyle = 'rgba(126,123,116,0.5)'; g.lineWidth = 2;
+            for (let i = 0; i <= n; i++) {
+                g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s, H); g.stroke();
+                g.beginPath(); g.moveTo(0, i * s); g.lineTo(W, i * s); g.stroke();
+            }
+        }, 1, 1);
+
+        const M = {
+            /* Emissive intensity in the fifties rather than the thirties, and
+               a cool grey to throw. The world's key light is a low orange
+               directional with no shadow map — section 4 spends it on the
+               street — and a directional with no shadow reaches fifteen metres
+               underground as happily as it reaches the footpath. So one wall
+               of every passage down here is sunlit and the opposite wall has
+               nothing on it at all, and the corridor reads as a room with a
+               window in it. Lifting the emissive lifts the dark side, which
+               closes that gap and, not coincidentally, is what a ceiling full
+               of fluorescent light actually does to a concrete wall. */
+            crete: stdMat(0xd6d4cd, {
+                map: creteTex, emissive: 0xa8b0b8, emissiveIntensity: 0.56,
+                roughness: 0.86, metalness: 0.03,
+            }),
+            // the same concrete for everything overhead, drawn both ways round
+            // because the vault is a cylinder you stand inside
+            vault: stdMat(0xd6d4cd, {
+                map: creteTex, emissive: 0xa8b0b8, emissiveIntensity: 0.46,
+                roughness: 0.90, metalness: 0.03, side: THREE.DoubleSide,
+            }),
+            floor: stdMat(0xd8d6d0, {
+                map: floorTex, emissive: 0xa0a6ac, emissiveIntensity: 0.40,
+                roughness: 0.66, metalness: 0.04,
+            }),
+            /* The dark timber over the platform vaults, and no map on it: the
+               ribs are separate boxes standing proud of the backing, so the
+               grain is geometry the light rakes across rather than a picture
+               of grain. A tiling map on a merged fan of eighty differently
+               angled boards is a repeat nobody can bake right anyway. */
+            batten: stdMat(0x4a382a, { roughness: 0.82, metalness: 0.03 }),
+            steel: stdMat(0xdfe1e5, {
+                emissive: 0x949aa0, emissiveIntensity: 0.30,
+                roughness: 0.44, metalness: 0.05,
+            }),
+            dark: stdMat(0x5a5e63, {
+                emissive: 0x33383d, emissiveIntensity: 0.34,
+                roughness: 0.66, metalness: 0.05,
+            }),
+            orange: stdMat(0xf46a22, {
+                emissive: 0xc2510f, emissiveIntensity: 0.26,
+                roughness: 0.54, metalness: 0.04,
+            }),
+            amber: stdMat(0xefb954, {
+                emissive: 0xb37f24, emissiveIntensity: 0.45,
+                roughness: 0.42, metalness: 0.05,
+            }),
+            /* The screen doors. Nearly half opacity and no metalness worth the
+               name, for the reason section 21's balustrade glass has: a pane
+               that disappears is a pane the eye reads as a hole, and this one
+               is the wall between a platform and a live track. At a fifth it
+               was invisible and the platform looked open to the tunnel. */
+            pane: stdMat(0x7f9aa4, {
+                roughness: 0.06, metalness: 0.04,
+                transparent: true, opacity: 0.46, side: THREE.DoubleSide,
+            }),
+            glow: emissive(0xffe8c4, 0xffd08c, 2.30),
+            led: emissive(0xeef4ff, 0xdcecff, 2.10),
+            sign: stdMat(0xffffff, {
+                map: stnMap, emissive: 0xffffff, emissiveMap: stnEmis,
+                emissiveIntensity: 1.30, roughness: 0.34,
+            }),
+            train: new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.42, metalness: 0.05,
+                emissive: srgb(0x585e64), emissiveIntensity: 0.22,
+            }),
+            trainGlass: stdMat(0x9db2bf, {
+                roughness: 0.08, metalness: 0.04,
+                transparent: true, opacity: 0.34, side: THREE.DoubleSide,
+            }),
+            /* And the inside of one, brighter again. A carriage ceiling faces
+               straight down, so the only thing in this world lighting it is
+               the hemisphere's ground colour — which is the warm brown of a
+               wet street, and which turned a white ceiling the colour of
+               tea. What lights a carriage is the strip along its own ceiling,
+               and this is that strip said as a material. */
+            trainRoom: new THREE.MeshStandardMaterial({
+                vertexColors: true, roughness: 0.58, metalness: 0.04,
+                emissive: srgb(0x9aa0a6), emissiveIntensity: 0.78,
+            }),
+        };
+
+        /* ------------------------------------------------------------
+           28c · the box: the floor, the end walls, and the vault over it
+           ------------------------------------------------------------ */
+        // One floor, twenty-three metres across and a hundred and eighty long,
+        // from screen door to screen door: the concourse and the two platforms
+        // are the same slab with no step between them, which is what a modern
+        // station is and what makes the walk down here simple.
+        bx(A.floor, -PX, -0.6, ZN - 0.6, PX, 0, ZS + 0.6);
+        for (const s of [-1, 1]) {
+            // the coping at the platform edge, the yellow line painted on it,
+            // and the tactile strip inside that
+            bx(A.dark, s * PX, 0, ZN, s * (PX - 0.50), 0.02, ZS);
+            bx(A.gAmber, s * (PX - 0.16), 0.02, ZN, s * (PX - 0.42), 0.03, ZS);
+            bx(A.gSteel, s * (PX - 0.58), 0, ZN, s * (PX - 1.06), 0.025, ZS);
+        }
+
+        /* The vault. A cylinder along z, open at both ends and drawn from
+           inside, springing at the tunnel soffit either side and crowning on
+           the centreline. The arc is read off those two points rather than
+           typed, because the springing has to land on the soffit and a vault
+           that arrives a hundred millimetres over it is a slot of daylight
+           into the ground. */
+        const vaultMesh = (() => {
+            const th0 = Math.acos(-(5.2 - VY) / VR);
+            const g = new THREE.CylinderGeometry(VR, VR, ZS - ZN + 1.6, 60, 1, true,
+                                                 th0, 2 * (Math.PI - th0));
+            g.rotateX(Math.PI / 2);
+            put(g, 0, VY, (ZN + ZS) / 2);
+            return mesh(g, M.vault);
+        })();
+
+        // the end walls, each with the way through to its link hall on the
+        // centreline and a tunnel portal either side of it
+        for (const s of [-1, 1]) {
+            const zw = s < 0 ? ZN : ZS;                     // the inner face
+            const zb = zw + s * 0.6;                        // and the outer
+            bx(A.crete, -PX - 0.4, 0, zw, -HW, 11.5, zb);
+            bx(A.crete, HW, 0, zw, PX + 0.4, 11.5, zb);
+            bx(A.crete, -HW, HH, zw, HW, 11.5, zb);
+            for (const sx of [-1, 1]) {
+                // the lintel over the portal, and the bore beyond it: not
+                // quite six metres of tunnel and then the dark, which is as
+                // far as it runs before the link hall crosses the line of it
+                bx(A.crete, sx * (PX + 0.4), 4.9, zw, sx * (WX + 0.2), 11.5, zb);
+                const zf = zw + s * BORE;
+                const g = new THREE.CylinderGeometry(3.15, 3.15, BORE, 20, 1, true);
+                g.rotateX(Math.PI / 2);
+                put(g, sx * TX, 1.5, (zw + zf) / 2);
+                A.gCrete.push(g);
+                bx(A.gCrete, sx * (TX - 3.2), RAILY - 0.5, zf, sx * (TX + 3.2), 4.7, zf + s * 0.4);
+                sgn(A.gSign, 'tunnel', sx * (TX - 0.9), 3.4, zw - s * 0.02,
+                    sx * (TX + 0.9), 3.85, zw - s * 0.05);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28d · the linings: dark timber over the platforms, aluminium
+                 slats over the middle, services at the crown
+           ------------------------------------------------------------ */
+        {
+            const L = ZS - ZN, zc = (ZN + ZS) / 2;
+            const ring = (arr, a0, a1, step, r, w, t) => {
+                for (let a = a0; a <= a1; a += step) for (const s of [-1, 1]) {
+                    const phi = s * a * Math.PI / 180;
+                    const g = boxG(w, t, L);
+                    put(g, Math.sin(phi) * r, VY + Math.cos(phi) * r, zc, 0, 0, -phi);
+                    arr.push(g);
+                }
+            };
+            ring(A.gBatten, 36, 62, 6.5, VR - 0.16, 1.30, 0.07);   // the backing boards
+            ring(A.gBatten, 34, 64, 1.7, VR - 0.34, 0.15, 0.10);   // the batten ribs
+            ring(A.gSteel, 4, 30, 2.6, VR - 0.30, 0.34, 0.07);     // slats over the concourse
+            bx(A.gSteel, -0.05, VY + VR - 0.26, ZN, 0.05, VY + VR - 0.14, ZS);
+            for (const sx of [-0.6, 0.6]) {
+                const g = cylG(0.05, 0.05, L, 8);
+                put(g, sx, VY + VR - 0.20, zc, Math.PI / 2, 0, 0);
+                A.gSteel.push(g);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28e · blade columns, the beams they carry, and the wall over
+           ------------------------------------------------------------ */
+        for (let z = ZN + 4; z <= ZS - 3; z += BAY) {
+            for (const s of [-1, 1]) {
+                const x = s * CX;
+                bx(A.crete, x - 0.42, 0.24, z - 0.85, x + 0.42, 4.6, z + 0.85);
+                for (const e of [-0.85, 0.85]) {
+                    const g = cylG(0.42, 0.42, 4.36, 14);
+                    put(g, x, 2.42, z + e);
+                    A.crete.push(g);
+                }
+                bx(A.dark, x - 0.52, 0.02, z - 0.98, x + 0.52, 0.26, z + 0.98);
+                // the downlight under the beam, throwing at the platform
+                bx(A.gSteel, x + s * 0.40, 4.16, z + 2.6, x + s * 0.64, 4.56, z + 2.9);
+                bx(A.gGlow, x + s * 0.42, 4.08, z + 2.62, x + s * 0.62, 4.17, z + 2.88);
+            }
+        }
+        for (const s of [-1, 1]) {
+            const x = s * CX;
+            bx(A.crete, x - 0.53, 4.6, ZN, x + 0.53, 5.6, ZS);          // the beam
+            // and the wall it turns into, which closes the concourse off from
+            // the platform above head height and is what the arches spring off
+            bx(A.gCrete, x - 0.45, 5.6, ZN, x + 0.45, 10.2, ZS);
+        }
+
+        /* ------------------------------------------------------------
+           28f · the crossing arches, and the lanterns where they meet
+
+                 Two arches a bay, each running from one beam to the other and
+                 from one end of the bay to the other, so consecutive bays
+                 cross on the centreline and a lantern hangs at every crossing.
+                 This is the thing anybody who has stood in one of these
+                 stations remembers about it.
+           ------------------------------------------------------------ */
+        {
+            const AX = 4.8, AY = 5.45, AR = 3.15;              // span, springing, rise
+            const SEG = 11;
+            const pt = (t, z0, z1) => [
+                -AX + AX * (1 - Math.cos(Math.PI * t)),
+                AY + AR * Math.sin(Math.PI * t),
+                z0 + (z1 - z0) * t,
+            ];
+            for (let z0 = ZN + 1; z0 + BAY <= ZS - 1; z0 += BAY) {
+                const z1 = z0 + BAY;
+                for (const dir of [1, -1]) {
+                    for (let i = 0; i < SEG; i++) {
+                        const a = pt(i / SEG, z0, z1), b = pt((i + 1) / SEG, z0, z1);
+                        strut(A.gOrange, 0.20, 0.58,
+                            dir * a[0], a[1], a[2], dir * b[0], b[1], b[2]);
+                    }
+                }
+                // the lantern: gold drums stacked on a rod with a warm core
+                // between every pair of them, hung at the crown of the crossing
+                const zc = z0 + BAY / 2;
+                let g = cylG(0.03, 0.03, 2.0, 6);
+                put(g, 0, AY + AR + 1.1, zc); A.gSteel.push(g);
+                g = cylG(0.14, 0.14, 0.42, 12);
+                put(g, 0, AY + AR - 0.12, zc); A.gAmber.push(g);
+                for (let j = 0; j < 5; j++) {
+                    const y = AY + AR - 0.54 - j * 0.30;
+                    g = cylG(0.115, 0.115, 0.20, 12); put(g, 0, y, zc); A.gGlow.push(g);
+                    g = cylG(0.17, 0.17, 0.05, 14); put(g, 0, y - 0.15, zc); A.gAmber.push(g);
+                }
+                g = cylG(0.14, 0.14, 0.32, 12);
+                put(g, 0, AY + AR - 2.22, zc); A.gAmber.push(g);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28g · the cone lamps over the platforms
+
+                 Orange cones on a thin stem off the vault, five and a half
+                 metres apart, and the only thing lighting a platform. The
+                 glow is a disc of emissive in the mouth of the cone, which is
+                 all a photograph of one of these ever shows.
+           ------------------------------------------------------------ */
+        for (let z = ZN + 5; z <= ZS - 4; z += 5.5) {
+            for (const s of [-1, 1]) {
+                const x = s * 8.4;
+                const yv = VY + Math.sqrt(Math.max(0, VR * VR - x * x));
+                let g = cylG(0.025, 0.025, yv - 7.45, 6);
+                put(g, x, (7.45 + yv) / 2, z); A.gSteel.push(g);
+                g = new THREE.CylinderGeometry(0.30, 0.08, 0.36, 12, 1, true);
+                put(g, x, 7.28, z); A.gAmber.push(g);
+                g = cylG(0.26, 0.26, 0.03, 12);
+                put(g, x, 7.13, z); A.gGlow.push(g);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28h · the platform screen doors
+
+                 Full height, the way the Metro Tunnel's are: a glazed wall
+                 from the platform up to a louvred band, with a doorway
+                 opposite every train door. The doors are drawn open, because
+                 nothing in this station moves and an open door is the one
+                 somebody can walk through — the leaves are pocketed over the
+                 fixed panes beside them, which is where they go.
+
+                 The glass is solid, deliberately: it is the only thing between
+                 a platform and a live track, and the walk reads a pane with
+                 depth as exactly what it is.
+
+                 The doorways are 2.9 m clear rather than the 1.9 an HCMT's
+                 screen doors actually are, and that is a compromise with the
+                 walk rather than a drawing decision. The walk rasterises the
+                 world at 1.365 m a cell and paints every steep face into the
+                 cell that contains it; a cell that catches so much as the edge
+                 of the glass beside a doorway comes out solid from the floor
+                 to the louvres, because a wall's samples merge with the floor
+                 under them. So an opening narrower than two cells can be an
+                 opening no cell centre ever lands cleanly inside — the door
+                 you can see and cannot walk through. Two cells is 2.73 m;
+                 these are 2.9, and the train's are 2.8, and every one of the
+                 forty-two doorways in this station has a cell in it.
+           ------------------------------------------------------------ */
+        for (const sd of [-1, 1]) {
+            const x = sd * PX;
+            const ins = x - sd * 0.06;                       // the platform face
+            bx(A.dark, x - 0.09, 0.02, ZN, x + 0.09, 0.12, ZS);      // the sill
+            bx(A.dark, x - 0.12, 2.72, ZN, x + 0.12, 3.10, ZS);      // the head runner
+            bx(A.dark, x - 0.07, 3.10, ZN, x + 0.07, 4.90, ZS);      // the louvred band
+            bx(A.gCrete, x - 0.22, 4.90, ZN, x + 0.22, 5.30, ZS);    // and the fascia over it
+            // the light line along the top of the doors, which is what makes
+            // a platform edge read from the far end of a station
+            bx(A.gLed, ins - sd * 0.13, 2.56, ZN, ins - sd * 0.19, 2.67, ZS);
+
+            const edges = [ZN + 0.5];
+            for (const dz of DOORZ) {
+                for (const pz of [dz - 1.45, dz + 1.45]) {           // the jamb posts
+                    bx(A.steel, x - 0.10, 0.12, pz - 0.09, x + 0.10, 2.74, pz + 0.09);
+                }
+                /* The plate across the gap between the platform and the train.
+                   Without it the only thing in the one cell that matters is
+                   the track slab a metre and a quarter down, which is more
+                   than the walk will step, and the doorway is a hole rather
+                   than a way in. The real ones have a gap filler here for the
+                   same reason, minus the arithmetic. */
+                bx(A.steel, x - sd * 0.34, -0.12, dz - 1.42, x + sd * 0.46, 0.01, dz + 1.42);
+                for (const lr of [-1, 1]) {                          // the open leaves
+                    bx(A.pane, ins - sd * 0.05, 0.16, dz + lr * 1.50,
+                               ins - sd * 0.11, 2.68, dz + lr * 2.90);
+                }
+                sgn(A.gSign, sd < 0 ? 'num1' : 'num2',
+                    ins - sd * 0.02, 3.16, dz - 0.21, ins - sd * 0.05, 3.58, dz + 0.21);
+                // and the yellow warning on the pane beside every fourth door
+                if (DOORZ.indexOf(dz) % 4 === 1) {
+                    sgn(A.gSign, 'mind', ins - sd * 0.02, 1.28, dz + 1.70,
+                        ins - sd * 0.05, 1.73, dz + 2.60);
+                }
+                edges.push(dz - 1.45, dz + 1.45);
+            }
+            edges.push(ZS - 0.5);
+            for (let i = 0; i < edges.length; i += 2) {
+                const a = edges[i], b = edges[i + 1];
+                if (b - a < 0.4) continue;
+                bx(A.pane, x - 0.03, 0.12, a + 0.06, x + 0.03, 2.72, b - 0.06);
+                bx(A.steel, x - 0.05, 0.12, a + 0.02, x + 0.05, 2.72, a + 0.11);
+                bx(A.steel, x - 0.05, 0.12, b - 0.11, x + 0.05, 2.72, b - 0.02);
+                for (let m = a + 2.4; m < b - 1.2; m += 2.4) {
+                    bx(A.steel, x - 0.04, 0.12, m - 0.04, x + 0.04, 2.72, m + 0.04);
+                }
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28i · the track cavities and the tunnel walls behind them
+           ------------------------------------------------------------ */
+        for (const s of [-1, 1]) {
+            const x = s * TX;
+            /* The slab stays solid. A cell in the track void has to find
+               something: a cell with no spans in it at all is one the walk
+               answers at the world's own level, which is the street — and a
+               person who got past the screen doors would be standing on
+               Swanston Street fifteen metres over their own head. */
+            bx(A.dark, x - 2.4, RAILY - 0.5, ZN, x + 2.4, RAILY - 0.17, ZS);
+            for (const r of [-0.72, 0.72]) {
+                bx(A.gSteel, x + r - 0.04, RAILY - 0.17, ZN, x + r + 0.04, RAILY, ZS);
+            }
+            bx(A.gCrete, s * WX, RAILY - 0.5, ZN, s * (WX + 0.4), 5.4, ZS);       // the far wall
+            bx(A.gCrete, s * (PX + 0.2), 5.05, ZN, s * (WX + 0.2), 5.4, ZS);      // the soffit
+            bx(A.gCrete, s * (PX + 0.04), RAILY - 0.5, ZN, s * (PX + 0.34), -0.02, ZS);
+        }
+
+        /* ------------------------------------------------------------
+           28j · signage over the concourse and the platforms
+           ------------------------------------------------------------ */
+        {
+            const hang = (k, z, x) => {
+                sgn(A.gSign, k, x - 1.28, 3.86, z - 0.04, x + 1.28, 4.70, z + 0.04);
+                for (const s of [-1, 1]) {
+                    const g = cylG(0.018, 0.018, 1.2, 6);
+                    put(g, x + s * 1.06, 5.30, z);
+                    A.gSteel.push(g);
+                }
+            };
+            /* Each exit sign in the half of the concourse it points out of.
+               The arrow on them is an up arrow, which on a hanging sign means
+               straight on — so two of them side by side pointing opposite ways
+               is a sign that says nothing. Exit 1 is the City Square end and
+               Exit 2 the Federation Square end, and that is the whole of the
+               wayfinding a two-ended station needs. */
+            for (const z of [ZN + 16, ZN + 44, TZ - 22]) hang('exit1', z, 0);
+            for (const z of [TZ + 22, ZS - 44, ZS - 16]) hang('exit2', z, 0);
+            for (const z of [ZN + 30, TZ, ZS - 30]) {
+                for (const s of [-1, 1]) {
+                    const x = s * 8.2;
+                    sgn(A.gSign, s < 0 ? 'plat1' : 'plat2',
+                        x - 1.35, 4.12, z - 0.04, x + 1.35, 4.74, z + 0.04);
+                    for (const e of [-1, 1]) {
+                        const g = cylG(0.018, 0.018, 1.8, 6);
+                        put(g, x + e * 1.15, 5.64, z);
+                        A.gSteel.push(g);
+                    }
+                }
+            }
+            // the station name on the blade columns, facing the platforms,
+            // and a departure screen under the beam every third bay
+            for (let z = ZN + 10; z <= ZS - 8; z += BAY * 3) {
+                for (const s of [-1, 1]) {
+                    sgn(A.gSign, 'name', s * (CX + 0.44), 2.28, z - 0.76,
+                        s * (CX + 0.48), 3.26, z + 0.76);
+                }
+            }
+            for (let z = ZN + 22; z <= ZS - 16; z += BAY * 6) {
+                for (const s of [-1, 1]) {
+                    sgn(A.gSign, 'pid', s * (CX + 0.46), 3.34, z - 0.66,
+                        s * (CX + 0.54), 4.02, z + 0.66);
+                }
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28k · what stands on the concourse
+           ------------------------------------------------------------ */
+        {
+            const bench = (x, z) => {
+                bx(A.dark, x - 1.3, 0.02, z - 0.42, x + 1.3, 0.12, z + 0.42);
+                for (const sz of [-1, 1]) for (let i = 0; i < 4; i++) {
+                    bx(A.steel, x - 1.28, 0.44, z + sz * (0.10 + i * 0.10),
+                                x + 1.28, 0.48, z + sz * (0.16 + i * 0.10));
+                }
+                for (const sx of [-1.15, 0, 1.15]) {
+                    bx(A.steel, x + sx - 0.03, 0.12, z - 0.30, x + sx + 0.03, 0.46, z + 0.30);
+                }
+                for (const yy of [0.62, 0.78, 0.94]) {
+                    bx(A.steel, x - 1.26, yy, z - 0.03, x + 1.26, yy + 0.06, z + 0.03);
+                }
+            };
+            for (const z of [ZN + 22, ZN + 48, TZ - 12, TZ + 16, ZS - 46, ZS - 20]) {
+                bench(rnd() < 0.5 ? -2.0 : 2.0, z);
+            }
+            // the Information and Help Point box, at the north end where the
+            // hall lets out, which is where the real one stands
+            {
+                const z = ZN + 10;
+                bx(A.crete, -2.3, 0, z - 1.7, 2.3, 3.0, z + 1.7);
+                for (const s of [-1, 1]) {
+                    sgn(A.gSign, 'info', -2.28, 0.60, z + s * 1.72, 2.28, 2.74, z + s * 1.75);
+                }
+                bx(A.gLed, -2.32, 3.00, z - 1.72, 2.32, 3.10, z + 1.72);
+            }
+            // the network map on a column flank, with the roundel over it
+            for (const s of [-1, 1]) {
+                const z = TZ + s * 46;
+                sgn(A.gSign, 'poster', s * (CX + 0.44), 1.10, z - 0.62,
+                    s * (CX + 0.48), 2.34, z + 0.62);
+                sgn(A.gSign, 'ptv', s * (CX + 0.44), 2.46, z - 0.30,
+                    s * (CX + 0.48), 2.76, z + 0.30);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           28l · the two link halls
+
+                 Each is an L. Leg A runs east and west past the end of the
+                 cavern, from under the shaft it serves to the centreline; leg
+                 B turns south (or north) and goes in through the end wall.
+                 Four metres wide either side of the centre, 3.6 m to the
+                 ceiling, walls drawn as walls rather than as a solid with a
+                 hole taken out of it — which is cheaper to reason about and
+                 is also how a lined passage is actually built.
+           ------------------------------------------------------------ */
+        const hall = (zA0, zA1, xE, gapsN, gapsS, zB0, zB1, wayZ, arriveX) => {
+            const T = 0.5, XW = -HW - 0.6;              // the west end of leg A
+            bx(A.floor, XW - T, -0.6, zA0 - T, xE + T, 0, zA1 + 0.3);
+            bx(A.gCrete, XW, HH, zA0, xE, HH + 0.3, zA1);
+            bx(A.crete, XW - T, -0.6, zA0 - T, XW, HH + 0.3, zA1 + T);
+            bx(A.crete, xE, -0.6, zA0 - T, xE + T, HH + 0.3, zA1 + T);
+            /* The two long walls, with the ways through left out of them
+               rather than cut out of them: a wall is the runs between its
+               openings, which is one box each and no subtraction. What closes
+               the head of the way into the shaft room is the shaft room's own
+               wall, cut in section 21f; the mouth of leg B needs no head at
+               all, because the hall's ceiling and leg B's are the same
+               ceiling. */
+            const runWall = (z0, z1, gaps) => {
+                let x = XW;
+                for (const [a, b] of gaps) {
+                    if (a > x + 0.05) bx(A.crete, x, -0.6, z0, a, HH + 0.3, z1);
+                    x = b;
+                }
+                if (xE > x + 0.05) bx(A.crete, x, -0.6, z0, xE, HH + 0.3, z1);
+            };
+            runWall(zA0 - T, zA0, gapsN);
+            runWall(zA1, zA1 + T, gapsS);
+            // leg B: the turn in through the end wall of the cavern
+            bx(A.floor, -HW - T, -0.6, zB0 - 0.6, HW + T, 0, zB1 + 0.6);
+            for (const sx of [-1, 1]) {
+                bx(A.crete, sx * HW, -0.6, zB0, sx * (HW + T), HH + 0.3, zB1);
+            }
+            bx(A.gCrete, -HW, HH, zB0, HW, HH + 0.3, zB1);
+            /* Two wayfinding panels, and the first of them is the one that
+               matters. You step off the flight heading straight at the far
+               wall of the hall four metres away, so that is where the sign
+               saying which way the platforms are has to be — the second, on
+               the end wall you then walk toward, only confirms it. Standing at
+               the bottom of an escalator looking at bare concrete is how a
+               station reads as a basement. */
+            sgn(A.gSign, 'way', arriveX - 1.7, 1.95, zA1 - 0.10,
+                arriveX + 1.7, 2.62, zA1 - 0.05);
+            sgn(A.gSign, 'way', XW + 0.02, 2.05, wayZ - 1.55, XW + 0.06, 2.66, wayZ + 1.55);
+            for (const z of [zA0 + 0.08, zA1 - 0.08]) {
+                bx(A.gLed, XW + 0.12, HH - 0.34, z - 0.05, xE - 0.3, HH - 0.21, z + 0.05);
+            }
+        };
+        /* North: out of the City Square room's south wall, west under the
+           roadway, then south into the cavern. Leg A runs at z −152 to −149,
+           clear of the tunnel bore drawn past the north end wall — which is
+           the whole reason the halls go round the end of the cavern rather
+           than into its side. */
+        hall(-152.1, -149.0, 34.2, [[24.7, 34.2]], [[-4.2, 4.2]], -148.5, -142.6, -150.6, 30.4);
+        /* South: out of the Federation Square room's south wall, west under
+           the forecourt, then north into the cavern. Both ways through are in
+           the same wall here — the mouth of leg B on the centreline and the
+           way in from the shaft twenty-five metres east of it. */
+        hall(46.5, 50.1, 33.0, [[-4.2, 4.2], [24.2, 33.0]], [], 38.6, 46.5, 48.3, 29.5);
+
+        /* ------------------------------------------------------------
+           28m · one HCMT, twice
+
+                 Seven cars, a hundred and fifty-seven metres, standing at each
+                 face with the doors open. Colour is on the vertices, so a
+                 whole train is two draws and a pane of glass rather than a
+                 material for every colour on it.
+
+                 It is solid, and that is the point of this whole section: you
+                 walk down the escalators, along the hall, across the concourse
+                 and in through a door, and the floor under your feet the whole
+                 way is geometry the walk has rasterised. The floor of a
+                 carriage is level with the platform, the way an HCMT's is, so
+                 there is no step to climb at the door — only the gap, and the
+                 threshold plate in 28h covers that.
+
+                 The doorways are 2.8 m rather than 1.6, for the reason 28h
+                 gives at length: at 1.365 m a cell, an opening narrower than
+                 two cells is one the walk may never find a clean cell inside,
+                 and a door you can see and cannot use is worse than a door
+                 drawn a metre too wide. The head of them is 2.2 m for a
+                 related reason — the walk's forward ray runs a metre over the
+                 feet and every span's underside is drawn 0.75 m lower than the
+                 geometry that made it, so a door head at two metres is a door
+                 head the ray meets.
+           ------------------------------------------------------------ */
+        const train = (xc, dest) => {
+            const P = { body: [], glass: [], room: [], fit: [], lit: [] };
+            const HWD = 1.50, CEIL = 2.34, ROOF = 2.70, D = 1.40;
+            const zA = TZ - CARS * CAR / 2, zB = TZ + CARS * CAR / 2;
+            const WHITE = 0xf3f4f2, NAVY = 0x1b3a63, GREY = 0x767d84;
+            const YELLOW = 0xe8bb1c, DARK = 0x2a2e33, SILVER = 0xc9ccd0;
+
+            // the underframe, the bogies and the wheels
+            cbx(P.body, DARK, xc - 1.42, RAILY + 0.34, zA, xc + 1.42, -0.02, zB);
+            for (let i = 0; i < CARS; i++) {
+                const zc = TZ + (i - (CARS - 1) / 2) * CAR;
+                for (const b of [-8.0, 8.0]) {
+                    cbx(P.body, DARK, xc - 1.26, RAILY + 0.12, zc + b - 1.5,
+                                      xc + 1.26, RAILY + 0.64, zc + b + 1.5);
+                    for (const w of [-1.0, 1.0]) for (const sx of [-1, 1]) {
+                        const g = cylG(0.42, 0.42, 0.12, 12);
+                        put(g, xc + sx * 0.72, RAILY + 0.42, zc + b + w, 0, 0, Math.PI / 2);
+                        col(P.body, 0x4a4e52, g);
+                    }
+                }
+            }
+            // the runs of side between one doorway and the next: the same list
+            // gives the pillars and the glass outside and the lining and the
+            // seats inside, so a window and the seat under it agree
+            const stops = [];
+            for (const dz of DOORZ) stops.push(dz - D - 0.12, dz + D + 0.12);
+            const runs = [[zA + 1.0, stops[0]]];
+            for (let i = 1; i < stops.length - 1; i += 2) runs.push([stops[i], stops[i + 1]]);
+            runs.push([stops[stops.length - 1], zB - 1.0]);
+            /* And the same list again for the bands under and over the windows,
+               carried out to the cab ends. Those have to break at every doorway
+               and not merely be drawn behind the open leaves: a skirt running
+               the length of the train is a metre of solid across the doorway,
+               and a metre of solid a metre under the walk's forward ray is the
+               difference between a door and a wall. It is also what a train
+               looks like — the door goes down to the floor. */
+            const bands = runs.map(([a, b], i) =>
+                [i === 0 ? zA : a, i === runs.length - 1 ? zB : b]);
+
+            for (const sx of [-1, 1]) {
+                const x0 = xc + sx * (HWD - 0.07), x1 = xc + sx * HWD;
+                for (const [a, b] of bands) {
+                    cbx(P.body, NAVY, x0, -0.02, a, x1, 0.62, b);
+                    cbx(P.body, WHITE, x0, 0.62, a, x1, 0.95, b);
+                }
+                cbx(P.body, WHITE, x0, 2.20, zA, x1, ROOF, zB);
+                for (const dz of DOORZ) {
+                    for (const lr of [-1, 1]) {
+                        cbx(P.body, YELLOW, x0, -0.02, dz + lr * D,
+                                            x1 + sx * 0.04, 2.20, dz + lr * (D + 0.13));
+                    }
+                    cbx(P.body, YELLOW, x0, 2.20, dz - D, x1 + sx * 0.04, 2.34, dz + D);
+                    for (const lr of [-1, 1]) {          // the leaves, open and pocketed
+                        cbx(P.body, WHITE, x1, 0.10, dz + lr * (D + 0.16),
+                                           x1 + sx * 0.07, 2.20, dz + lr * (D + 1.56));
+                    }
+                    cbx(P.room, DARK, xc - HWD, -0.04, dz - D, xc + HWD, 0.01, dz + D);
+                }
+                for (const [a, b] of runs) {
+                    if (b - a < 0.5) continue;
+                    cbx(P.body, WHITE, x0, 0.95, a, x1, 2.20, a + 0.11);
+                    cbx(P.body, WHITE, x0, 0.95, b - 0.11, x1, 2.20, b);
+                    const n = Math.max(1, Math.round((b - a) / 2.4));
+                    for (let k = 1; k < n; k++) {
+                        const m = a + (b - a) * k / n;
+                        cbx(P.body, WHITE, x0, 0.95, m - 0.05, x1, 2.20, m + 0.05);
+                    }
+                    bx(P.glass, x0 + sx * 0.015, 1.02, a + 0.11, x1 - sx * 0.015, 2.06, b - 0.11);
+                }
+            }
+            // the roof, and the air-conditioning standing on it
+            cbx(P.body, SILVER, xc - HWD, ROOF, zA, xc + HWD, ROOF + 0.16, zB);
+            for (let i = 0; i < CARS; i++) {
+                const zc = TZ + (i - (CARS - 1) / 2) * CAR;
+                cbx(P.body, GREY, xc - 1.14, ROOF + 0.16, zc - 3.2,
+                                  xc + 1.14, ROOF + 0.46, zc + 3.2);
+            }
+            // the two cab ends: a raked front, a windscreen, the destination box
+            for (const se of [-1, 1]) {
+                const ze = se < 0 ? zA : zB;
+                cbx(P.body, WHITE, xc - HWD, -0.02, ze, xc + HWD, 2.30, ze + se * 0.9);
+                cbx(P.body, NAVY, xc - HWD, -0.02, ze + se * 0.9, xc + HWD, 1.05, ze + se * 1.5);
+                cbx(P.body, WHITE, xc - HWD, 1.05, ze + se * 0.9, xc + HWD, 1.98, ze + se * 1.42);
+                bx(P.glass, xc - 1.26, 1.16, ze + se * 1.40, xc + 1.26, 1.94, ze + se * 1.44);
+                cbx(P.body, DARK, xc - HWD, 1.98, ze + se * 0.6, xc + HWD, 2.32, ze + se * 1.40);
+                sgn(P.lit, dest, xc - 0.80, 2.03, ze + se * 1.41,
+                    xc + 0.80, 2.26, ze + se * 1.44);
+            }
+            // ---- inside ----
+            // The floor, and written far paler than it looks: every hex in
+            // this file goes through the double conversion section 0 owns up
+            // to, and a navy typed as navy comes out as the black hole this
+            // carriage had for a floor the first time it was walked through.
+            cbx(P.room, 0x6a8ec0, xc - HWD + 0.07, -0.06, zA + 1.0,
+                                  xc + HWD - 0.07, 0, zB - 1.0);
+            cbx(P.room, 0xeef0ef, xc - HWD + 0.07, CEIL, zA + 1.0,
+                                  xc + HWD - 0.07, CEIL + 0.12, zB - 1.0);
+            for (const sx of [-1, 1]) {
+                sgn(P.lit, 'strip', xc + sx * 0.92, CEIL - 0.07, zA + 1.2,
+                    xc + sx * 1.26, CEIL - 0.01, zB - 1.2);
+            }
+            for (const sx of [-1, 1]) {
+                const xw = xc + sx * (HWD - 0.11);
+                for (const [a, b] of runs) {
+                    if (b - a < 0.5) continue;
+                    cbx(P.room, 0xe9ebea, xw, 0, a, xw + sx * 0.11, 0.95, b);
+                    cbx(P.room, 0xe9ebea, xw, 2.20, a, xw + sx * 0.11, CEIL, b);
+                    if (b - a < 2.2) continue;
+                    cbx(P.room, 0x4f7fc0, xw, 0.42, a + 0.26, xw - sx * 0.52, 0.50, b - 0.26);
+                    cbx(P.room, 0x4f7fc0, xw, 0.50, a + 0.26, xw - sx * 0.14, 1.04, b - 0.26);
+                    for (const e of [a + 0.30, b - 0.38]) {
+                        cbx(P.room, 0x8e959b, xw - sx * 0.06, 0, e, xw - sx * 0.16, 0.42, e + 0.08);
+                    }
+                }
+                /* The stanchions by every door, and the rail overhead — and
+                   both of them ghosted, which is the one thing in this train
+                   that had to be argued out with the walk rather than drawn.
+                   A carriage is three metres wide and the walk's cells are
+                   1.365, so the aisle is one column of cells across; a pole
+                   from the floor to the ceiling standing anywhere in that
+                   column is a curtain of samples that merges the floor with
+                   the ceiling and turns the doorway into solid. Ghosted, the
+                   floor is what you stand on and the poles are what they look
+                   like. The seats either side stay solid: they are furniture,
+                   they are out of the aisle, and you should not walk through
+                   one. */
+                for (const dz of DOORZ) for (const lr of [-1, 1]) {
+                    cbx(P.fit, 0xb9bec2, xc + sx * 0.86, 0, dz + lr * (D + 0.32),
+                                         xc + sx * 0.92, 2.10, dz + lr * (D + 0.38));
+                }
+                cbx(P.fit, 0xb9bec2, xc + sx * 0.86, 2.04, zA + 1.2,
+                                     xc + sx * 0.92, 2.10, zB - 1.2);
+            }
+            return P;
+        };
+
+        /* ------------------------------------------------------------
+           28n · merged, and handed over
+
+                 Twenty-four meshes for a hundred and eighty metres of station
+                 and two trains, and three parts: the cavern, and one train
+                 each, because a train is exactly the sort of thing somebody
+                 reaches out and picks up and the cavern is exactly not.
+           ------------------------------------------------------------ */
+        {
+            const group = new THREE.Group();
+            group.position.y = FY;
+            const add = (parts, mat, ghost) => {
+                if (!parts || !parts.length) return;
+                const m = merged(parts, mat);
+                if (ghost) world.ghost(m); else m.receiveShadow = true;
+                group.add(m);
+            };
+            add(A.crete, M.crete); add(A.floor, M.floor);
+            add(A.dark, M.dark); add(A.steel, M.steel); add(A.pane, M.pane);
+            add(A.gCrete, M.crete, true); add(A.gBatten, M.batten, true);
+            add(A.gSteel, M.steel, true); add(A.gOrange, M.orange, true);
+            add(A.gAmber, M.amber, true); add(A.gGlow, M.glow, true);
+            add(A.gLed, M.led, true); add(A.gSign, M.sign, true);
+            world.ghost(vaultMesh); group.add(vaultMesh);
+            scene.add(group);
+            world.part('townhallcavern_00', group);
+
+            for (const [name, xc, dest] of [['hcmt_00', -TX, 'dest1'], ['hcmt_01', TX, 'dest2']]) {
+                const P = train(xc, dest);
+                const g = new THREE.Group();
+                g.position.y = FY;
+                g.add(merged(P.body, M.train));
+                g.add(merged(P.room, M.trainRoom));
+                g.add(merged(P.glass, M.trainGlass));
+                for (const parts of [P.fit, P.lit]) {
+                    const m = merged(parts, parts === P.lit ? M.sign : M.trainRoom);
+                    world.ghost(m); g.add(m);
+                }
+                scene.add(g);
+                world.part(name, g);
+            }
+        }
     }
 }
