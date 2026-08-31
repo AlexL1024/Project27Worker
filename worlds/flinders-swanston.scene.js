@@ -4007,19 +4007,45 @@ export default function build(world) {
                         F(A, H.zincLo, px - 0.09, py - 0.09, z - 0.07, px + 0.09, py + 0.09, z + 0.07);
                     }
                 }
-                // the two floors punched into it, set square in the curve
+                /* ---- the dormers, and the reason the top of this building
+                        was a mess.
+
+                        The openings punched into the cap were turned a quarter
+                        turn out of the surface they sit in: the box's long axis
+                        is its depth into the curve, so it wants the surface
+                        normal, which at swept angle `a` is simply (cos a,
+                        sin a) — and the code was rotating to `a − π/2` and
+                        pushing the pane outward instead of in. Eight bays'
+                        worth of that is the serrated dark fringe that was
+                        along the whole parapet.
+
+                        Set right, it is one module repeated: a pair of dormers
+                        per bay, on the bay's own centres, with a zinc cheek
+                        either side and a flat head over both, twice up the
+                        curve. The whole point of this elevation is that it is
+                        the same thing eight times; it has to actually be the
+                        same thing eight times. ---- */
                 for (let f = 0; f < 2; f++) {
-                    const a = Math.PI - (Math.PI / 2) * (0.30 + f * 0.34);
-                    const px = XSH + (RSH - 0.30) * Math.cos(a), py = Y_CRN + (RSH - 0.30) * Math.sin(a);
-                    for (let i = 0; i < NB; i++) {
-                        const zc = ZS - (i + 0.5) * BW;
-                        let g2 = boxG(1.5, 2.30, BW * 0.52);
-                        put(g2, px, py, zc, 0, 0, -(Math.PI - a) + Math.PI / 2);
+                    const a = Math.PI - (Math.PI / 2) * (0.26 + f * 0.30);
+                    const nx = Math.cos(a), ny = Math.sin(a);            // the surface normal
+                    const px = XSH + (RSH - 0.16) * nx, py = Y_CRN + (RSH - 0.16) * ny;
+                    const DW = BW * 0.30, DH = 2.10 - f * 0.25;
+                    for (let i = 0; i < NB; i++) for (const sd of [-1, 1]) {
+                        const zc = ZS - (i + 0.5) * BW + sd * BW * 0.21;
+                        let g2 = boxG(1.30, DH, DW);
+                        put(g2, px, py, zc, 0, 0, a);
                         FG(A, CF.reveal, g2);
-                        g2 = boxG(0.10, 2.05, BW * 0.46);
-                        put(g2, px - 0.55 * Math.cos(Math.PI - a), py + 0.55 * Math.sin(Math.PI - a), zc,
-                            0, 0, -(Math.PI - a) + Math.PI / 2);
-                        A.push(pane(g2, CF.glassLo, CF.glassHi, py - 1.0, py + 1.0));
+                        g2 = boxG(0.10, DH - 0.26, DW - 0.20);
+                        put(g2, px - 0.50 * nx, py - 0.50 * ny, zc, 0, 0, a);
+                        A.push(pane(g2, CF.glassLo, CF.glassHi, py - DH / 2, py + DH / 2));
+                        for (const ck of [-1, 1]) {                       // the cheeks
+                            g2 = boxG(1.34, DH + 0.30, 0.20);
+                            put(g2, px + 0.10 * nx, py + 0.10 * ny, zc + ck * (DW / 2 + 0.10), 0, 0, a);
+                            FG(A, H.zincHi, g2);
+                        }
+                        g2 = boxG(1.44, 0.22, DW + 0.44);                 // and the head over it
+                        put(g2, px + 0.14 * nx + 0.10 * ny * DH, py + 0.14 * ny + DH / 2 + 0.08, zc, 0, 0, a);
+                        FG(A, H.zincHi, g2);
                     }
                 }
             }
