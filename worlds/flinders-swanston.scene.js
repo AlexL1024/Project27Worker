@@ -3469,7 +3469,11 @@ export default function build(world) {
         fedMass(MX(31, 0, 62, 0, -0.02, 0), 22, 40, 20, { clad: 'sand', rise: 3.8, plant: 1, cladRoof: 2 });
         fedMass(MX(37, 0, 92, 0, 0.11, 0), 18, 22, 16, { clad: 'sand', rise: 3.0 });
         // its lower northern wing, stepping down to the Flinders Street corner
-        fedMass(MX(32, 0, 33, 0, 0.03, 0), 20, 18, 13, { clad: 'zinc', rise: 3.3, cladRoof: 1 });
+        /* The low northern wing that used to stand on the Flinders Street
+           corner is gone. Town Hall Station's Federation Square entrance
+           takes that whole quadrant — the canopy, the glazed pavilion under
+           it and the opening down to the concourse are section 30 — and a
+           building standing in the middle of it was the thing in the way. */
         // ACMI, fronting Flinders Street, and the smaller volume behind it
         fedMass(MX(72, 0, 36, 0, 0.015, 0), 24, 26, 20, { clad: 'zinc', rise: 3.6, plant: 1 });
         fedMass(MX(85, 0, 52, 0, -0.24, 0), 14, 16, 14, { clad: 'sand', rise: 2.9 });
@@ -7211,7 +7215,14 @@ export default function build(world) {
                 const T = 0.5, TOP = SQ.DECK - 0.34;                   // the plaza soffit
                 const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
                 C_(IX0 - T, SQ.HALL - T, IZN - T, IX1 + T, SQ.HALL, IZS + T);   // the landing
-                C_(IX0 - T, SQ.HALL, IZN - T, IX0, TOP, IZS + T);              // west
+                /* the west wall, in two with a way through it, because the
+                   link out to the platform leaves here — see section 30. The
+                   south wall of this room already had exactly this cut in it,
+                   which is where the pattern comes from. */
+                const WZ0 = -161.0, WZ1 = -155.0, WH = SQ.HALL + 5.2;
+                C_(IX0 - T, SQ.HALL, IZN - T, IX0, TOP, WZ0);                  // west, north of the door
+                C_(IX0 - T, SQ.HALL, WZ1, IX0, TOP, IZS + T);                  // west, south of it
+                C_(IX0 - T, WH, WZ0, IX0, TOP, WZ1);                           // and the head over it
                 C_(IX1, SQ.HALL, IZN - T, IX1 + T, TOP, IZS + T);              // east
                 C_(IX0 - T, SQ.HALL, IZN - T, IX1 + T, TOP, IZN);              // the head end
                 // and the far one, which is now two jambs and a head over the
@@ -7501,7 +7512,12 @@ export default function build(world) {
                 const T = 0.5, TOP = FQ.SOFF;
                 const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
                 C_(FQ.IX0 - T, FQ.HALL - T, FQ.IZN - T, FQ.IX1 + T, FQ.HALL, FQ.IZS + T);   // the floor
-                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX0, TOP, FQ.IZS + T);               // west
+                /* west, in two with a way through it — the link out to the
+                   platform leaves here, the same as at City Square */
+                const WZ0 = 38.5, WZ1 = 44.5, WH = FQ.HALL + 5.2;
+                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX0, TOP, WZ0);
+                C_(FQ.IX0 - T, FQ.HALL, WZ1, FQ.IX0, TOP, FQ.IZS + T);
+                C_(FQ.IX0 - T, WH, WZ0, FQ.IX0, TOP, WZ1);
                 C_(FQ.IX1, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZS + T);               // east
                 C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZN);               // the head end
                 // and the far one, which is now two jambs and a head over the
@@ -14670,7 +14686,13 @@ export default function build(world) {
        ============================================================ */
     {
         const DEEP = -27.0;          // the platform floor, measured off the street
-        const ZC = -70.0;            // the cavern's middle, under Swanston
+        /* Set out off the wayfinding isometric rather than off convenience.
+           The cavern is 220 m of platform; laid from here it runs from Collins
+           Street to just short of Flinders Street, which is where the map puts
+           it, and the three exits fall where the map puts them: Collins at the
+           north end, Swanston in the middle at Flinders Lane, Federation
+           Square off the south end. */
+        const ZC = -115.0;           // the cavern's middle, under Swanston at Flinders Lane
         const LAYER = 2;             // the station's own layer — see above
         const LIT_Y = -6.0;          // below this, the camera is in the station
 
@@ -14726,6 +14748,26 @@ export default function build(world) {
 
         buildStation(shim);
 
+        /* The two concourse end walls come down, and this is the only thing
+           anywhere that reaches into the module's own scene. It is done here
+           rather than by editing it, and it is done by hiding rather than by
+           deleting, so nothing is lost and one line puts them back.
+
+           They are found by their shape — the module builds each as a single
+           11.8 x 14.5 x 0.6 box and nothing else in the station is that — and
+           hidden rather than ghosted on purpose: ghosting would take them out
+           of the walk and leave them standing, so you would see a wall and
+           walk through it. Section 30 stands a lined portal in each opening.
+           An end wall is exactly what you take out to put an exit behind. */
+        let walls = 0;
+        G.traverse((o) => {
+            const p = o.isMesh && o.geometry && o.geometry.parameters;
+            if (p && p.width === 11.8 && p.height === 14.5 && p.depth === 0.6) {
+                o.visible = false; walls++;
+            }
+        });
+        if (walls !== 2) console.warn(`townhall: expected 2 end walls, hid ${walls}`);
+
         // everything it built goes on the station's layer, and stays there
         const mark = (o) => { o.layers.set(LAYER); o.children.forEach(mark); };
         G.children.forEach(mark);
@@ -14747,5 +14789,186 @@ export default function build(world) {
                 scene.environmentIntensity = now ? stnEnvI : streetEnvI;
             }
         });
+    }
+
+    /* ============================================================
+       30 · the two ways in — Collins Street and Federation Square
+
+       Set out off the wayfinding isometric. The platform is 220 m of cavern
+       under Swanston with its concourse open end to end; the map hangs three
+       cores off it and this builds two of them, Exit 1 at the Collins Street
+       end and Exit 3 at Federation Square. Exit 2 is deliberately not here.
+
+       Both are built onto the shafts that already existed rather than beside
+       them: the City Square flight and the Federation Square flight each came
+       down to a lined room at fifteen metres and stopped, and those rooms are
+       now landings on the way rather than the end of it.
+
+       The way in is the part worth writing down, because there is only one and
+       it took a while to find. The station is somebody else's module and this
+       file may not edit a line of it, so every join has to be something the
+       module already offers. Its vault is a shell four hundred millimetres
+       thick at thirteen metres down, closed the whole length — an escalator
+       dropped through the crown would come through the ceiling, and the walk
+       would read the shell as a step in the middle of the flight. Its sides
+       at platform level are the screen doors and the running tunnels. What it
+       does have is two concourse end walls, each one small box eleven metres
+       wide, and those are the doors. They are hidden here and a portal of this
+       section's own stands in each opening — which is what you would do to a
+       real end wall if you were adding an exit behind it, and it costs the
+       module nothing.
+
+       So each core runs: the old shaft down to fifteen, a passage at that
+       level alongside the vault rather than over it, out past the end of the
+       cavern, and then one flight down through the portal onto the platform.
+       ============================================================ */
+    {
+        const DEEP = -27.0, ZC = -115.0;             // as section 29 places it
+        const CAV_N = ZC - 110.3, CAV_S = ZC + 110.3;  // where the end walls stand
+        /* -13.8, not the -15 the two rooms are nominally at: what the walk
+           actually offers down there is the top of their floor slab, and a
+           passage set out to the nominal level arrived 1.18 m below it. You
+           could drop into it — the walk allows a three metre fall — and then
+           not climb back, because it only allows a metre up. A one-way link
+           into a station is worse than no link. */
+        /* Flush with the floor slab of both rooms. Set 1.2 m above it — which
+           is where the bottom tread of each escalator rasterises, and what an
+           earlier pass here read off the probe — the passage became a step up
+           the walk will not take: it allows a three metre fall and only a
+           metre of climb, so you could drop in and never get out. */
+        const LINK = -15.0;
+
+        const A = [], Ast = [], Adk = [], Agl = [], Alit = [];
+        const Mc  = stdMat(0xbdb9b2, { roughness: 0.74, metalness: 0.04 });
+        const Mst = stdMat(0xc9ccce, { roughness: 0.34, metalness: 0.05 });
+        const Mdk = stdMat(0x55575a, { roughness: 0.44, metalness: 0.22 });
+        const Mgl = stdMat(0xbfc8cc, { roughness: 0.06, metalness: 0.10,
+                                       transparent: true, opacity: 0.24, depthWrite: false });
+        const Mlit = emissive(0xffffff, 0xf6f2e6, 1.5, {});
+
+        const bx = (arr, x0, y0, z0, x1, y1, z1) => {
+            const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+            put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+            arr.push(g); return g;
+        };
+
+        /* A lined passage: floor, two walls, a soffit high enough that the
+           walk does not fuse it to the floor, and a light line down the
+           middle. `w` is the clear width — 4 m, which is three cells, because
+           two is a corridor the walk can lose. */
+        /* 2.5, and the number is the walk's rather than the eye's. At 2.9 the
+           soffit landed 400 mm under the head of the doorway it comes out of,
+           and the grid merges anything closer than 1.4 m — so the two fused,
+           took the floor with them, and the one cell in the doorway came back
+           solid from the slab to the sky. */
+        const passZ = (x, z0, z1, y, w) => {
+            const h = 2.5;
+            bx(A, x - w / 2 - 0.3, y - 0.5, z0, x + w / 2 + 0.3, y, z1);            // floor
+            bx(Adk, x - w / 2 - 0.3, y, z0, x - w / 2, y + h, z1);                  // walls
+            bx(Adk, x + w / 2, y, z0, x + w / 2 + 0.3, y + h, z1);
+            bx(A, x - w / 2 - 0.3, y + h, z0, x + w / 2 + 0.3, y + h + 0.3, z1);    // soffit
+            bx(Alit, x - 0.35, y + h - 0.06, z0 + 0.4, x + 0.35, y + h - 0.01, z1 - 0.4);
+        };
+        const passX = (z, x0, x1, y, w) => {
+            const h = 2.5;
+            bx(A, x0, y - 0.5, z - w / 2 - 0.3, x1, y, z + w / 2 + 0.3);
+            bx(Adk, x0, y, z - w / 2 - 0.3, x1, y + h, z - w / 2);
+            bx(Adk, x0, y, z + w / 2, x1, y + h, z + w / 2 + 0.3);
+            bx(A, x0, y + h, z - w / 2 - 0.3, x1, y + h + 0.3, z + w / 2 + 0.3);
+            bx(Alit, x0 + 0.4, y + h - 0.06, z - 0.35, x1 - 0.4, y + h - 0.01, z + 0.35);
+        };
+
+        /* One bank of escalators, running in z. The deck is what the walk
+           stands on and it is solid; the balustrades are glass and ghosted,
+           for the reason the City Square flight already had to learn — a metre
+           of glass standing on a deck is inside the walk's 1.4 m merge, so
+           left solid the surface it offers down the whole flight is the top of
+           the handrail and you ride down floating above the steps. */
+        const flight = (cx, w, z0, y0, z1, y1) => {
+            const dz = z1 - z0, dy = y1 - y0;
+            const len = Math.hypot(dz, dy), rx = -Math.atan2(dy, dz);
+            const mid = [(z0 + z1) / 2, (y0 + y1) / 2];
+            let g = boxG(w, 1.1, len);
+            put(g, cx, mid[1] - 0.55, mid[0], rx); A.push(g);                       // the deck
+            const n = Math.max(2, Math.round(len / 0.42));
+            for (let i = 0; i < n; i++) {                                            // the treads
+                const t = (i + 0.5) / n;
+                g = boxG(w - 0.5, 0.05, 0.30);
+                put(g, cx, y0 + dy * t + 0.03, z0 + dz * t, rx); Ast.push(g);
+            }
+            for (const s of [-1, 1]) {                                               // and the sides
+                g = boxG(0.08, 1.05, len);
+                put(g, cx + s * (w / 2 - 0.05), mid[1] + 0.52, mid[0], rx); Agl.push(g);
+                g = boxG(0.16, 0.12, len);
+                put(g, cx + s * (w / 2 - 0.05), mid[1] + 1.08, mid[0], rx); Ast.push(g);
+            }
+        };
+
+        /* The portal that stands where an end wall was: a lined opening with a
+           lintel, wide enough that the walk cannot miss it. */
+        /* Two jambs and no lintel. A head across the opening reads better and
+           was drawn first, but the flight is still eight metres above the
+           platform where it crosses this line, so the head sat 400 mm over the
+           escalator deck — well inside the merge — and shut the way it was
+           supposed to open. The jambs are clear of the flight either side. */
+        const portal = (z, o) => {
+            bx(A, -6.4, DEEP, z - o * 0.4, -2.6, DEEP + 5.2, z + o * 0.4);
+            bx(A,  2.6, DEEP, z - o * 0.4,  6.4, DEEP + 5.2, z + o * 0.4);
+            bx(Alit, -2.5, DEEP + 5.05, z - o * 0.06, 2.5, DEEP + 5.15, z + o * 0.06);
+        };
+        // and a landing where each flight meets the platform
+        const foot = (z, o) => bx(A, EX - 2.0, DEEP - 0.5, z, EX + 2.0, DEEP, z + o * 6.0);
+
+        /* Both links go west out of their room first and then run north or
+           south on x = 16, which is the one lane there is: sixteen metres is
+           clear of the vault at 11.9 and clear over the running tunnel, which
+           does not start until twenty-one metres down. Straight out of either
+           room and along would have run the passage through the escalator
+           shaft it had just come down. */
+        const LX = 16.0;
+        /* Both flights come down on x = 8.5, over the eastern platform, and not
+           down the middle. The concourse end wall is only 11.8 m wide, so the
+           cavern is already open past x = 5.9 — and down the middle the flight
+           ran straight into the lift core the module stands at that end, which
+           the walk reads as one solid from the platform up to -16 and will not
+           climb. Landing on the platform is also what the station itself does:
+           the escalators come down onto it near the end. */
+        const EX = 8.5;
+
+        /* ---- Exit 1, off the City Square shaft, out to the Collins end ---- */
+        /* Stopped at the room's own inside face, not run through it. Taken
+           into the room, this passage's soffit crossed the bottom of the
+           escalator shaft, and the flight came down and landed on the roof of
+           the link instead of on the floor of the room. */
+        passX(-158.0, LX, 25.2, LINK, 4.0);              // west, up to the room's face
+        passZ(LX, -155.0, -236.0, LINK, 4.0);            // north, alongside the vault
+        /* The head of each flight is a bare landing, not another length of
+           lined passage: a passage builds a wall across the end it turns at,
+           and that wall came down 1.3 m over the escalator deck — inside the
+           merge — which welded the two and stopped the walk at the top step. */
+        bx(A, -2.4, LINK - 0.5, -240.5, LX + 2.3, LINK, -235.5);
+        flight(EX, 4.0, -236.0, LINK, -214.0, DEEP);    // down through the north portal
+        foot(-214.0, 1);
+
+        /* ---- Exit 3, off the Federation Square shaft, out to the south ---- */
+        passX(41.5, LX, 24.7, LINK, 4.0);
+        passZ(LX, 44.0, 6.0, LINK, 4.0);
+        bx(A, -2.4, LINK - 0.5, 1.5, LX + 2.3, LINK, 6.5);
+        flight(EX, 4.0, 2.0, LINK, -20.0, DEEP);
+        foot(-20.0, -1);
+
+        const put30 = (arr, mat, name, ghost) => {
+            if (!arr.length) return;
+            const m = merged(arr, mat);
+            m.receiveShadow = true;
+            if (ghost) world.ghost(m);
+            scene.add(m);
+            if (name) world.part(name, m);
+        };
+        put30(A, Mc, 'stationlinks_00');
+        put30(Ast, Mst, 'stationlinksteel_00');
+        put30(Adk, Mdk, 'stationlinkwall_00');
+        put30(Agl, Mgl, null, true);
+        put30(Alit, Mlit, null, true);
     }
 }
