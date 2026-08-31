@@ -5,11 +5,11 @@
   "parts" : {
     "fedsquare_00" : {
       "position" : [
+        -7.101,
         0,
-        0,
-        0
+        -176.2437
       ],
-      "rotationY" : 6.618
+      "rotationY" : 0
     },
     "station_00" : {
       "position" : [
@@ -19,6 +19,14 @@
       ],
       "rotationY" : 2.544
     },
+    "swanstonwall_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 0
+    },
     "tower_00" : {
       "position" : [
         0,
@@ -26,6 +34,14 @@
         0
       ],
       "rotationY" : 0
+    },
+    "westin_00" : {
+      "position" : [
+        184.5617,
+        0,
+        -20.1988
+      ],
+      "rotationY" : 4.29
     }
   }
 }
