@@ -3180,17 +3180,36 @@ export default function build(world) {
        carved capital nobody will ever see. So it was one even colonnade of
        plain drums running the whole frontage, on a base that read as a black
        band, and the argument was that the column count carried the rhythm and
-       the rhythm was the building.
+       the rhythm was the building. That argument is dead. The player walks
+       down this footpath, and at three metres every one of those economies is
+       a lie you can put your hand on.
 
-       The player walks down this footpath. At three metres the count is the
-       least of it and every one of those economies is a lie you can put your
-       hand on, so the range this is built for has changed and so has the
-       building. What holds up close is the composition and the joints:
-       pavilion, wing, portico, wing, tower rather than an even beat; a
-       bluestone plinth laid in blocks with joints and openings cut into it; a
-       giant order with a moulded base, a shaft ten diameters tall and a
-       spreading acanthus capital; and every window an arch with voussoirs, a
-       carved keystone and a sash set half a metre back in its own reveal.
+       So the range it is built for has changed and so has the building. What
+       holds up close is the composition and the joints. The Swanston front is
+       the composition it actually has — end pavilion, wing, portico, wing,
+       and the clock tower standing in for the pavilion on the Collins corner,
+       because that is where the real one puts it. Under all of it a bluestone
+       plinth storey laid in blocks, with joints you can see and openings cut
+       into it, square-headed on Swanston and segmental-headed with heavy
+       voussoirs on Collins the way each of them really is. Over that a giant
+       Corinthian order on moulded bases, shafts ten diameters tall and
+       fluted where a person gets near enough to count them, under spreading
+       acanthus capitals. Every window is an arch: nine voussoirs, a carved
+       keystone, and a sash half a metre back in its own reveal. The cornice
+       has its dentils and its modillions. The parapet has a pedestal where
+       the order lands and an urn on every pedestal.
+
+       The portico projects, which is the whole of what a portico is: four
+       coupled columns on two pedestals two and a half metres in front of the
+       building line, the wall set back the same again behind them, and
+       between the two a loggia a person can climb four steps and stand in,
+       with three round arches in the back of it and the three banners hanging
+       between the columns in front. Behind the parapet a slate mansard leans
+       in over the block, with gabled dormers on Swanston, oeil-de-boeuf
+       dormers on Collins and cast-iron cresting along the ridge. The tower
+       goes up in stages — rusticated shaft, louvred belfry, the clock stage
+       with a lit dial on each of the four sides, balustrade and urns, ogee
+       dome with lucarnes, lantern, flag.
 
        Nothing here is painted. A wall is built around its openings rather
        than cut out of a slab — there is nothing to cut with — and all the
@@ -3198,11 +3217,26 @@ export default function build(world) {
        because the sun casts no shadow map: a recess reads only because its
        jambs face a different way than the wall they are cut into, and a
        west-facing front at golden hour gives a bright north jamb and a black
-       south one for free.
+       south one for free. Where a shadow was genuinely needed and could not
+       be had — the loggia's ceiling — it is a painted tone instead, and said
+       so at the line.
 
-       Four meshes: the sandstone, the dark (bluestone, slate, the reveals),
-       one vertex-coloured mesh for everything that is neither of those —
-       glass, the timber of a door, the banners — and the lit clock dials.
+       Two elevations and four tower faces, written once. Everything is built
+       in the face's own frame — u along the frontage, y up, w out towards the
+       street — and carried into the world by one matrix each, so a belfry arch
+       and a Swanston window are the same eleven lines.
+
+       Four meshes. The sandstone; the dark (bluestone and the base's reveals);
+       one vertex-coloured mesh carrying everything that is neither of those —
+       glass, the timber of a door, the slate of the roof, the iron, the
+       flowers and the flags; and the lit clock dials. Nothing is instanced:
+       the dentils, the balusters, the urns and the flutes all merge into
+       arrays that were being merged anyway, which costs triangles and no draw
+       at all, where an InstancedMesh would have cost a draw and could not have
+       been stood on. The steps and the loggia floor are in that last category
+       — the walk grid ignores instanced geometry, and this is a building the
+       walk is meant to go into.
+
        ============================================================ */
     {
         const sand = [], dk = [], col = [], glow = [];
@@ -3312,7 +3346,7 @@ export default function build(world) {
                 const a = u0 + k * bw + 0.05, b = u0 + (k + 1) * bw - 0.05;
                 let clear = true;
                 for (const h of holes) if (b > h[0] - 0.03 && a < h[1] + 0.03) clear = false;
-                if (clear) B(dk, M, a, y0 + 0.05, -RUST, b, y1 - 0.05, 0);
+                if (clear) B(dk, M, a, y0 + 0.05, -0.08, b, y1 - 0.05, 0);
             }
         };
         // and one square-headed opening in it, with its lintel and its doors
@@ -3362,8 +3396,13 @@ export default function build(world) {
                floated — which is what it was doing after the last pass. */
             if (ped !== false) {
                 B(dk, M, u - 1.16, 0, -RUST, u + 1.16, 0.45, pr + 0.98);
+                // solid, with its courses standing 80 mm off it. Built as five
+                // separate blocks it was five shelves projecting a metre and a
+                // third, and fifteen of those down the Collins front turned the
+                // base storey into a staircase on its side.
+                B(dk, M, u - 1.08, 0.45, -RUST, u + 1.08, 5.60, pr + 0.84);
                 for (let k = 0; k < 5; k++)
-                    B(dk, M, u - 1.08, 0.50 + k * 1.03, -RUST, u + 1.08, 1.43 + k * 1.03, pr + 0.92);
+                    B(dk, M, u - 1.08, 0.50 + k * 1.03, pr + 0.84, u + 1.08, 1.43 + k * 1.03, pr + 0.92);
                 B(dk, M, u - 1.14, 5.60, -RUST, u + 1.14, H0, pr + 0.98);
             }
             // pedestal and the moulded base over it
@@ -3568,6 +3607,19 @@ export default function build(world) {
            nothing out of the storey over it. */
         const plinthRun = (M, u0, u1, cs, seg) => {
             const holes = cs.map((c) => [c - 1.15, c + 1.15]);
+            /* The wall the courses are laid against stops 80 mm behind them,
+               not 420. It is set back the full 420 only where a door is cut
+               past it — that is what gives an opening its reveal — but a joint
+               between two blocks is a joint, and at 420 every course was
+               reading from the footpath as a shelf, so the Collins base came
+               out as a flight of stone stairs on its side. */
+            const edge = [u0];
+            for (const h of holes) { edge.push(h[0]); edge.push(h[1]); }
+            edge.push(u1);
+            for (let k = 0; k < edge.length; k += 2)
+                if (edge[k + 1] - edge[k] > 0.03) B(dk, M, edge[k], 0, -RUST, edge[k + 1], H0, -0.08);
+            B(dk, M, u0, 0, -RUST, u1, 0.30, -0.08);
+            B(dk, M, u0, 4.86, -RUST, u1, H0, -0.08);
             B(dk, M, u0, 0, -RUST, u1, 0.45, 0.12);
             for (let k = 0; k < 5; k++)
                 rustCourse(M, u0, u1, 0.45 + k * 1.03, 0.45 + (k + 1) * 1.03, k < 4 ? holes : []);
@@ -3757,17 +3809,47 @@ export default function build(world) {
                leaning away from it, which is what a pediment of this date has
                and what reads as carving from the footpath at fifty metres. */
             {
-                const fx = HX - 4.10;
-                g = cylG(1.30, 1.30, 0.34, 18); put(g, fx - 0.17, HE + 1.70, PCZ, 0, 0, Math.PI / 2); sand.push(g);
-                g = cylG(1.02, 1.02, 0.22, 18); put(g, fx - 0.30, HE + 1.70, PCZ, 0, 0, Math.PI / 2); sand.push(g);
+                /* The first go at this was a 1.3 m disc and eight small blocks
+                   in a pediment twenty metres wide and four and a half tall,
+                   which from the footpath was an empty gable with a scratch in
+                   it. A relief in a tympanum fills the tympanum — it is cut to
+                   the shape of the triangle, which is why the figures in one
+                   are always reclining. */
+                const fx = HX - 4.10, ph = 4.30, phw = PGW / 2;
+                const top = (dz) => HE + ph * (1 - Math.abs(dz) / phw);
+                g = cylG(2.05, 2.05, 0.44, 20); put(g, fx - 0.22, HE + 1.90, PCZ, 0, 0, Math.PI / 2); sand.push(g);
+                g = cylG(1.66, 1.66, 0.30, 20); put(g, fx - 0.36, HE + 1.90, PCZ, 0, 0, Math.PI / 2); sand.push(g);
+                g = cylG(1.24, 1.24, 0.22, 20); put(g, fx - 0.48, HE + 1.90, PCZ, 0, 0, Math.PI / 2); sand.push(g);
+                // a wreath of leaves round the roundel
+                for (let k = 0; k < 16; k++) {
+                    const a = k * Math.PI / 8;
+                    g = boxG(0.22, 0.52, 0.30);
+                    put(g, 0, 0, 0, 0, 0, a);
+                    put(g, fx - 0.30, HE + 1.90 + Math.cos(a) * 1.86, PCZ + Math.sin(a) * 1.86, 0, Math.PI / 2, 0);
+                    sand.push(g);
+                }
+                /* Two reclining figures, one each side, leaning away from the
+                   roundel and getting lower as the gable closes over them.
+                   Invented — the photograph has a carved relief and nothing in
+                   it resolves at that size — but this is the shape a pediment
+                   of this date has and what reads as carving from the kerb. */
                 for (const sgn of [-1, 1]) {
-                    for (let k = 0; k < 4; k++) {
-                        g = boxG(0.30, 1.28 - k * 0.26, 0.98 - k * 0.14);
-                        put(g, fx - 0.16, HE + 0.35 + (1.28 - k * 0.26) / 2, PCZ + sgn * (2.35 + k * 1.20), 0, 0, sgn * 0.10);
+                    for (let k = 0; k < 7; k++) {
+                        const dz = sgn * (2.90 + k * 1.05);
+                        const hh = Math.min(2.20 - k * 0.24, top(dz) - HE - 0.35);
+                        if (hh < 0.25) continue;
+                        g = boxG(0.34, hh, 0.86 - k * 0.06);
+                        put(g, fx - 0.19, HE + 0.35 + hh / 2, PCZ + dz, 0, 0, sgn * (0.06 + k * 0.03));
                         sand.push(g);
                     }
-                    g = sphG(0.30, 8, 6); put(g, fx - 0.20, HE + 1.72, PCZ + sgn * 2.35); sand.push(g);
+                    g = sphG(0.38, 10, 8); put(g, fx - 0.26, HE + 2.30, PCZ + sgn * 3.05); sand.push(g);
+                    g = boxG(0.30, 0.44, 1.90);
+                    put(g, fx - 0.24, HE + 1.55, PCZ + sgn * 4.60, 0, 0, sgn * 0.30); sand.push(g);
+                    // a scroll unrolling into the angle of the gable
+                    g = cylG(0.26, 0.26, 1.70, 10);
+                    put(g, fx - 0.22, HE + 0.72, PCZ + sgn * 8.30, Math.PI / 2, 0, 0); sand.push(g);
                 }
+                g = boxG(0.30, 0.34, 3.40); put(g, fx - 0.22, HE + 0.52, PCZ); sand.push(g);
             }
         }
 
@@ -4267,6 +4349,203 @@ export default function build(world) {
             g = cylG(0.09, 0.13, 5.20, 6); put(g, TX, L1 + 4.70, TZ); dk.push(g);
             BC(0x1c3f6e, MX(TX, 0, TZ), -0.02, L1 + 5.60, 0.06, 2.30, L1 + 6.90, 0.10);
             BC(0xc8352e, MX(TX, 0, TZ), 1.20, L1 + 5.60, 0.06, 2.30, L1 + 6.25, 0.10);
+        }
+
+        /* --- what is on the footpath, and the colour ------------------------
+
+           Everything below is in the vertex-coloured mesh with the glass and
+           the doors, which is what makes it affordable: three flags, six
+           lamp standards, five planters, four poster cases and a post box are
+           one draw call between them, because the colour is on the geometry
+           rather than in a material.
+
+           They are also the only strong colour on the building, and that is
+           the point of them. Barrabool sandstone at golden hour is one note
+           held for eighty metres; what the photograph actually has is that
+           note plus three banners, a row of white globes and a kerb full of
+           flowers, and without those this is a very well-modelled beige.
+
+           Note on the hexes: everything here is written far paler and far
+           more washed-out than it looks, because `stdMat` and `srgb` convert
+           a second time on top of what three already does and a hex arrives
+           raised to about the fourth power. 0xe4664c is the red of the
+           Aboriginal flag in this file. 0xcc0000 would be black. */
+        const WB = (hex, x0, y0, z0, x1, y1, z1) => {
+            const q = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
+            put(q, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+            col.push(paint(q, hex));
+            return q;
+        };
+        /* A generator of its own for the flowers, rather than the module's.
+           `rr` and `pickOf` share one linear congruential seed with everything
+           else in this world, so a hundred draws taken here shift every draw
+           taken after here — which quietly re-rolled the cross streets two
+           sections down and cost the world a shopfront. Anything random inside
+           this section stays inside it. */
+        let _hs = 18700809;                            // the Town Hall's foundation stone
+        const hr = (a, b) => { _hs = (_hs * 1664525 + 1013904223) % 4294967296; return a + (b - a) * _hs / 4294967296; };
+        const hpick = (a) => a[Math.floor(hr(0, a.length))];
+
+        const CL = {
+            red: 0xe4664c, black: 0x6c6a66, yellow: 0xf2d267, white: 0xf4f0e6,
+            green: 0x7cc878, blue: 0x74a8de, amber: 0xe89a3c, pink: 0xf0a4bc,
+            post: 0xdc5a44, board: 0xece5d6, ink: 0x3a352e,
+        };
+
+        /* The three banners between the columns, which are the most colourful
+           thing on this building and the reason anybody's eye stops at the
+           portico rather than sliding off it. Left, the Torres Strait Islander
+           flag; centre, an amber event banner with lettering and a figure on
+           it; right, the Aboriginal flag. Hung off a rail in front of the
+           order, the way they actually hang, so they read against the shadow
+           of the loggia rather than against the sky. */
+        {
+            const M = M_SW, u = (d) => PCZ + d, W = 2.30, Y1 = 17.80, Y0 = 10.40, F = 2.34;
+            const strip = (hex, c, y0, y1) => BC(hex, M, c - W / 2, y0, F, c + W / 2, y1, F + 0.05);
+            for (const d of [-4.20, 0, 4.20]) {
+                BC(T.iron, M, u(d) - W / 2 - 0.16, Y1, F - 0.06, u(d) + W / 2 + 0.16, Y1 + 0.10, F + 0.12);
+                for (const s of [-1, 1]) BC(T.iron, M, u(d) + s * (W / 2 + 0.04), Y1, F - 0.06, u(d) + s * (W / 2 + 0.10), Y1 + 0.10, 1.90);
+            }
+            // Torres Strait Islander: green, black, blue, black, green, and the
+            // white dhari and star across the middle of it
+            {
+                const c = u(-4.20), h = Y1 - Y0;
+                strip(CL.green, c, Y1 - h * 0.16, Y1);
+                strip(CL.black, c, Y1 - h * 0.24, Y1 - h * 0.16);
+                strip(CL.blue, c, Y0 + h * 0.24, Y1 - h * 0.24);
+                strip(CL.black, c, Y0 + h * 0.16, Y0 + h * 0.24);
+                strip(CL.green, c, Y0, Y0 + h * 0.16);
+                const q = cylG(0.62, 0.62, 0.05, 14);
+                put(q, c, (Y0 + Y1) / 2 + 0.30, F + 0.08); carry(col, paint(q, CL.white), M);
+                BC(CL.blue, M, c - 0.40, (Y0 + Y1) / 2 + 0.10, F + 0.11, c + 0.40, (Y0 + Y1) / 2 + 0.50, F + 0.14);
+                for (let k = 0; k < 5; k++) {
+                    const a = k * Math.PI * 2 / 5;
+                    const p = boxG(0.14, 0.62, 0.05);
+                    put(p, 0, 0.24, 0, 0, 0, a);
+                    put(p, c, (Y0 + Y1) / 2 - 0.85, F + 0.09);
+                    carry(col, paint(p, CL.white), M);
+                }
+            }
+            // the event banner: an amber field, three lines of lettering and a
+            // figure. The lettering is bars — at the distance a person reads a
+            // banner from a footpath, type is bars.
+            {
+                const c = u(0);
+                strip(CL.amber, c, Y0, Y1);
+                BC(CL.ink, M, c - 0.86, Y1 - 1.10, F + 0.05, c + 0.86, Y1 - 0.72, F + 0.08);
+                BC(CL.ink, M, c - 0.62, Y1 - 1.66, F + 0.05, c + 0.62, Y1 - 1.42, F + 0.08);
+                BC(CL.white, M, c - 0.96, Y0 + 0.80, F + 0.05, c + 0.96, Y0 + 1.10, F + 0.08);
+                BC(CL.white, M, c - 0.70, Y0 + 0.40, F + 0.05, c + 0.70, Y0 + 0.62, F + 0.08);
+                let q = sphG(0.30, 8, 6);
+                put(q, c - 0.10, Y0 + 3.90, F + 0.07); carry(col, paint(q, CL.white), M);
+                q = boxG(0.66, 1.40, 0.05);
+                put(q, c - 0.10, Y0 + 2.90, F + 0.07, 0, 0, 0.10); carry(col, paint(q, CL.white), M);
+                q = boxG(0.24, 1.20, 0.05);
+                put(q, c + 0.52, Y0 + 3.30, F + 0.07, 0, 0, -0.55); carry(col, paint(q, CL.white), M);
+            }
+            // the Aboriginal flag: black over red, and the sun in the middle
+            {
+                const c = u(4.20);
+                strip(CL.black, c, (Y0 + Y1) / 2, Y1);
+                strip(CL.red, c, Y0, (Y0 + Y1) / 2);
+                // the sun straddles the join, so it has to stand in front of
+                // both halves rather than share a plane with either
+                const q = cylG(0.74, 0.74, 0.05, 16);
+                put(q, c, (Y0 + Y1) / 2, F + 0.09); carry(col, paint(q, CL.yellow), M);
+            }
+        }
+
+        /* Vertical banners on poles, angled out over the footpath at high
+           level — pink and white, and the one thing on the Collins elevation
+           that is not stone. */
+        {
+            const flag = (M, u, y) => {
+                let q = cylG(0.055, 0.075, 2.70, 6);
+                put(q, 0, 0, 0, 1.02, 0, 0);
+                put(q, u, y + 0.68, 1.32);
+                carry(col, paint(q, T.iron), M);
+                BC(CL.pink, M, u - 0.38, y - 3.30, 2.28, u + 0.38, y + 1.16, 2.32);
+                for (const d of [-0.30, -1.60, -2.90]) BC(CL.white, M, u - 0.38, y + d, 2.32, u + 0.38, y + d + 0.44, 2.35);
+            };
+            for (const k of [1, 3, 5, 7]) flag(M_CO, colDiv[k], 15.60);
+            for (const w of WINGS) flag(M_SW, (w[0] + w[1]) / 2, 15.60);
+        }
+
+        /* Cast-iron lamp standards with white globe lamps: a pair flanking the
+           portico steps and four more down the front. The globes are emissive
+           and `world.bloom` carries them — there are four real-time lights in
+           this world and every one of them is spent three hundred metres
+           south of here. */
+        {
+            const standard = (x, z) => {
+                let q;
+                WB(T.iron, x - 0.40, KERB_H, z - 0.40, x + 0.40, KERB_H + 0.24, z + 0.40);
+                WB(T.iron, x - 0.31, KERB_H + 0.24, z - 0.31, x + 0.31, KERB_H + 0.98, z + 0.31);
+                q = cylG(0.11, 0.20, 3.70, 10); put(q, x, KERB_H + 2.83, z); col.push(paint(q, T.iron));
+                for (const yy of [1.30, 2.40, 3.50]) {
+                    q = cylG(0.17, 0.17, 0.11, 10); put(q, x, KERB_H + yy, z); col.push(paint(q, T.iron));
+                }
+                q = cylG(0.22, 0.13, 0.38, 10); put(q, x, KERB_H + 4.87, z); col.push(paint(q, T.iron));
+                q = sphG(0.32, 12, 9); put(q, x, KERB_H + 5.36, z); glow.push(q);
+                for (const s of [-1, 1]) {
+                    q = cylG(0.065, 0.085, 1.20, 6);
+                    put(q, 0, 0, 0, s * 1.02, 0, 0);
+                    put(q, x, KERB_H + 4.36, z + s * 0.50);
+                    col.push(paint(q, T.iron));
+                    q = sphG(0.22, 10, 8); put(q, x, KERB_H + 4.72, z + s * 1.02); glow.push(q);
+                }
+            };
+            for (const z of [PCZ - 8.6, PCZ + 8.6]) standard(14.30, z);
+            for (const z of [PCZ - 20, PCZ + 20, HZN + 6, TZ - 2]) standard(15.60, z);
+            standard(38.0, HZS + 4.30);
+            standard(56.0, HZS + 4.30);
+        }
+
+        /* Planter boxes full of flowers along the kerb — kept off the stretch
+           in front of the portico, because the steps already take two metres
+           of a seven-metre footpath there and a planter opposite them would
+           leave a metre and a half for the walk. */
+        {
+            const planter = (x, z, len) => {
+                WB(0x9b9285, x - 0.52, KERB_H, z - len / 2, x + 0.52, KERB_H + 0.60, z + len / 2);
+                WB(0xa9a094, x - 0.60, KERB_H + 0.60, z - len / 2 - 0.08, x + 0.60, KERB_H + 0.72, z + len / 2 + 0.08);
+                WB(0x6a6252, x - 0.44, KERB_H + 0.58, z - len / 2 + 0.10, x + 0.44, KERB_H + 0.70, z + len / 2 - 0.10);
+                for (let i = 0; i < 20; i++) {
+                    const q = sphG(hr(0.11, 0.21), 6, 5);
+                    put(q, x + hr(-0.40, 0.40), KERB_H + 0.76 + hr(0, 0.32), z + hr(-len / 2 + 0.24, len / 2 - 0.24));
+                    col.push(paint(q, hpick([0xe8846a, 0xf0c07a, 0xd8829a, 0xefe4c8, 0x9ec47a, 0xb894c8])));
+                }
+            };
+            for (const z of [-266, -273.5, -318, -325.5]) planter(12.80, z, 2.60);
+            planter(45.0, HZS + 5.20, 2.60);
+        }
+
+        /* Glazed poster cases either side of the entrance, red and white the
+           way an event poster in a town hall case always is, and one more pair
+           inside the loggia beside the outer arches. */
+        {
+            const posterCase = (M, u, y, hw, hh, w) => {
+                BC(T.iron, M, u - hw - 0.11, y - hh - 0.11, w - 0.03, u + hw + 0.11, y + hh + 0.11, w + 0.15);
+                BC(CL.board, M, u - hw, y - hh, w + 0.15, u + hw, y + hh, w + 0.18);
+                BC(CL.red, M, u - hw + 0.09, y - hh + 0.46, w + 0.18, u + hw - 0.09, y + hh - 0.14, w + 0.20);
+                BC(CL.board, M, u - hw + 0.22, y - 0.14, w + 0.20, u + hw - 0.22, y + 0.34, w + 0.22);
+                for (const d of [-0.56, -0.80]) BC(CL.ink, M, u - hw + 0.22, y + d, w + 0.20, u + hw - 0.22, y + d + 0.11, w + 0.22);
+            };
+            for (const s of [-1, 1]) {
+                posterCase(M_SW, PCZ + s * 10.90, 2.90, 0.72, 1.05, 0.02);
+                posterCase(MX(HX - (-2.60) + 0.60, 0, 0, 0, -Math.PI / 2, 0), PCZ + s * 3.60, 3.10, 0.62, 0.95, 0.02);
+            }
+        }
+
+        /* And the pillar box on the corner, which is in every photograph of
+           this footpath ever taken and is the reddest thing in three blocks. */
+        {
+            const x = 36.4, z = HZS + 4.90;
+            let q = cylG(0.35, 0.37, 1.34, 12); put(q, x, KERB_H + 0.67, z); col.push(paint(q, CL.post));
+            q = cylG(0.41, 0.41, 0.09, 12); put(q, x, KERB_H + 1.38, z); col.push(paint(q, CL.post));
+            q = sphG(0.39, 12, 8); put(q, x, KERB_H + 1.42, z, 0, 0, 0, 1, 0.62, 1); col.push(paint(q, CL.post));
+            q = boxG(0.10, 0.07, 0.40); put(q, x - 0.33, KERB_H + 1.06, z); col.push(paint(q, 0x4a453e));
+            q = boxG(0.06, 0.20, 0.26); put(q, x - 0.35, KERB_H + 0.62, z); col.push(paint(q, 0xdfd8c8));
         }
 
         const hall = new THREE.Group();
