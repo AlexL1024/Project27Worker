@@ -3474,6 +3474,56 @@ export default function build(world) {
             B(sand, M, c + hw, y0, 0, c + hw + 0.16, y1, 0.13);
         };
 
+        /* One face of a stage, laid around however many arched openings it
+           has: the field under the sills and over the crowns, the piers
+           between, the stepped haunches, the archivolt and the keystone. The
+           same construction the windows use, generalised because the belfry
+           wanted it at a different size and with louvres in it rather than
+           glass. */
+        const arcadeFace = (M, u0, u1, y0, y1, cs, R, sill, head, d, fill) => {
+            const sy = head - R;
+            B(sand, M, u0, y0, -d, u1, sill, 0);
+            B(sand, M, u0, head, -d, u1, y1, 0);
+            const edge = [u0];
+            for (const c of cs) { edge.push(c - R); edge.push(c + R); }
+            edge.push(u1);
+            for (let k = 0; k < edge.length; k += 2)
+                if (edge[k + 1] - edge[k] > 0.03) B(sand, M, edge[k], sill, -d, edge[k + 1], sy, 0);
+            for (const c of cs) {
+                for (let k = 0; k < 8; k++) {
+                    const ya = sy + R * (k / 8), yb = sy + R * ((k + 1) / 8);
+                    const hw = Math.sqrt(Math.max(0, R * R - (ya - sy) * (ya - sy)));
+                    if (R - hw > 0.02) {
+                        B(sand, M, c - R, ya, -d, c - hw, yb, 0);
+                        B(sand, M, c + hw, ya, -d, c + R, yb, 0);
+                    }
+                }
+                for (let k = 0; k < 9; k++) {
+                    const a = Math.PI * (k + 0.5) / 9, rm = R + 0.28;
+                    const q = boxG(0.58, (R + 0.57) * Math.PI / 9 * 1.06, d + 0.40);
+                    put(q, c + rm * Math.cos(a), sy + rm * Math.sin(a), -d / 2 + 0.20, 0, 0, a);
+                    carry(sand, q, M);
+                }
+                B(sand, M, c - 0.28, sy + R + 0.02, -d, c + 0.28, sy + R + 0.62, 0.26);
+                B(sand, M, c - R - 0.36, sill - 0.30, -d, c + R + 0.36, sill, 0.24);
+                if (fill) fill(M, c, R, sill, sy);
+            }
+        };
+
+        /* A stone urn: pedestal, foot, bowl, neck, lip and a ball on top. Six
+           frusta, and there are twenty of them on this building — merged into
+           the sandstone rather than instanced, because the array is being
+           merged anyway and an urn that way costs triangles and no draw. */
+        const urn = (x, y, z, s) => {
+            let q;
+            q = boxG(1.00 * s, 0.22 * s, 1.00 * s); put(q, x, y + 0.11 * s, z); sand.push(q);
+            q = cylG(0.30 * s, 0.46 * s, 0.30 * s, 10); put(q, x, y + 0.37 * s, z); sand.push(q);
+            q = cylG(0.62 * s, 0.30 * s, 0.60 * s, 10); put(q, x, y + 0.82 * s, z); sand.push(q);
+            q = cylG(0.42 * s, 0.64 * s, 0.50 * s, 10); put(q, x, y + 1.37 * s, z); sand.push(q);
+            q = cylG(0.56 * s, 0.42 * s, 0.16 * s, 10); put(q, x, y + 1.70 * s, z); sand.push(q);
+            q = sphG(0.19 * s, 8, 6); put(q, x, y + 1.90 * s, z); sand.push(q);
+        };
+
         /* --- a run of the wall, with its openings --------------------------- */
         const bayRun = (M, u0, u1, cs, flute) => {
             const sy = WHEAD - WR;
@@ -3509,6 +3559,9 @@ export default function build(world) {
            no other one on that side, and inventing one would put a pavilion
            inside a tower. */
         const TX = HX + 8.0, TZ = HZS - 8.0, THW = 8.2;
+        // the tower's two street faces, in the same frame the elevations use
+        const M_TW = MX(TX - THW, 0, 0, 0, -Math.PI / 2, 0);
+        const M_TS = MX(0, 0, TZ + THW);
         const P_S = TZ - THW, P_N = HZN + 8.4;         // where the wings meet what ends them
         const PCZ = (P_S + P_N) / 2, PHW = 10.4;       // the portico, centred between the two
         const WINGS = [[P_N, PCZ - PHW], [PCZ + PHW, P_S]];
@@ -3789,40 +3842,225 @@ export default function build(world) {
         g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, HT + MR / 2, HZS - MIN / 2 - 0.4, -mA); dk.push(g);
         g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, HT + MR / 2, HZN + MIN / 2 + 0.4, mA); dk.push(g);
 
-        /* --- the clock tower, on the Collins Street corner. Rebuilt stage by
-               stage in a later pass; what stands here is the massing it has to
-               agree with. --- */
+        /* --- the clock tower, on the Swanston/Collins corner ----------------
+
+           The best thing on the building and, until this pass, a plain
+           sandstone box with two glowing ovals near the top of it. It is built
+           in stages now, the way a tower of this date is designed and the way
+           anybody standing on the corner reads it going up: the rusticated
+           shaft carrying the building's own stonework past the parapet, the
+           belfry with its louvred arches, the clock stage with a dial on each
+           of the four sides between paired colonettes, a cornice, a balustrade
+           with an urn on each corner, the slate ogee dome with lucarnes in it,
+           and the lantern and the flag on top.
+
+           Fifty-five metres to the finial, sixty to the top of the pole. The
+           lower two stages are the building's own — the same plinth, the same
+           giant order, the same arched windows — because the tower is the
+           corner pavilion of the elevation before it is anything else, and
+           standing it off on its own was most of why the corner used to read
+           as a blank. */
         {
-            const T0 = 30.0, T1 = 39.4, T2 = 40.8;     // shaft, clock stage, cornice
-            g = boxG(THW * 2 - 0.4, T0, THW * 2 - 0.4); put(g, TX, T0 / 2, TZ); sand.push(g);
-            g = boxG(THW * 2 + 0.4, H0, THW * 2 + 0.4); put(g, TX, H0 / 2, TZ); dk.push(g);
-            for (const c of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-                g = boxG(1.5, T0 - H0, 1.5); put(g, TX + c[0] * (THW - 0.8), (H0 + T0) / 2, TZ + c[1] * (THW - 0.8)); sand.push(g);
+            const T = THW;                             // the tower's half width at the base
+            // the two street faces get everything the rest of the building has
+            plinthRun(M_TW, TZ - T, TZ + T, [TZ - 2.6, TZ + 2.6]);
+            plinthRun(M_TS, TX - T, TX + T, [TX - 2.6, TX + 2.6]);
+            bayRun(M_TW, TZ - T, TZ + T, [TZ - 2.6, TZ + 2.6]);
+            bayRun(M_TS, TX - T, TX + T, [TX - 2.6, TX + 2.6]);
+            for (const s of [-1, 1]) for (const d of [5.65, 7.15]) {
+                orderCol(M_TW, TZ + s * d, 0.44, true);
+                orderCol(M_TS, TX + s * d, 0.44, true);
             }
-            g = boxG(THW * 2 + 1.2, 1.0, THW * 2 + 1.2); put(g, TX, HE - 2.35, TZ); sand.push(g);
-            g = boxG(THW * 2 + 1.0, 1.3, THW * 2 + 1.0); put(g, TX, T0 + 0.65, TZ); sand.push(g);
+            // and the mass behind them, up to the parapet the whole block shares
+            g = boxG(T * 2 - 0.46, H0, T * 2 - 0.46);
+            put(g, TX + 0.23, H0 / 2, TZ - 0.23); dk.push(g);
+            g = boxG(T * 2 - 0.50, H3 - H0, T * 2 - 0.50);
+            put(g, TX + 0.25, (H0 + H3) / 2, TZ - 0.25); sand.push(g);
 
-            g = boxG(14.4, T1 - T0 - 1.3, 14.4); put(g, TX, (T0 + 1.3 + T1) / 2, TZ); sand.push(g);
-            const dialY = 35.4;
-            for (const f of [[0, 0, 7.3], [0, Math.PI, -7.3], [1, Math.PI / 2, 7.3], [1, -Math.PI / 2, -7.3]]) {
-                const dx = f[0] ? f[2] : 0, dz = f[0] ? 0 : f[2];
-                g = new THREE.CircleGeometry(2.35, 20); put(g, TX + dx * 1.02, dialY, TZ + dz * 1.02, 0, f[1], 0); dk.push(g);
-                g = new THREE.CircleGeometry(1.95, 20); put(g, TX + dx * 1.05, dialY, TZ + dz * 1.05, 0, f[1], 0); glow.push(g);
-            }
-            g = boxG(16.6, 1.4, 16.6); put(g, TX, T1 + 0.7, TZ); sand.push(g);
-            g = boxG(15.4, 0.5, 15.4); put(g, TX, T2 + 0.25, TZ); sand.push(g);
+            /* Four faces to a stage, and one matrix each: u runs along the
+               face, y up, w out. The same frame the two elevations are written
+               in, so a belfry arch and a Swanston window are the same code. */
+            const faces = (hw) => [
+                [MX(0, 0, TZ + hw), TX],                                // south
+                [MX(TX - hw, 0, 0, 0, -Math.PI / 2, 0), TZ],            // west
+                [MX(0, 0, TZ - hw, 0, Math.PI, 0), -TX],                // north
+                [MX(TX + hw, 0, 0, 0, Math.PI / 2, 0), -TZ],            // east
+            ];
+            const drum = (y0, y1, hw) => {
+                g = boxG(hw * 2, y1 - y0, hw * 2); put(g, TX, (y0 + y1) / 2, TZ); sand.push(g);
+            };
 
-            g = cylG(4.8 / 0.7071, 7.6 / 0.7071, 5.0, 4); put(g, TX, T2 + 3.0, TZ, 0, Math.PI / 4, 0); dk.push(g);
-            g = boxG(6.6, 0.4, 6.6); put(g, TX, T2 + 5.6, TZ); sand.push(g);
-            g = boxG(5.6, 2.9, 5.6); put(g, TX, T2 + 7.2, TZ); sand.push(g);
-            for (const f of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                g = new THREE.PlaneGeometry(3.0, 1.9);
-                put(g, TX + f[0] * 2.9, T2 + 7.3, TZ + f[1] * 2.9, 0, Math.atan2(f[0], f[1]), 0); glow.push(g);
+            // stage one: the rusticated shaft, carrying the plinth's own
+            // banding up past the roofline so the tower reads as one thing
+            const S0 = H3, S1 = 32.20;
+            drum(S0, S1, 7.10);
+            for (const f of faces(7.10)) {
+                for (let k = 0; k < 5; k++) {
+                    const y0 = S0 + 0.10 + k * 0.72;
+                    for (let j = 0; j < 6; j++) {
+                        const a = f[1] - 7.10 + j * 2.367 + 0.06, b = a + 2.247;
+                        B(sand, f[0], a, y0, 0, b, y0 + 0.62, 0.16);
+                    }
+                }
             }
-            g = boxG(6.4, 0.45, 6.4); put(g, TX, T2 + 8.85, TZ); sand.push(g);
-            g = cylG(0.5 / 0.7071, 3.2 / 0.7071, 2.6, 4); put(g, TX, T2 + 10.4, TZ, 0, Math.PI / 4, 0); dk.push(g);
-            g = sphG(0.55, 8, 6); put(g, TX, T2 + 11.9, TZ); sand.push(g);
-            g = cylG(0.10, 0.13, 5.4, 6); put(g, TX, T2 + 14.9, TZ); dk.push(g);
+            drum(S1, S1 + 0.42, 7.55);
+            drum(S1 + 0.42, S1 + 0.70, 7.30);
+
+            // stage two: the belfry, two louvred arches to a face
+            const B0 = 32.90, B1 = 38.80, BHW = 7.05;
+            drum(B0, B1, BHW - 0.50);
+            const louvres = (M, c, R, sill, sy) => {
+                BC(0x241f19, M, c - R + 0.06, sill, -0.46, c + R - 0.06, sy + R - 0.10, -0.40);
+                for (let k = 0; k < 12; k++) {
+                    const yy = sill + 0.30 + k * 0.42;
+                    if (yy > sy + R - 0.30) break;
+                    const hw = yy > sy ? Math.sqrt(Math.max(0, R * R - (yy - sy) * (yy - sy))) : R;
+                    const q = boxG((hw - 0.12) * 2, 0.24, 0.34);
+                    put(q, c, yy, -0.24, 0.40, 0, 0);
+                    carry(col, paint(q, 0x6e6252), M);
+                }
+            };
+            for (const f of faces(BHW)) {
+                arcadeFace(f[0], f[1] - BHW, f[1] + BHW, B0, B1, [f[1] - 3.30, f[1] + 3.30],
+                           1.50, 34.30, 38.10, 0.50, louvres);
+                for (const s of [-1, 1]) {
+                    B(sand, f[0], f[1] + s * BHW, B0, -0.50, f[1] + s * (BHW - 1.05), B1, 0.30);
+                    for (const d of [0.30, 0.80]) {
+                        const q = cylG(0.26, 0.28, B1 - B0 - 1.30, 8);
+                        put(q, f[1] + s * (BHW - d - 0.22), (B0 + B1) / 2 + 0.20, 0.44);
+                        carry(sand, q, f[0]);
+                    }
+                }
+            }
+            drum(B1, B1 + 0.44, 7.70);
+            for (const f of faces(7.70)) enrich(f[0], f[1] - 7.70, f[1] + 7.70, B1 - 0.86, 0.02);
+            drum(B1 + 0.44, B1 + 0.90, 7.40);
+
+            /* stage three: the clock. A dial on each of the four sides, cream,
+               with black Roman numerals and black hands, in a moulded circular
+               surround with paired colonettes each side of it. The dial is the
+               one emissive thing on this building — there are four real-time
+               lights in this world and none of them are up here — and the
+               numerals and the hands are dark geometry a few centimetres in
+               front of it, which is the only way to draw a hand on a surface
+               whose whole job is to be brighter than everything round it. */
+            const C0 = 39.70, C1 = 44.60, CHW = 6.75, DY = 42.10, DR = 2.05;
+            drum(C0, C1, CHW);
+            for (const f of faces(CHW)) {
+                const c = f[1], M = f[0];
+                // the moulded surround: two rings of stone standing off the face
+                for (const r of [[DR + 0.86, 0.34], [DR + 0.52, 0.62]]) {
+                    const q = cylG(r[0], r[0], r[1], 22);
+                    put(q, c, DY, r[1] / 2, Math.PI / 2, 0, 0);
+                    carry(sand, q, M);
+                }
+                // the dial itself, and the black ring round the edge of it
+                let q = new THREE.CircleGeometry(DR + 0.16, 24);
+                put(q, c, DY, 0.63); carry(col, paint(q, 0x2a251f), M);
+                q = new THREE.CircleGeometry(DR, 24);
+                put(q, c, DY, 0.66); carry(glow, q, M);
+                // twelve numerals, and the four cardinals doubled in width the
+                // way a Roman dial has them
+                for (let k = 0; k < 12; k++) {
+                    const a = k * Math.PI / 6, rr = DR * 0.80;
+                    const w = (k % 3 === 0) ? 0.30 : 0.15;
+                    q = boxG(w, 0.40, 0.06);
+                    put(q, 0, 0, 0, 0, 0, -a);
+                    put(q, c + Math.sin(a) * rr, DY + Math.cos(a) * rr, 0.70);
+                    carry(col, paint(q, 0x231f1a), M);
+                }
+                /* Twenty to five, which is the hour this whole world is set at
+                   and the one the header of this file names. */
+                for (const h of [[240 * Math.PI / 180, DR * 0.86, 0.10], [140 * Math.PI / 180, DR * 0.58, 0.14]]) {
+                    q = boxG(h[2], h[1], 0.05);
+                    put(q, 0, h[1] / 2 - 0.10, 0, 0, 0, 0);
+                    put(q, 0, 0, 0, 0, 0, -h[0]);
+                    put(q, c, DY, 0.72);
+                    carry(col, paint(q, 0x231f1a), M);
+                }
+                q = cylG(0.14, 0.14, 0.10, 8); put(q, c, DY, 0.74, Math.PI / 2, 0, 0);
+                carry(col, paint(q, 0x231f1a), M);
+                // paired colonettes, two to a side
+                for (const s of [-1, 1]) for (const d of [3.55, 4.45]) {
+                    B(sand, M, c + s * d - 0.42, C0 + 0.50, -0.05, c + s * d + 0.42, C0 + 0.80, 0.52);
+                    q = cylG(0.24, 0.27, 3.10, 10);
+                    put(q, c + s * d, C0 + 2.40, 0.28); carry(sand, q, M);
+                    q = cylG(0.36, 0.26, 0.34, 10);
+                    put(q, c + s * d, C1 - 1.72, 0.28); carry(sand, q, M);
+                    B(sand, M, c + s * d - 0.44, C1 - 1.55, -0.05, c + s * d + 0.44, C1 - 1.32, 0.56);
+                }
+            }
+            drum(C1, C1 + 0.44, 7.40);
+            for (const f of faces(7.40)) enrich(f[0], f[1] - 7.40, f[1] + 7.40, C1 - 0.86, 0.02);
+            drum(C1 + 0.44, C1 + 1.00, 7.05);
+
+            /* stage four: the balustrade, and an urn standing on each of the
+               four corners. Merged rather than instanced for the reason the
+               dentils are: the array is being merged anyway, so an urn costs
+               triangles and no draw at all. */
+            const D0 = 45.60, D1 = 47.30;
+            for (const f of faces(6.95)) {
+                B(sand, f[0], f[1] - 6.95, D0, -0.10, f[1] + 6.95, D0 + 0.46, 0.30);
+                B(sand, f[0], f[1] - 6.95, D1 - 0.32, -0.10, f[1] + 6.95, D1, 0.30);
+                const n = 11;
+                for (let k = 0; k <= n; k++) {
+                    const t = f[1] - 5.40 + 10.80 * (k / n);
+                    const q = cylG(0.13, 0.18, D1 - D0 - 0.78, 6);
+                    put(q, t, (D0 + D1) / 2 + 0.07, 0.12); carry(sand, q, f[0]);
+                }
+            }
+            for (const cx of [-1, 1]) for (const cz of [-1, 1]) {
+                const x = TX + cx * 6.55, z = TZ + cz * 6.55;
+                g = boxG(1.70, D1 - D0 + 0.30, 1.70); put(g, x, (D0 + D1) / 2 - 0.15, z); sand.push(g);
+                urn(x, D1 + 0.15, z, 0.86);
+            }
+
+            /* stage five: the dome. Square in plan and ogee in section — the
+               sides leave the balustrade almost vertical, sweep in through the
+               middle and flatten again under the lantern — built as twelve
+               square frusta because a lathe would have made it round and it is
+               not round. */
+            const E0 = 47.30, E1 = 53.80, EW0 = 6.30, EWM = 3.15, EW1 = 1.10;
+            const ogee = (t) => (t < 0.5 ? EW0 - (EW0 - EWM) * (t / 0.5) * (t / 0.5)
+                                        : EWM - (EWM - EW1) * (1 - (1 - (t - 0.5) / 0.5) * (1 - (t - 0.5) / 0.5)));
+            for (let k = 0; k < 12; k++) {
+                const t0 = k / 12, t1 = (k + 1) / 12;
+                g = cylG(ogee(t1) * 1.4143, ogee(t0) * 1.4143, (E1 - E0) / 12 + 0.02, 4);
+                put(g, TX, E0 + (E1 - E0) * (t0 + t1) / 2, TZ, 0, Math.PI / 4, 0); dk.push(g);
+            }
+            // and a lucarne in it on each face, low down where the slope is
+            for (const f of faces(ogee(0.20) + 0.10)) {
+                const c = f[1], M = f[0];
+                B(dk, M, c - 0.86, E0 + 1.00, -0.60, c + 0.86, E0 + 2.30, 0.30);
+                const q = shapeG(archShape(1.10, 1.55));
+                put(q, c, E0 + 1.00, 0.33); carry(glow, q, M);
+                const p = prismG(1.90, 0.70, 0.95);
+                put(p, c, E0 + 2.30, -0.10);
+                carry(dk, p, M);
+            }
+
+            /* the lantern, the finial and the flag. The pole is the tallest
+               thing on the building and the flag on it is the only piece of
+               this section that moves. */
+            const L0 = 53.80, L1 = 55.90;
+            g = boxG(3.30, 0.36, 3.30); put(g, TX, L0 + 0.18, TZ); sand.push(g);
+            g = boxG(2.60, L1 - L0 - 0.36, 2.60); put(g, TX, (L0 + 0.36 + L1) / 2, TZ); sand.push(g);
+            for (const f of faces(1.30)) {
+                const q = shapeG(archShape(1.15, 1.70));
+                put(q, f[1], L0 + 0.55, 0.02); carry(glow, q, f[0]);
+                for (const s of [-1, 1]) B(sand, f[0], f[1] + s * 1.10, L0 + 0.36, -0.05, f[1] + s * 1.30, L1, 0.16);
+            }
+            g = boxG(3.00, 0.34, 3.00); put(g, TX, L1 + 0.17, TZ); sand.push(g);
+            for (let k = 0; k < 5; k++) {
+                const t0 = k / 5, t1 = (k + 1) / 5;
+                const w0 = 1.30 - 1.10 * t0 * t0, w1 = 1.30 - 1.10 * t1 * t1;
+                g = cylG(w1 * 1.4143, w0 * 1.4143, 0.28, 4);
+                put(g, TX, L1 + 0.34 + 0.28 * (k + 0.5), TZ, 0, Math.PI / 4, 0); dk.push(g);
+            }
+            g = sphG(0.42, 10, 8); put(g, TX, L1 + 2.00, TZ); sand.push(g);
+            g = cylG(0.09, 0.13, 5.20, 6); put(g, TX, L1 + 4.70, TZ); dk.push(g);
+            BC(0x1c3f6e, MX(TX, 0, TZ), -0.02, L1 + 5.60, 0.06, 2.30, L1 + 6.90, 0.10);
+            BC(0xc8352e, MX(TX, 0, TZ), 1.20, L1 + 5.60, 0.06, 2.30, L1 + 6.25, 0.10);
         }
 
         const hall = new THREE.Group();
