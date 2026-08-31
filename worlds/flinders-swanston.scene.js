@@ -5405,8 +5405,15 @@ export default function build(world) {
                             W(A, XC, y, B.z0 - 0.4, XC + 0.07, y + 2.35, B.z1 + 0.4, 0x1a2026, 0x4e6672);
                             F(A, 0x9aa0a4, XF, y + 2.35, B.z0 - 0.4, XC, y + 3.15, B.z1 + 0.4);
                         }
+                        /* Added, not subtracted. In this table `z0` is the
+                           north end and `z1` the south, so setting out from
+                           `z0` runs southward and `z0 − span` walks straight
+                           out of the building into its neighbour: these fins
+                           were being drawn up the face of the tower next door,
+                           which is why this block read as a blank box above
+                           its own shops. */
                         for (let i = 0; i <= 12; i++) {
-                            const z = B.z0 - span * (i / 12);
+                            const z = B.z0 + span * (i / 12);
                             F(A, 0xb2b6b8, XF - 0.34, 5.0, z - 0.10, XC, B.top, z + 0.10);
                         }
                         F(A, 0x9aa0a4, XF - 0.30, B.top, B.z0, XC, B.top + 1.2, B.z1);
@@ -5430,7 +5437,7 @@ export default function build(world) {
                         for (let f = 0; f < 6; f++) {
                             const y = 5.4 + f * 3.20;
                             for (let i = 0; i < 4; i++) {
-                                const zc = B.z0 - span * ((i + 0.5) / 4);
+                                const zc = B.z0 + span * ((i + 0.5) / 4);   // southward, as above
                                 W(A, XC, y + 0.62, zc + 1.15, XC + 0.07, y + 2.55, zc - 1.15);
                                 F(A, 0xa89c84, XF - 0.18, y + 0.40, zc + 1.38, XC, y + 0.62, zc - 1.38);
                                 F(A, 0xdad2bc, XF - 0.12, y + 2.55, zc + 1.30, XC, y + 2.78, zc - 1.30);
@@ -5441,9 +5448,9 @@ export default function build(world) {
                         F(A, 0xc6bda8, XF - 0.16, B.top + 0.9, B.z0, XF + 0.20, B.top + 2.4, B.z1);
                         // the sign up its flank, which is what you actually
                         // remember about this building from the square
-                        F(A, 0x3c3a34, XF + 0.46, 7.0, B.z1 + 1.5, XF + 0.10, 20.5, B.z1 + 2.6);
+                        F(A, 0x3c3a34, XF + 0.46, 7.0, B.z1 - 1.5, XF + 0.10, 20.5, B.z1 - 2.6);
                         P.shopLit.push(shp(put(boxG(0.06, 13.0, 1.05), XF + 0.52, 13.7,
-                                           B.z1 + 2.05), 'stpaul'));
+                                           B.z1 - 2.05), 'stpaul'));
 
                     } else {
                         /* The bank's order is set out from `z0` toward `z1`,
