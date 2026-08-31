@@ -5636,12 +5636,23 @@ export default function build(world) {
            tallest thing in the view is not in the city at all: it is in
            Southbank, close to the far bank, and it is two hundred and
            ninety-seven metres to a flat roof. Fender Katsalidis, 2006, and the
-           whole building is one argument about 1854 — blue-black glass for the
-           flag, a white cross up its face, a red stripe for the blood, and ten
-           storeys of gold-plated glass on top for the reason anybody was on
-           the goldfields in the first place. The gold is the thing: from
-           anywhere in this city you find Eureka by looking for a warm block
-           sitting on a cold shaft.
+           whole building is one argument about 1854 — blue glass for the flag,
+           gold-plated glass on top for the reason anybody was on the
+           goldfields at all, and a white blade up one flank with a small red
+           mark near the top of it for the blood.
+
+           Built once from memory before the photograph arrived, and the
+           photograph corrected three things, all of them the same mistake of
+           taking a description literally. The white is not a stripe running
+           the full height: it is a tapered blade on the eastern flank that
+           comes to a point somewhere past halfway and widens to the crown. The
+           red is not a stripe either: it is a short cross near the top of that
+           blade, and at this range it is four pixels. And the crown is not a
+           solid gold block — it is gold at its ends with the glass carrying
+           through the middle of it, capped by the dark of the plant on the
+           roof. What runs the full height instead is a dark slot left of
+           centre, which the description never mentioned and the photograph
+           makes the most legible thing on the shaft.
 
            It is three hundred metres away and the fog has a fifth of it, so
            everything here is spent on the four things that survive that
@@ -5733,9 +5744,8 @@ export default function build(world) {
                    nearly black at the bottom where it has the roofs of
                    Southbank in it, taking the sky by the time it reaches the
                    gold. ---- */
-            const RD0 = 15.6, RD1 = 18.2;                  // the red, near the east edge
-            const WH0 = -8.0, WH1 = -0.5;                  // and the white, off centre
-            const COLS = [[-HW, WH0], [WH1, RD0], [RD1, HW]];
+            const DK0 = -9.6, DK1 = -5.4;                  // the dark slot, left of centre
+            const COLS = [[-HW, DK0], [DK1, HW]];
             const VIS = 2.66;                              // glass, and the rest of the floor is slab
 
             const gp = (x0, y0, x1, y1, lo, hi, gy0, gy1) => {
@@ -5755,17 +5765,40 @@ export default function build(world) {
                 }
                 gp(a, Y_F0 + NF * FF, b, Y_GOLD, CF.euGlassLo, CF.euGlassHi, 0, Y_GOLD);
             }
-            bx(A, CF.euWhite, WH0, 0, -HD, WH1, Y_GOLD, HD);
-            bx(A, CF.euRed,   RD0, 0, -HD, RD1, Y_GOLD, HD);
+            bx(A, CF.spandrel, DK0, 0, -HD, DK1, Y_GOLD, HD);   // the slot, unbroken
+
+            /* ---- the white blade on the eastern flank. It is not a stripe:
+                    it comes to a point a little past halfway and widens all
+                    the way to the crown, and its straight diagonal edge is the
+                    one line on this building that is not horizontal. Stepped
+                    by the floor, because it is a curtain wall and its edge
+                    steps too, and stood eight tenths of a metre proud of the
+                    glass — far enough that a twenty-four-bit depth buffer can
+                    still tell the two apart at three hundred metres, which
+                    anything closer cannot. ---- */
+            {
+                const YB = Y_GOLD * 0.52, BW = 15.4, NB = Math.floor((Y_GOLD - YB) / FF);
+                for (let f = 0; f < NB; f++) {
+                    const y = YB + f * FF;
+                    const t = (y - YB) / (Y_GOLD - YB);
+                    bx(A, f % 3 === 2 ? CF.euWhiteLo : CF.euWhite,
+                       HW - BW * t, y, -HD - 0.8, HW, y + FF, HD + 0.8);
+                }
+                // and the red, which is a cross and not a line, near its top
+                const YR = Y_GOLD - 34.0;
+                bx(A, CF.euRed, HW - 6.4, YR, -HD - 1.4, HW - 4.2, YR + 22.0, HD + 1.4);
+                bx(A, CF.euRed, HW - 10.6, YR + 12.0, -HD - 1.4, HW - 1.0, YR + 14.4, HD + 1.4);
+            }
 
             /* ---- the cores. Two white blades on the narrow ends, standing
                     out past the slab and set well in from its broad faces, and
                     they are the whole reason the silhouette has shoulders
-                    rather than corners. They over-run the roof by four metres:
-                    the height everybody quotes is to the roof of the crown,
-                    and these go past it. ---- */
+                    rather than corners. They stop at the roof: I had them
+                    over-running it by four metres, and the photograph has a
+                    flat top with the gold carried right to the parapet and
+                    nothing standing past it. ---- */
             for (const s of [-1, 1]) {
-                bx(A, CF.euWhite, s * (HW - 1.2), 0, -8.6, s * (HW + 5.0), H + 4.0, 8.6);
+                bx(A, CF.euWhite, s * (HW - 1.2), 0, -8.6, s * (HW + 5.0), H, 8.6);
             }
 
             /* ---- the crown. Ten storeys of gold-plated glass, cantilevered a
@@ -5790,6 +5823,18 @@ export default function build(world) {
                 bx(A, CF.euGoldBand, -GW, y + VIS, -GD_, GW, y + FF, GD_);
             }
             gpG(Y_GOLD + NG * FF, H);
+            /* The glass carrying through the middle of the crown, and the dark
+               of the plant across the top of it. Without these the crown is a
+               gold brick, which is what everybody says it is and not what the
+               photograph shows. Stood proud of the gold by a metre for the
+               same depth-buffer reason the blade is. */
+            {
+                const CW = 7.2, CT = Y_GOLD + (H - Y_GOLD) * 0.72;
+                const g = boxG(CW * 2, CT - Y_GOLD - 2.0, (GD_ + 1.0) * 2);
+                put(g, EX, (Y_GOLD + 2.0 + CT) / 2, EZ);
+                G.push(pane(g, CF.euGlassLo, CF.euGlassHi, Y_GOLD, H));
+                bx(A, CF.spandrel, -GW - 0.2, H - 7.0, -GD_ - 0.2, GW + 0.2, H, GD_ + 0.2);
+            }
 
             /* ---- the roof, which is flat, and the little that stands on it.
                     The mast is kept to almost nothing on purpose: at this range
