@@ -3168,166 +3168,422 @@ export default function build(world) {
 
     /* ============================================================
        14 · Melbourne Town Hall — the whole east side of Swanston Street
-            between Collins and Little Collins, four hundred metres north
+            between Collins and Little Collins
 
        Reed and Barnes, 1870, rebuilt behind its own facade after the 1925
        fire: Second Empire, a giant Corinthian order in Barrabool sandstone
        over a rusticated bluestone base, a mansard roof behind a balustraded
-       parapet, the long colonnaded elevation down Swanston Street, the
-       pedimented portico with its arched entrance in the middle of it, and
-       the clock tower standing on the Collins Street corner.
+       parapet, and the clock tower standing on the Collins Street corner.
 
-       Built for the range it is seen at rather than for its own sake. From
-       Flinders Street this is three hundred metres up a wet street and the
-       fog has three fifths of it, so what has to survive that is the
-       silhouette — the tower, the parapet line, the shadow rhythm of a
-       colonnade — and the colour, which is the one honey-coloured building on
-       a grey street. A carved capital at this distance is a carved capital
-       nobody will ever see, so there are none. The column count is right
-       instead, because the count is what makes the rhythm read, and the
-       rhythm is what makes it the Town Hall rather than a sandstone box.
+       This was built as a silhouette, for the view from Flinders Street —
+       three hundred metres of warm air away, where a carved capital is a
+       carved capital nobody will ever see. So it was one even colonnade of
+       plain drums running the whole frontage, on a base that read as a black
+       band, and the argument was that the column count carried the rhythm and
+       the rhythm was the building.
 
-       Three meshes: the sandstone, the dark (bluestone, slate and the reveals
-       behind the order) and the lit clock dials. They were paid for out of
-       the two litter bins, whose lids are now the same galvanised grey as
-       their drums, and out of the tree pits, which went in with the trunks.
+       The player walks down this footpath. At three metres the count is the
+       least of it and every one of those economies is a lie you can put your
+       hand on, so the range this is built for has changed and so has the
+       building. What holds up close is the composition and the joints:
+       pavilion, wing, portico, wing, tower rather than an even beat; a
+       bluestone plinth laid in blocks with joints and openings cut into it; a
+       giant order with a moulded base, a shaft ten diameters tall and a
+       spreading acanthus capital; and every window an arch with voussoirs, a
+       carved keystone and a sash set half a metre back in its own reveal.
+
+       Nothing here is painted. A wall is built around its openings rather
+       than cut out of a slab — there is nothing to cut with — and all the
+       relief is geometry. That matters more in this world than in most,
+       because the sun casts no shadow map: a recess reads only because its
+       jambs face a different way than the wall they are cut into, and a
+       west-facing front at golden hour gives a bright north jamb and a black
+       south one for free.
+
+       Four meshes: the sandstone, the dark (bluestone, slate, the reveals),
+       one vertex-coloured mesh for everything that is neither of those —
+       glass, the timber of a door, the banners — and the lit clock dials.
        ============================================================ */
     {
-        const sand = [], dk = [], glow = [];
+        const sand = [], dk = [], col = [], glow = [];
+        let g;
 
-        /* The block, off the same simplified Hoddle Grid as everything else
-           up this street: the building line east of Swanston, the north kerb
-           of Collins and the south kerb of Little Collins. */
+        /* Colour on the vertices, for the things that are neither sandstone
+           nor bluestone. Section 21 has this pair of helpers already, but they
+           are scoped inside section 21 and section 21 is built after this, so
+           a local copy is cheaper than moving anything. Everything that goes
+           into `col` is painted on the way in, without exception: a merge of a
+           list where some geometries carry a colour attribute and some do not
+           answers null, and a null geometry takes the viewport with it. */
+        const _tone = new Map();
+        const TONE = (hex) => { let c = _tone.get(hex); if (!c) { c = srgb(hex); _tone.set(hex, c); } return c; };
+        const paint = (q, hex) => {
+            const c = TONE(hex), n = q.attributes.position.count, a = new Float32Array(n * 3);
+            for (let k = 0; k < n; k++) { a[k * 3] = c.r; a[k * 3 + 1] = c.g; a[k * 3 + 2] = c.b; }
+            q.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return q;
+        };
+        // a pane graded up its own height — pale at the head where it takes the
+        // sky, nearly black at the sill where it takes the building opposite
+        const pane = (q, lo, hi, y0, y1) => {
+            const p = q.attributes.position, n = p.count, a = new Float32Array(n * 3);
+            const c0 = TONE(lo), c1 = TONE(hi);
+            for (let k = 0; k < n; k++) {
+                const t = smoothstep(y0, y1, p.getY(k));
+                a[k * 3] = lerp(c0.r, c1.r, t);
+                a[k * 3 + 1] = lerp(c0.g, c1.g, t);
+                a[k * 3 + 2] = lerp(c0.b, c1.b, t);
+            }
+            q.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return q;
+        };
+        const T = {
+            reveal:  0x6b6152,      // stone in the back of an opening, out of the sun
+            timber:  0x4a2f1d,      // the doors, which are very dark and very brown
+            glassLo: 0x1f272e, glassHi: 0x7c93a4,
+            iron:    0x262b30,
+        };
+
+        /* The block, off the same simplified Hoddle Grid as everything else up
+           this street: the building line east of Swanston, the north kerb of
+           Collins and the south kerb of Little Collins. */
         const HX = BX, HZS = -(230 + 13.5 + FP), HZN = -(345 - 5.6 - FP);
         const HW = 66, HD = HZS - HZN;                 // 66 m along Collins, 81.9 along Swanston
         const HCX = HX + HW / 2, HCZ = (HZS + HZN) / 2;
-        const H0 = 5.0;            // top of the bluestone base
-        const H1 = 20.4;           // top of the giant order
-        const H2 = 23.6;           // top of the cornice
-        const H3 = 26.0;           // top of the balustrade
-        let g, i;
 
-        // the bluestone base, and the four rusticated courses in it that give
-        // it its weight from the far end of the street
-        g = boxG(HW + 0.7, H0, HD + 0.7); put(g, HCX, H0 / 2, HCZ); dk.push(g);
-        for (i = 0; i < 4; i++) {
-            const y = 1.15 + i * 1.05;
-            g = boxG(0.16, 0.13, HD + 1.0); put(g, HX - 0.45, y, HCZ); dk.push(g);
-            g = boxG(HW + 1.0, 0.13, 0.16); put(g, HCX, y, HZS + 0.45); dk.push(g);
-        }
+        /* The storey heights. A bluestone plinth storey a person stands beside,
+           a giant order two storeys tall over it, a full entablature, a modest
+           attic and the balustrade — which is the section the elevation
+           actually has, rather than the two bands it had before. */
+        const H0 = 6.00;           // top of the bluestone
+        const HC = 19.30;          // top of the shafts, where the capitals start
+        const H1 = 21.00;          // top of the order, underside of the architrave
+        const HE = 24.95;          // top of the cornice
+        const HT = 27.10;          // top of the attic
+        const H3 = 29.25;          // top of the balustrade coping
 
-        // the wall behind the order, and the entablature and cornice over it
-        g = boxG(HW, H1 - H0, HD); put(g, HCX, (H0 + H1) / 2, HCZ); sand.push(g);
-        g = boxG(HW + 1.0, 2.2, HD + 1.0); put(g, HCX, H1 + 1.1, HCZ); sand.push(g);
-        g = boxG(HW + 2.3, 1.0, HD + 2.3); put(g, HCX, H1 + 2.7, HCZ); sand.push(g);
+        /* Two elevations, written once and stood up twice. Everything below is
+           built in the face's own frame — u along the frontage, y up, w out
+           towards the street — and carried into the world by one matrix, so
+           the Swanston front and the Collins flank are the same code seen from
+           two different streets. */
+        const M_SW = MX(HX, 0, 0, 0, -Math.PI / 2, 0);   // local (u,y,w) → world (HX−w, y, u)
+        const M_CO = MX(0, 0, HZS);                      // local (u,y,w) → world (u, y, HZS+w)
 
-        /* The giant order. One column every four and a half metres, standing
-           on the bluestone and running the full two storeys to the
-           entablature, with a plinth and an abacus and nothing between them —
-           at this distance a flute is a wasted triangle and a capital is a
-           lie you cannot see. Two elevations only: Swanston and Collins are
-           the two anybody in this world will ever look at. */
-        const bay = 4.55;
-        const column = (x, z, ry) => {
-            let q = boxG(1.75, 0.55, 1.75); put(q, x, H0 + 0.28, z, 0, ry, 0); sand.push(q);
-            q = cylG(0.62, 0.72, H1 - H0 - 1.3, 10); put(q, x, (H0 + H1) / 2 + 0.1, z); sand.push(q);
-            q = boxG(1.65, 0.75, 1.65); put(q, x, H1 - 0.38, z, 0, ry, 0); sand.push(q);
+        const B = (arr, M, u0, y0, w0, u1, y1, w1) => {
+            const q = boxG(Math.abs(u1 - u0), Math.abs(y1 - y0), Math.abs(w1 - w0));
+            put(q, (u0 + u1) / 2, (y0 + y1) / 2, (w0 + w1) / 2);
+            carry(arr, q, M);
+            return q;
         };
-        // the reveal behind a bay: two tiers of window, the lower one arched
-        const bayLight = (x, z, ry) => {
-            let q = shapeG(archShape(2.5, 5.2)); put(q, x, H0 + 1.4, z, 0, ry, 0); dk.push(q);
-            q = new THREE.PlaneGeometry(2.4, 3.6); put(q, x, H0 + 10.2, z, 0, ry, 0); dk.push(q);
+        const BC = (hex, M, u0, y0, w0, u1, y1, w1) => {
+            const q = boxG(Math.abs(u1 - u0), Math.abs(y1 - y0), Math.abs(w1 - w0));
+            put(q, (u0 + u1) / 2, (y0 + y1) / 2, (w0 + w1) / 2);
+            carry(col, paint(q, hex), M);
+            return q;
         };
 
-        const nW = Math.floor((HD - 6) / bay);
-        for (i = 0; i <= nW; i++) {
-            const z = HZN + 3 + i * bay + (HD - 6 - nW * bay) / 2;
-            column(HX - 0.5, z, 0);
-            if (i < nW) bayLight(HX + 0.06, z + bay / 2, -Math.PI / 2);
-        }
-        const nS = Math.floor((HW - 6) / bay);
-        for (i = 0; i <= nS; i++) {
-            const x = HX + 3 + i * bay + (HW - 6 - nS * bay) / 2;
-            column(x, HZS + 0.5, 0);
-            if (i < nS) bayLight(x + bay / 2, HZS - 0.06, 0);
+        /* --- the bluestone plinth storey ------------------------------------
+
+           The strongest thing about this building from the footpath is the
+           line where the honey stone stops and the bluestone starts, and the
+           bluestone has to earn it: five courses of real blocks, standing
+           420 mm proud of the wall behind them with a 50 mm joint all round,
+           so the whole storey is joints and shadow rather than a dark band.
+           The wall behind is a separate box set back by exactly that, which is
+           also what lets an opening be an opening: the courses are laid around
+           it and there is nothing to cut. */
+        const RUST = 0.42;
+        g = boxG(HW - RUST, H0, HD - RUST); put(g, HCX + RUST / 2, H0 / 2, HCZ - RUST / 2); dk.push(g);
+        // and the sandstone wall over it, set back by exactly the depth of a
+        // reveal so that every opening above has somewhere to be set back into
+        g = boxG(HW - 0.46, H1 - H0, HD - 0.46); put(g, HCX + 0.23, (H0 + H1) / 2, HCZ - 0.23); sand.push(g);
+
+        const rustCourse = (M, u0, u1, y0, y1, holes) => {
+            const n = Math.max(1, Math.round((u1 - u0) / 2.30));
+            const bw = (u1 - u0) / n;
+            for (let k = 0; k < n; k++) {
+                const a = u0 + k * bw + 0.05, b = u0 + (k + 1) * bw - 0.05;
+                let clear = true;
+                for (const h of holes) if (b > h[0] - 0.03 && a < h[1] + 0.03) clear = false;
+                if (clear) B(dk, M, a, y0 + 0.05, -RUST, b, y1 - 0.05, 0);
+            }
+        };
+        // and one square-headed opening in it, with its lintel and its doors
+        const plinthDoor = (M, c, hw, top) => {
+            BC(T.reveal, M, c - hw, 0.30, -RUST + 0.02, c + hw, top, -RUST + 0.06);
+            BC(T.timber, M, c - hw + 0.16, 0.30, -RUST + 0.06, c - 0.03, top - 0.55, -RUST + 0.20);
+            BC(T.timber, M, c + 0.03, 0.30, -RUST + 0.06, c + hw - 0.16, top - 0.55, -RUST + 0.20);
+            // the fanlight over the doors, and the moulded head that carries it
+            const fl = boxG(hw * 2 - 0.32, 0.44, 0.10);
+            put(fl, c, top - 0.30, -RUST + 0.14);
+            carry(col, pane(fl, T.glassLo, T.glassHi, top - 0.52, top - 0.08), M);
+            B(dk, M, c - hw - 0.34, top, -RUST, c + hw + 0.34, top + 0.34, 0.16);
+            B(dk, M, c - hw - 0.22, 0, -RUST, c + hw + 0.22, 0.30, 0.22);
+        };
+
+        /* --- the giant order ------------------------------------------------
+
+           Twelve hundred millimetres at the foot and twelve of those to the
+           astragal, which is the proportion the Corinthian order has had since
+           Vitruvius wrote it down and the reason the old plain drums read as
+           columns nobody had measured. Engaged: the shaft stands three
+           quarters of its diameter out of the wall, so the front of the
+           building is wall with an order on it and not a peristyle. */
+        const RC = 0.60;
+        const orderCol = (M, u, pr, flute) => {
+            let q;
+            // pedestal and the moulded base over it
+            B(sand, M, u - 1.02, H0 - 0.28, -0.05, u + 1.02, H0 + 0.26, pr + 0.94);
+            B(sand, M, u - 0.90, H0 + 0.26, -0.05, u + 0.90, H0 + 0.54, pr + 0.84);
+            q = cylG(RC * 1.03, RC * 1.20, 0.26, 12); put(q, u, H0 + 0.67, pr); carry(sand, q, M);
+            q = cylG(RC * 1.16, RC * 1.03, 0.20, 12); put(q, u, H0 + 0.90, pr); carry(sand, q, M);
+            // the shaft, with the taper standing in for entasis
+            q = cylG(RC * 0.87, RC, HC - H0 - 1.00, 12);
+            put(q, u, (H0 + 1.00 + HC) / 2, pr); carry(sand, q, M);
+            /* Flutes as raised arrises rather than cut grooves, for the same
+               reason every opening here is built around instead of cut. Only
+               where somebody can get close enough to count them — the front
+               and the Collins corner — because thirteen small cylinders a
+               column is a real number of triangles to spend on a shaft nobody
+               reaches. */
+            if (flute) for (let k = 0; k < 13; k++) {
+                const a = (k - 6) * 0.255;
+                q = cylG(RC * 0.115, RC * 0.125, HC - H0 - 1.55, 5);
+                put(q, u + Math.sin(a) * RC * 0.95, (H0 + 1.30 + HC) / 2, pr + Math.cos(a) * RC * 0.95);
+                carry(sand, q, M);
+            }
+            // the astragal, the bell, and two rows of acanthus leaning out of it
+            q = cylG(RC * 0.98, RC * 0.90, 0.15, 12); put(q, u, HC + 0.07, pr); carry(sand, q, M);
+            q = cylG(RC * 1.36, RC * 0.98, 1.16, 12); put(q, u, HC + 0.73, pr); carry(sand, q, M);
+            for (let row = 0; row < 2; row++) for (let k = 0; k < 7; k++) {
+                const a = (k - 3) * 0.42, r = RC * (row ? 1.24 : 1.06);
+                q = boxG(0.24, row ? 0.62 : 0.52, 0.16);
+                put(q, 0, 0, 0.09, -0.40, 0, 0);
+                put(q, u + Math.sin(a) * r, HC + (row ? 0.92 : 0.36), pr + Math.cos(a) * r, 0, a, 0);
+                carry(sand, q, M);
+            }
+            // the volutes under the abacus, and the abacus itself
+            for (const s of [-1, 1]) {
+                q = cylG(0.17, 0.17, 0.22, 8);
+                put(q, u + s * RC * 1.32, H1 - 0.46, pr + RC * 1.02, Math.PI / 2, 0, 0);
+                carry(sand, q, M);
+            }
+            B(sand, M, u - RC * 1.62, H1 - 0.32, -0.05, u + RC * 1.62, H1 - 0.08, pr + RC * 1.46);
+            B(sand, M, u - RC * 1.50, H1 - 0.08, -0.05, u + RC * 1.50, H1 + 0.02, pr + RC * 1.36);
+        };
+        // the same order flattened against the wall, for a pavilion's angles
+        const orderPil = (M, u, pr) => {
+            B(sand, M, u - 1.00, H0 - 0.28, -0.05, u + 1.00, H0 + 0.26, pr + 0.30);
+            B(sand, M, u - 0.86, H0 + 0.26, -0.05, u + 0.86, H0 + 0.60, pr + 0.26);
+            B(sand, M, u - RC * 1.10, H0 + 0.60, -0.05, u + RC * 1.10, HC, pr);
+            B(sand, M, u - RC * 1.30, HC, -0.05, u + RC * 1.30, H1 - 0.32, pr + 0.06);
+            for (let k = 0; k < 4; k++) {
+                const q = boxG(0.22, 0.52, 0.14);
+                put(q, u + (k - 1.5) * 0.36, HC + 0.55, pr + 0.02, -0.38, 0, 0);
+                carry(sand, q, M);
+            }
+            B(sand, M, u - RC * 1.62, H1 - 0.32, -0.05, u + RC * 1.62, H1 - 0.08, pr + 0.20);
+            B(sand, M, u - RC * 1.50, H1 - 0.08, -0.05, u + RC * 1.50, H1 + 0.02, pr + 0.16);
+        };
+
+        /* --- one arched window ----------------------------------------------
+
+           The wall face is laid around the arc in eight steps and the
+           archivolt is then set over the staircase that leaves, which is both
+           how a real arch is built and the only way to have a hole in a solid
+           without anything to subtract with. */
+        const WSILL = 8.60, WHEAD = 16.20, WR = 1.30;
+        const REV = 0.46;                              // how far the sash sits back
+        const archWin = (M, c) => {
+            const sy = WHEAD - WR;
+            for (let k = 0; k < 8; k++) {
+                const ya = sy + WR * (k / 8), yb = sy + WR * ((k + 1) / 8);
+                const hw = Math.sqrt(Math.max(0, WR * WR - (ya - sy) * (ya - sy)));
+                if (WR - hw > 0.02) {
+                    B(sand, M, c - WR, ya, -REV, c - hw, yb, 0);
+                    B(sand, M, c + hw, ya, -REV, c + WR, yb, 0);
+                }
+            }
+            // the archivolt, nine voussoirs on the arc
+            for (let k = 0; k < 9; k++) {
+                const a = Math.PI * (k + 0.5) / 9, rm = WR + 0.27;
+                const q = boxG(0.58, WR * Math.PI / 9 * 1.14, 0.64);
+                put(q, c + rm * Math.cos(a), sy + rm * Math.sin(a), -0.16, 0, 0, a);
+                carry(sand, q, M);
+            }
+            // and the keystone, which is carved and therefore projects further
+            B(sand, M, c - 0.30, sy + WR + 0.02, -REV, c + 0.30, sy + WR + 0.72, 0.26);
+            B(sand, M, c - 0.21, sy + WR + 0.16, 0.26, c + 0.21, sy + WR + 0.56, 0.46);
+            // the sill, on its own two corbels
+            B(sand, M, c - WR - 0.36, WSILL - 0.30, -REV, c + WR + 0.36, WSILL, 0.26);
+            for (const s of [-1, 1]) B(sand, M, c + s * (WR + 0.02), WSILL - 0.62, -REV, c + s * (WR + 0.24), WSILL - 0.30, 0.16);
+            // the sash, set back in the reveal, and its glazing bars
+            const q = shapeG(archShape(WR * 2 - 0.14, WHEAD - WSILL - 0.07));
+            put(q, c, WSILL + 0.04, -REV + 0.04);
+            carry(col, pane(q, T.glassLo, T.glassHi, WSILL, WHEAD), M);
+            BC(T.iron, M, c - 0.05, WSILL + 0.06, -REV + 0.05, c + 0.05, WHEAD - 0.30, -REV + 0.10);
+            for (const yy of [10.9, 12.7, 14.5]) BC(T.iron, M, c - WR + 0.14, yy - 0.05, -REV + 0.05, c + WR - 0.14, yy + 0.05, -REV + 0.10);
+        };
+        // a sunk panel over each arch, said with a raised architrave for the
+        // same reason: the field is the wall and the frame is what is added
+        const sunkPanel = (M, c, hw) => {
+            const y0 = 17.45, y1 = 19.35;
+            B(sand, M, c - hw - 0.16, y0 - 0.16, 0, c + hw + 0.16, y0, 0.13);
+            B(sand, M, c - hw - 0.16, y1, 0, c + hw + 0.16, y1 + 0.16, 0.13);
+            B(sand, M, c - hw - 0.16, y0, 0, c - hw, y1, 0.13);
+            B(sand, M, c + hw, y0, 0, c + hw + 0.16, y1, 0.13);
+        };
+
+        /* --- a run of the wall, with its openings --------------------------- */
+        const bayRun = (M, u0, u1, cs, flute) => {
+            const sy = WHEAD - WR;
+            B(sand, M, u0, H0, -REV, u1, WSILL - 0.30, 0);          // under the sills
+            B(sand, M, u0, WHEAD, -REV, u1, H1, 0);                 // over the crowns
+            const edge = [u0];
+            for (const c of cs) { edge.push(c - WR); edge.push(c + WR); }
+            edge.push(u1);
+            for (let k = 0; k < edge.length; k += 2)
+                if (edge[k + 1] - edge[k] > 0.03) B(sand, M, edge[k], WSILL - 0.30, -REV, edge[k + 1], sy, 0);
+            for (const c of cs) { archWin(M, c); sunkPanel(M, c, 1.00); }
+
+            // and the bluestone under it: a base course, five rusticated
+            // courses laid around the doors, and the moulded string that stops
+            // the bluestone and starts the sandstone
+            const holes = cs.map((c) => [c - 1.15, c + 1.15]);
+            B(dk, M, u0, 0, -RUST, u1, 0.45, 0.12);
+            for (let k = 0; k < 5; k++)
+                rustCourse(M, u0, u1, 0.45 + k * 1.03, 0.45 + (k + 1) * 1.03, k < 4 ? holes : []);
+            B(dk, M, u0, 5.60, -RUST, u1, H0, 0.28);
+            for (const c of cs) plinthDoor(M, c, 1.15, 4.36);
+        };
+
+        /* --- the Swanston Street front --------------------------------------
+
+           Read going north from Collins Street: the clock tower on the corner,
+           a wing, the portico, the second wing, and the end pavilion on Little
+           Collins. The tower is the south end pavilion — the real building has
+           no other one on that side, and inventing one would put a pavilion
+           inside a tower. */
+        const TX = HX + 8.0, TZ = HZS - 8.0, THW = 8.2;
+        const P_S = TZ - THW, P_N = HZN + 8.4;         // where the wings meet what ends them
+        const PCZ = (P_S + P_N) / 2, PHW = 10.4;       // the portico, centred between the two
+        const WINGS = [[P_N, PCZ - PHW], [PCZ + PHW, P_S]];
+        const swanCol = new Set();                     // one column a division, not two
+        for (const w of WINGS) {
+            const span = w[1] - w[0], nb = 2, bw = span / nb;
+            for (let k = 0; k < nb; k++) {
+                const b0 = w[0] + k * bw;
+                bayRun(M_SW, b0, b0 + bw, [b0 + bw / 2 - 2.30, b0 + bw / 2 + 2.30]);
+            }
+            for (let k = 0; k <= nb; k++) swanCol.add((w[0] + k * bw).toFixed(2));
         }
 
-        /* The balustrade, as a rim rather than a lid: a plinth, a row of
-           balusters and a coping, on the two elevations that face the city.
-           Written as four rails rather than one slab because a slab across
-           the footprint is a flat roof, which is the thing the mansard behind
-           it exists to not be. */
-        for (const r of [[HCX, HZS + 1.15, HW + 2.3, 0.5], [HCX, HZN - 1.15, HW + 2.3, 0.5],
-                         [HX - 1.15, HCZ, 0.5, HD + 2.3], [HX + HW + 1.15, HCZ, 0.5, HD + 2.3]]) {
-            g = boxG(r[2], 0.4, r[3]); put(g, r[0], H2 + 0.2, r[1]); sand.push(g);
-            g = boxG(r[2], 0.35, r[3]); put(g, r[0], H3 - 0.18, r[1]); sand.push(g);
+        /* The end pavilion on Little Collins, stepping 850 forward of the wall
+           with its own paired pilasters and one arch between them. */
+        {
+            const q0 = HZN, q1 = P_N, PR = 0.85, qc = (q0 + q1) / 2;
+            const MP = MX(HX - PR, 0, 0, 0, -Math.PI / 2, 0);
+            B(dk, M_SW, q0, 0, -RUST, q1, H0, PR);                  // the mass it steps out to
+            B(sand, M_SW, q0, H0, -REV, q1, H1, PR);
+            bayRun(MP, q0, q1, [qc]);
+            for (const s of [-1, 1]) { orderPil(MP, qc + s * 3.85, 0.30); orderPil(MP, qc + s * 2.95, 0.16); }
         }
-        for (const e of [['z', HZS + 1.15, HX + 1.2, HW - 2.4], ['x', HX - 1.15, HZN + 1.2, HD - 2.4]]) {
-            const n = Math.round(e[3] / 2.3);
-            for (i = 0; i <= n; i++) {
-                const t = e[2] + e[3] * (i / n);
-                g = cylG(0.17, 0.21, 1.45, 6);
-                put(g, e[0] === 'z' ? t : e[1], H2 + 1.12, e[0] === 'z' ? e[1] : t); sand.push(g);
+
+        /* The portico's bay, left as wall for now — the portico itself stands
+           in front of it. */
+        bayRun(M_SW, PCZ - PHW, PCZ + PHW, [PCZ - 6.5, PCZ, PCZ + 6.5]);
+        for (const u of swanCol) orderCol(M_SW, Number(u), 0.44, true);
+
+        /* --- the Collins Street flank ---------------------------------------
+
+           The long side, and the one the sun never reaches: at twenty past
+           seven the sun is west-north-west, so this whole elevation is lit by
+           sky alone and every recess on it reads as grey on grey. What carries
+           it is the west-facing return of anything that projects, which is why
+           the columns here are paired — two returns a division instead of one.
+           Six bays, one arch each, over the fifty metres between the tower and
+           the far corner. */
+        const CU0 = TX + THW, CU1 = HX + HW;
+        {
+            const span = CU1 - CU0, nb = 6, bw = span / nb;
+            for (let k = 0; k < nb; k++) {
+                const b0 = CU0 + k * bw;
+                bayRun(M_CO, b0, b0 + bw, [b0 + bw / 2]);
+            }
+            for (let k = 0; k <= nb; k++) for (const s of [-1, 1]) {
+                const u = CU0 + k * bw + s * 0.85;
+                if (u > CU0 - 0.1 && u < CU1 + 0.1) orderCol(M_CO, u, 0.44, k < 2);
             }
         }
 
-        /* The mansard, in slate, behind the parapet: four slopes leaning in
-           to a flat deck. It reads for about four metres of its height and
-           that is all it has to do — it is the difference between a Second
-           Empire roof and a parapet with the sky behind it. */
-        const MR = 5.2, MIN = 4.2;                     // rise, and how far it leans in
+        /* --- the entablature, the attic and the parapet ---------------------
+
+           One profile carried right round the block: architrave, frieze, a bed
+           mould, the corona, and a cyma over it. The dentils and the modillions
+           that belong under the corona are hung on it with the portico. */
+        const ring = (y0, y1, out) => {
+            g = boxG(HW + out * 2, y1 - y0, HD + out * 2);
+            put(g, HCX, (y0 + y1) / 2, HCZ); sand.push(g);
+        };
+        ring(H1, H1 + 0.85, 0.30);                     // architrave
+        ring(H1 + 0.85, H1 + 2.35, 0.12);              // frieze
+        ring(H1 + 2.35, H1 + 2.85, 0.46);              // bed mould
+        ring(H1 + 2.85, H1 + 3.70, 1.15);              // corona
+        ring(H1 + 3.70, HE, 1.32);                     // cyma
+        ring(HE, HT, 0.55);                            // the attic storey
+        ring(HT, HT + 0.55, 1.05);                     // the parapet's own plinth
+        ring(H3 - 0.34, H3, 1.05);                     // and its coping
+
+        /* The balusters, as a rim and not a lid: four rails of them on the two
+           elevations that face the city, because a sheet across the footprint
+           is a flat roof and a flat roof is the thing the mansard behind it
+           exists not to be. */
+        for (const e of [['z', HZS + 1.05, HX - 0.6, HW + 1.2], ['x', HX - 1.05, HZN - 0.6, HD + 1.2],
+                         ['z', HZN - 1.05, HX - 0.6, HW + 1.2], ['x', HX + HW + 1.05, HZN - 0.6, HD + 1.2]]) {
+            const n = Math.round(e[3] / 1.15);
+            for (let k = 0; k <= n; k++) {
+                const t = e[2] + e[3] * (k / n);
+                g = cylG(0.13, 0.19, 1.26, 6);
+                put(g, e[0] === 'z' ? t : e[1], HT + 1.18, e[0] === 'z' ? e[1] : t); sand.push(g);
+            }
+        }
+
+        // the attic's own small windows, one over each arch below
+        for (const w of WINGS) {
+            const span = w[1] - w[0], bw = span / 2;
+            for (let k = 0; k < 2; k++) for (const s of [-2.30, 2.30]) {
+                const c = w[0] + k * bw + bw / 2 + s;
+                BC(T.glassLo, M_SW, c - 0.72, HE + 0.55, -0.30, c + 0.72, HT - 0.55, -0.22);
+                B(sand, M_SW, c - 0.92, HE + 0.35, -0.30, c + 0.92, HE + 0.55, 0.10);
+            }
+        }
+
+        /* The mansard, in slate, behind the parapet: four slopes leaning in to
+           a flat deck. It reads for about four metres of its height and that is
+           all it has to do — it is the difference between a Second Empire roof
+           and a parapet with the sky behind it. */
+        const MR = 5.4, MIN = 4.2;                     // rise, and how far it leans in
         const mLen = Math.hypot(MIN, MR), mA = Math.atan2(MIN, MR);
-        g = boxG(HW - 2 * MIN, 0.6, HD - 2 * MIN); put(g, HCX, H2 + MR, HCZ); dk.push(g);
-        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + MIN / 2 + 0.4, H2 + MR / 2, HCZ, 0, 0, -mA); dk.push(g);
-        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + HW - MIN / 2 - 0.4, H2 + MR / 2, HCZ, 0, 0, mA); dk.push(g);
-        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, H2 + MR / 2, HZS - MIN / 2 - 0.4, -mA); dk.push(g);
-        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, H2 + MR / 2, HZN + MIN / 2 + 0.4, mA); dk.push(g);
+        g = boxG(HW - 2 * MIN, 0.6, HD - 2 * MIN); put(g, HCX, HT + MR, HCZ); dk.push(g);
+        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + MIN / 2 + 0.4, HT + MR / 2, HCZ, 0, 0, -mA); dk.push(g);
+        g = boxG(0.5, mLen, HD - 1.0); put(g, HX + HW - MIN / 2 - 0.4, HT + MR / 2, HCZ, 0, 0, mA); dk.push(g);
+        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, HT + MR / 2, HZS - MIN / 2 - 0.4, -mA); dk.push(g);
+        g = boxG(HW - 1.0, mLen, 0.5); put(g, HCX, HT + MR / 2, HZN + MIN / 2 + 0.4, mA); dk.push(g);
 
-        /* --- the portico on Swanston Street: six free-standing columns on a
-               bluestone podium, three arches under them, and the pediment
-               over. This is the one piece of the building anybody photographs
-               and it is the one piece that has to project, because a portico
-               flush with its wall is a pilaster. --- */
+        /* --- the clock tower, on the Collins Street corner. Rebuilt stage by
+               stage in a later pass; what stands here is the massing it has to
+               agree with. --- */
         {
-            const PZ = HCZ + 2, PW = 21.0, PX = HX - 3.2;
-            g = boxG(4.0, H0, PW + 2.0); put(g, PX + 1.6, H0 / 2, PZ); dk.push(g);
-            for (i = 0; i < 3; i++) {                                  // the steps up off the footpath
-                g = boxG(1.2, 0.42, PW - 1.0); put(g, PX - 0.6 - i * 1.2, 0.21 + i * 0.42 - 0.9, PZ); dk.push(g);
-            }
-            for (i = 0; i < 3; i++) {                                  // the three arches behind the columns
-                g = shapeG(archShape(3.4, 4.4));
-                put(g, PX + 1.9, 0.5, PZ - 6.4 + i * 6.4, 0, -Math.PI / 2, 0); dk.push(g);
-            }
-            for (i = 0; i < 6; i++) {
-                const z = PZ - PW / 2 + 1.6 + i * ((PW - 3.2) / 5);
-                column(PX + 1.0, z, 0);
-            }
-            g = boxG(4.6, 2.4, PW + 2.4); put(g, PX + 1.5, H1 + 1.2, PZ); sand.push(g);
-            g = boxG(5.2, 1.0, PW + 3.4); put(g, PX + 1.4, H1 + 2.9, PZ); sand.push(g);
-            // the pediment, its gable turned to face down Swanston Street
-            g = prismG(PW + 3.4, 4.4, 4.6); put(g, PX + 1.5, H2 + 0.4, PZ, 0, Math.PI / 2, 0); sand.push(g);
-            g = boxG(5.0, 0.4, PW + 4.2); put(g, PX + 1.4, H2 + 0.2, PZ); sand.push(g);
-        }
-
-        /* --- the clock tower, on the Collins Street corner. Fifty-one metres
-               to the finial, which at this range is the only part of the
-               building tall enough to stand above the fog line and the only
-               part anybody navigates by. --- */
-        {
-            const TX = HX + 8.5, TZ = HZS - 8.5;
             const T0 = 30.0, T1 = 39.4, T2 = 40.8;     // shaft, clock stage, cornice
-            g = boxG(16.0, T0, 16.0); put(g, TX, T0 / 2, TZ); sand.push(g);
-            g = boxG(16.8, H0, 16.8); put(g, TX, H0 / 2, TZ); dk.push(g);
-            for (const c of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {   // the corner pilasters
-                g = boxG(1.5, T0 - H0, 1.5); put(g, TX + c[0] * 7.4, (H0 + T0) / 2, TZ + c[1] * 7.4); sand.push(g);
+            g = boxG(THW * 2 - 0.4, T0, THW * 2 - 0.4); put(g, TX, T0 / 2, TZ); sand.push(g);
+            g = boxG(THW * 2 + 0.4, H0, THW * 2 + 0.4); put(g, TX, H0 / 2, TZ); dk.push(g);
+            for (const c of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+                g = boxG(1.5, T0 - H0, 1.5); put(g, TX + c[0] * (THW - 0.8), (H0 + T0) / 2, TZ + c[1] * (THW - 0.8)); sand.push(g);
             }
-            g = boxG(17.6, 1.0, 17.6); put(g, TX, 22.6, TZ); sand.push(g);
-            g = boxG(17.4, 1.3, 17.4); put(g, TX, T0 + 0.65, TZ); sand.push(g);
+            g = boxG(THW * 2 + 1.2, 1.0, THW * 2 + 1.2); put(g, TX, HE - 2.35, TZ); sand.push(g);
+            g = boxG(THW * 2 + 1.0, 1.3, THW * 2 + 1.0); put(g, TX, T0 + 0.65, TZ); sand.push(g);
 
-            // the clock stage and its four dials, which are lit — at twenty to
-            // five in November rain the Town Hall clock is on, and from the
-            // bottom of Swanston Street it is the only thing up here you can
-            // actually read
             g = boxG(14.4, T1 - T0 - 1.3, 14.4); put(g, TX, (T0 + 1.3 + T1) / 2, TZ); sand.push(g);
             const dialY = 35.4;
             for (const f of [[0, 0, 7.3], [0, Math.PI, -7.3], [1, Math.PI / 2, 7.3], [1, -Math.PI / 2, -7.3]]) {
@@ -3338,9 +3594,6 @@ export default function build(world) {
             g = boxG(16.6, 1.4, 16.6); put(g, TX, T1 + 0.7, TZ); sand.push(g);
             g = boxG(15.4, 0.5, 15.4); put(g, TX, T2 + 0.25, TZ); sand.push(g);
 
-            // the mansard cap, the lantern, and the little slate cupola over
-            // it. Four radial segments turned a quarter-bay so the flat faces
-            // land on the axes rather than the diagonals.
             g = cylG(4.8 / 0.7071, 7.6 / 0.7071, 5.0, 4); put(g, TX, T2 + 3.0, TZ, 0, Math.PI / 4, 0); dk.push(g);
             g = boxG(6.6, 0.4, 6.6); put(g, TX, T2 + 5.6, TZ); sand.push(g);
             g = boxG(5.6, 2.9, 5.6); put(g, TX, T2 + 7.2, TZ); sand.push(g);
@@ -3358,12 +3611,18 @@ export default function build(world) {
         hall.add(
             merged(sand, stdMat(0xdccdaf, { roughness: 0.86 })),
             merged(dk, stdMat(0x5d636b, { roughness: 0.74 })),
+            /* One material for everything that is neither stone, told apart by
+               a colour attribute on the merged geometry. Which is what makes a
+               timber door, a graded sash and a flag one draw call between
+               them, and the only reason there is any colour on this building
+               at all. */
+            merged(col, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0.04 })),
             /* One emissive level for the dials and the lantern together, and it
                is set by the dials: at 2.2 they clipped to flat white discs a
-               hundred metres away and the hands nobody has drawn would not
-               have shown anyway. 1.7 keeps them above the 0.80 bloom
-               threshold, so from the bottom of Swanston Street they are still
-               the two lit things up here — which is the entire job. */
+               hundred metres away and the hands would not have shown anyway.
+               1.7 keeps them above the 0.80 bloom threshold, so from the bottom
+               of Swanston Street they are still the two lit things up here —
+               which is the entire job. */
             merged(glow, emissive(0xf4ecd6, 0xffe6ae, 1.7, { side: THREE.DoubleSide, roughness: 0.5 })));
         scene.add(hall);
         world.part('townhall_00', hall);
