@@ -3,6 +3,14 @@
     "fedsquare_00"
   ],
   "parts" : {
+    "australia108_00" : {
+      "position" : [
+        0,
+        0,
+        0
+      ],
+      "rotationY" : 0
+    },
     "eurekatower_00" : {
       "position" : [
         0,
