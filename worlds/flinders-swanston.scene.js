@@ -242,14 +242,14 @@ export default function build(world) {
        road, the rain, the standard materials' own fog — reads these four
        numbers, so the horizon in the shader and the horizon in three's fog are
        the same horizon rather than two that nearly agree. */
-    const FOG_COL = daylight(0x9aa2a8);
-    const FOG_NEAR = 34, FOG_FAR = 470;
+    const FOG_COL = daylight(0xe8c6a0);
+    const FOG_NEAR = 95, FOG_FAR = 1250;
     scene.fog = new THREE.Fog(FOG_COL.clone(), FOG_NEAR, FOG_FAR);
 
     // Where the sun is behind all that cloud: west-north-west and low, which is
     // where 16:40 in a Melbourne winter puts it, and which is why the western
     // faces of everything are the pale ones.
-    const SUN = new THREE.Vector3(-0.763, 0.450, -0.458).normalize();
+    const SUN = new THREE.Vector3(-0.845, 0.132, -0.518).normalize();
 
     camera.position.set(46, 12, 44);
 
@@ -285,8 +285,8 @@ export default function build(world) {
         uFogCol: { value: FOG_COL.clone() },
         uFogNear: { value: FOG_NEAR },
         uFogFar: { value: FOG_FAR },
-        uSkyLo: { value: srgb(0x9fa8ae) },        // the grey the ground sits in
-        uSkyHi: { value: srgb(0x6f767c) },        // and the darker grey it mirrors overhead
+        uSkyLo: { value: srgb(0xf2cda2) },        // the warm low sky the ground sits in
+        uSkyHi: { value: srgb(0x5f86bd) },        // and the blue it mirrors overhead
         uSun: { value: SUN.clone() },
         uLPos: { value: WL.map((l) => l.p) },
         uLCol: { value: WL.map((l) => l.c) },
@@ -450,10 +450,10 @@ export default function build(world) {
     const skyMat = new THREE.ShaderMaterial({
         side: THREE.BackSide, depthWrite: false, fog: false,
         uniforms: Object.assign(pick('uTime', 'uSun'), {
-            uZen: { value: daylight(0x5c666e) },
-            uMid: { value: daylight(0x8f979c) },
-            uHor: { value: daylight(0xb6bbbc) },
-            uWarm: { value: daylight(0xd8c8ab) },
+            uZen: { value: daylight(0x2c5591) },
+            uMid: { value: daylight(0x93bada) },
+            uHor: { value: daylight(0xf7c894) },
+            uWarm: { value: daylight(0xff9b46) },
         }),
         vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
         fragmentShader: NOISE_GLSL + /* glsl */`
@@ -464,24 +464,31 @@ export default function build(world) {
             vec3 d = normalize(vDir);
             float h = clamp(d.y, -1.0, 1.0);
 
-            // An overcast sky is brightest just above the horizon and darkest
-            // overhead, which is the opposite of a clear one and most of why a
-            // grey day looks the way it does.
+            // Twenty minutes before the sun goes: deep blue overhead, a pale
+            // band, and the whole western horizon the colour of the inside of
+            // a peach. The gradient runs the same way it did under cloud —
+            // horizon, middle, zenith — but the three colours it runs between
+            // are a different day.
             vec3 col = mix(uHor, uMid, smoothstep(-0.04, 0.30, h));
             col = mix(col, uZen, smoothstep(0.18, 0.92, h));
 
-            // ragged low cloud, dragged east on the same wind that leans the rain
+            // High thin cloud, and much less of it — enough to catch the light
+            // and go copper on its underside, not enough to shut the sky in.
             vec2 cp = d.xz / max(abs(h) + 0.14, 0.14);
-            float c1 = fbm(cp * 0.42 + vec2(uTime * 0.0125, uTime * 0.0048));
-            float c2 = fbm(cp * 1.15 - vec2(uTime * 0.0082, 0.0));
-            float cloud = smoothstep(0.28, 0.82, c1 * 0.72 + c2 * 0.42);
-            col *= 0.86 + cloud * 0.30;
-            col -= vec3(0.030, 0.028, 0.024) * smoothstep(0.5, 1.0, cloud);
-
-            // the sun is in there somewhere, west-north-west, and the cloud is
-            // thin enough over it to go the colour of weak tea
+            float c1 = fbm(cp * 0.34 + vec2(uTime * 0.0090, uTime * 0.0035));
+            float c2 = fbm(cp * 0.95 - vec2(uTime * 0.0060, 0.0));
+            float cloud = smoothstep(0.52, 0.94, c1 * 0.70 + c2 * 0.40);
             float s = max(dot(d, normalize(uSun)), 0.0);
-            col += uWarm * pow(s, 3.2) * 0.14 * (1.0 - cloud * 0.55);
+            col = mix(col, uWarm * (0.55 + 0.75 * pow(s, 1.6)), cloud * 0.55);
+
+            /* And the sun itself, which under cloud was a smear and is now the
+               brightest thing in the world: a wide warm bloom for the sky
+               around it, and a small hard core that the bloom pass will take
+               and turn into the flare you get looking west down Flinders
+               Street at this hour. */
+            col += uWarm * pow(s, 5.0) * 0.85;
+            col += vec3(1.0, 0.86, 0.66) * pow(s, 400.0) * 6.0;
+            col += uWarm * pow(max(s, 0.0), 1.4) * 0.16 * smoothstep(0.28, -0.02, h);
 
             // and below the horizon the dome just carries the fog, so the
             // ground plane running out of the world has nothing to meet
@@ -499,18 +506,20 @@ export default function build(world) {
     /* ============================================================
        4 · lights — four, and no more
 
-       On an overcast day the sky is the light: a hemisphere doing most of the
-       work, a weak cold directional standing in for the sun behind the cloud,
-       and two point lights where warm interior light visibly falls on wet
-       pavement. Everything else that glows in this world glows because its
-       material says so.
+       Twenty minutes before sunset the sun is the light, not the sky: a low
+       directional coming in almost level from the west-north-west, warm
+       enough to be orange on anything facing it, with the hemisphere pulled
+       back to the blue fill an evening sky actually gives. The two shop
+       lights and the tram stop stay — they are only now beginning to tell.
+       Everything else that glows in this world glows because its material
+       says so.
        ============================================================ */
-    scene.add(new THREE.HemisphereLight(0xc4ced6, 0x555049, 1.95));
-    scene.add(new THREE.AmbientLight(0xcbd6de, 0.30));
+    scene.add(new THREE.HemisphereLight(0xbcd4f0, 0x7a6a52, 1.45));
+    scene.add(new THREE.AmbientLight(0xffdcb4, 0.40));
 
-    const sun = new THREE.DirectionalLight(0xd6e0ea, 1.15);
+    const sun = new THREE.DirectionalLight(0xffb166, 2.75);
     sun.position.copy(SUN).multiplyScalar(340);
-    sun.castShadow = false;          // no sun means no shadows; the source page knew it too
+    sun.castShadow = false;          // still no shadow maps: four lights, no passes to spare
     scene.add(sun);
 
     // The concourse mouth under the great arch, which on a wet afternoon is the
@@ -1331,17 +1340,22 @@ export default function build(world) {
             float groove = smoothstep(0.55, 0.18, abs(ax - ${TRS.toFixed(2)})) * road * 0.55;
             float pool = smoothstep(0.52, 0.74, fbm(wp.xz * 0.42 + 4.0)) * road;
             pool = clamp(pool * 0.85 + gutter * 0.75 + groove, 0.0, 1.0);
-            albedo = mix(albedo, albedo * 0.42, pool);
+            albedo = mix(albedo, albedo * 0.82, pool * 0.35);
 
-            float gloss = clamp(road * 0.88 + path * 0.42 + pool * 0.55, 0.0, 1.0);
-            float rip = ripple(wp.xz, uTime) * gloss * det;
+            /* Dry, near enough. The pools, the gutter smear and the ripple
+               were the whole reason this road read as wet; at twenty to six on
+               a clear evening what is left is the low sheen a road always has
+               into the sun, so gloss comes down to about a third and the
+               ripple goes to nothing. */
+            float gloss = clamp(road * 0.30 + path * 0.12 + pool * 0.20, 0.0, 1.0);
+            float rip = 0.0;
 
             vec3 diff, spec;
             wetLight(wp, uCamPos, rip, gloss, diff, spec);
 
-            // On an overcast afternoon the road is mostly a photograph of the
-            // cloud, so the sky term leads and the ten sources are the accents
-            // laid on top of it.
+            // Under cloud the road was mostly a photograph of the sky and the
+            // ten sources were accents on it. Dry and lit from the side, the
+            // albedo leads and the mirror is a quarter of what it was.
             //
             // These two weights were the ones tuned blind, against a program
             // that never compiled, and they had the balance exactly backwards:
@@ -1353,9 +1367,8 @@ export default function build(world) {
             // the 0.80 bloom threshold, so the street stops feeding the bloom
             // pass that is meant for the signals and the destination boxes.
             vec3 col = albedo * (uSkyLo * 0.55 + diff);
-            col += skyMirror(wp, uCamPos, rip) * gloss * (0.52 + 0.22 * n1);
-            col += spec * (0.16 + 0.07 * n1);
-            col += vec3(0.60, 0.66, 0.74) * max(rip, 0.0) * 0.045;
+            col += skyMirror(wp, uCamPos, rip) * gloss * (0.15 + 0.07 * n1);
+            col += spec * (0.09 + 0.04 * n1);
 
             gl_FragColor = vec4(applyFog(col, dist), 1.0);
           }`,
@@ -6060,6 +6073,14 @@ export default function build(world) {
             { ax: 'z', dir: -1, s: 66, fleet: 2118, route: '67', dest: 'CARNEGIE', via: 'SWANSTON ST' },
             { ax: 'x', dir: 1, s: -46, fleet: 272, route: '109', dest: 'BOX HILL', via: 'via Collins St' },
             { ax: 'x', dir: -1, s: 74, fleet: 221, route: '70', dest: 'WATTLE PK', via: 'via Flinders St' },
+            { ax: 'z', dir: 1, s: -232, fleet: 2094, route: '1', dest: 'STH MELB', via: 'SWANSTON ST' },
+            { ax: 'z', dir: 1, s: 108, fleet: 2135, route: '64', dest: 'BRIGHTON', via: 'SWANSTON ST' },
+            { ax: 'z', dir: -1, s: -142, fleet: 2168, route: '72', dest: 'CAMBERWELL', via: 'SWANSTON ST' },
+            { ax: 'z', dir: -1, s: 196, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
+            /* Four more on Swanston and no more than that. A tram is about
+               seven meshes — the shell, the glass, the doors, the bogies, the
+               pantograph and two lit destination boxes — so ten of them is
+               seventy draws, and Swanston is the street you are looking down. */
         ];
         defs.forEach((d, i) => {
             const t = makeTram(d.fleet, d.route, d.dest, d.via);
@@ -6187,16 +6208,22 @@ export default function build(world) {
        walking the footpaths, and two thirds of them have an umbrella up —
        which, seen from above, is what this crossing looks like in the rain. ---- */
     const PEDS = [];
+    /* Both crossings now, not one. Everybody in this world used to be
+       standing at Flinders and Swanston, which is why the four hundred metres
+       north of it read as evacuated. */
     const CORNERS = [[-(SW + 2.2), -(FL + 2.2)], [SW + 2.2, -(FL + 2.2)],
-                     [SW + 2.2, FL + 2.2], [-(SW + 2.2), FL + 2.2]];
+                     [SW + 2.2, FL + 2.2], [-(SW + 2.2), FL + 2.2],
+                     [-(SW + 2.4), -216.9], [SW + 2.4, -216.9],
+                     [-(SW + 2.4), -243.1], [SW + 2.4, -243.1],
+                     [SW + 3.0, -128.6], [-(SW + 3.0), -128.6]];
     let pedBodyIM, pedHeadIM, brollyIM;
     {
         const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c, 0xf6d9bd];
         const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0xc9c3b6, 0x2f4858, 0x53344a, 0xb0533a];
         const UMB = [0x14171b, 0x1b1f24, 0x232a33, 0x2b2320, 0x33272c, 0x1f2a2e, 0x5e1c1f, 0x1d3350, 0x2e2f28];
 
-        for (let i = 0; i < 54; i++) {                    // waiting at the corners
-            const c = irr(0, 3);
+        for (let i = 0; i < 110; i++) {                   // waiting at the crossings
+            const c = irr(0, CORNERS.length - 1);
             PEDS.push({
                 mode: 'wait', corner: c, sp: rr(1.15, 1.65), phase: rr(0, 6.3),
                 x: CORNERS[c][0] + rr(-3.4, 3.4), z: CORNERS[c][1] + rr(-3.4, 3.4),
@@ -6204,11 +6231,16 @@ export default function build(world) {
                 brolly: rnd() < 0.72, lean: rr(-0.10, 0.10),
             });
         }
-        for (let i = 0; i < 46; i++) {                    // walking the footpaths
-            const onSwanston = rnd() < 0.62;
+        /* And a great many more walking, over the whole length of the street
+           rather than the hundred metres either side of the crossing. Swanston
+           between Flinders Lane and Little Collins is one of the busiest
+           footpaths in the country at this hour; two dozen people on it read
+           as a public holiday. */
+        for (let i = 0; i < 180; i++) {                   // walking the footpaths
+            const onSwanston = rnd() < 0.74;
             const side = rnd() < 0.5 ? -1 : 1, dir = rnd() < 0.5 ? -1 : 1;
-            const off = onSwanston ? side * (SW + rr(1.8, 5.6)) : side * (FL + rr(1.8, 5.6));
-            const s = rr(-110, 110);
+            const off = onSwanston ? side * (SW + rr(1.8, 6.2)) : side * (FL + rr(1.8, 5.6));
+            const s = onSwanston ? rr(-338, 232) : rr(-150, 150);
             PEDS.push({
                 mode: 'walk', ax: onSwanston ? 'z' : 'x', off, s, dir,
                 sp: rr(1.1, 1.7), phase: rr(0, 6.3),
@@ -6344,8 +6376,181 @@ export default function build(world) {
         world.ghost(m);
         return m;
     }
-    makeRain(5200, 54, 34, 0.011, 0.95, 19.0, 0.36, srgb(0xb9c2c8));
-    makeRain(1600, 15, 20, 0.019, 1.45, 24.0, 0.26, srgb(0xc9d1d6));
+    /* It has stopped. `makeRain` stays because the weather in this world was
+       always meant to be a thing you could change your mind about, and two
+       calls is the whole of what it costs to turn it back on. */
+
+    /* ============================================================
+       24 · gulls and pigeons
+
+       A city with nobody in it is a model of a city, and the thing that
+       finally stops this one reading as a model is not another building — it
+       is something small moving on the ground at the edge of your eye.
+       Melbourne's version of that is silver gulls, which come up from the bay
+       and stand about on the paving looking for what people drop, and pigeons,
+       which do the same thing closer together and with less confidence.
+
+       Two instanced meshes and a state machine per bird. A bird is walking, or
+       it has stopped to peck at something, or it is putting in a short hop —
+       and the whole difference between a flock that looks alive and one that
+       looks like a screensaver is that they do not change state together, so
+       every timer starts at a different place in its own cycle.
+
+       One of the flocks is not wandering. Six gulls are locked to a spilled
+       box of chips on the plaza and are having the argument gulls have about
+       it: their targets are re-picked every half second within half a metre
+       of the chips, so they shoulder each other off the pile and take short
+       hops to get back on, and none of them ever quite wins.
+       ============================================================ */
+    {
+        const bcol = (g, hex) => {
+            const c = new THREE.Color(hex);
+            const n = g.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return g;
+        };
+        const bmat = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.74 });
+
+        /* A silver gull, forty centimetres of it: a body that leans forward, a
+           head set well up on the neck, the grey mantle over the back that is
+           the only marking you read at this distance, a red bill and red legs.
+           Built nose-north so a heading is one rotation about y. */
+        const gullG = () => {
+            const parts = [];
+            let g = sphG(0.115, 9, 7); put(g, 0, 0.185, 0, 0, 0, 0, 1.0, 0.86, 1.75); parts.push(bcol(g, 0xf4f2ee));
+            g = sphG(0.098, 9, 7); put(g, 0, 0.205, -0.045, 0, 0, 0, 1.0, 0.72, 1.35); parts.push(bcol(g, 0xb9c0c4));
+            g = sphG(0.062, 8, 6); put(g, 0, 0.275, 0.145); parts.push(bcol(g, 0xf6f5f2));
+            g = coneG(0.026, 0.105, 6); put(g, 0, 0.268, 0.215, Math.PI / 2, 0, 0); parts.push(bcol(g, 0xd8402c));
+            g = boxG(0.055, 0.022, 0.135); put(g, 0, 0.176, -0.215, -0.22, 0, 0); parts.push(bcol(g, 0xdedbd4));
+            for (const sx of [-0.042, 0.042]) {
+                g = cylG(0.011, 0.011, 0.115, 5); put(g, sx, 0.062, 0.012); parts.push(bcol(g, 0xd8402c));
+                g = boxG(0.042, 0.014, 0.062); put(g, sx, 0.010, 0.032); parts.push(bcol(g, 0xd8402c));
+            }
+            return merge(parts);
+        };
+        /* And a feral pigeon, which is rounder, lower, greyer and has the one
+           green-purple patch on its neck that is the whole reason anybody
+           looks at a pigeon twice. */
+        const pigeonG = () => {
+            const parts = [];
+            let g = sphG(0.098, 9, 7); put(g, 0, 0.135, 0, 0, 0, 0, 1.0, 0.90, 1.55); parts.push(bcol(g, 0x7d8288));
+            g = sphG(0.086, 9, 7); put(g, 0, 0.150, -0.030, 0, 0, 0, 1.0, 0.74, 1.20); parts.push(bcol(g, 0x5c6167));
+            g = sphG(0.050, 8, 6); put(g, 0, 0.208, 0.098); parts.push(bcol(g, 0x6a7076));
+            g = sphG(0.040, 8, 6); put(g, 0, 0.172, 0.070, 0, 0, 0, 1.0, 0.70, 1.0); parts.push(bcol(g, 0x2f6b52));
+            g = coneG(0.017, 0.062, 6); put(g, 0, 0.206, 0.148, Math.PI / 2, 0, 0); parts.push(bcol(g, 0x33363a));
+            g = boxG(0.052, 0.018, 0.125); put(g, 0, 0.126, -0.175, -0.16, 0, 0); parts.push(bcol(g, 0x6a7076));
+            for (const sx of [-0.034, 0.034]) {
+                g = cylG(0.009, 0.009, 0.082, 5); put(g, sx, 0.046, 0.010); parts.push(bcol(g, 0xc45a4a));
+            }
+            return merge(parts);
+        };
+
+        /* Where they are. The chips are on the plaza in front of the station
+           canopy, which is exactly where a dropped box of chips ends up. */
+        const CHIP = { x: 31.5, z: -142.5 };
+        const FLOCKS = [
+            { kind: 0, n: 7,  x: CHIP.x, z: CHIP.z, r: 1.9, fight: true },
+            { kind: 0, n: 9,  x: 27.0,  z: 44.0,   r: 10.0 },
+            { kind: 0, n: 5,  x: -6.0,  z: -104.0, r: 7.0 },
+            { kind: 0, n: 4,  x: 62.0,  z: 96.0,   r: 9.0 },
+            { kind: 1, n: 14, x: 30.0,  z: -196.0, r: 5.5 },
+            { kind: 1, n: 11, x: 14.6,  z: -62.0,  r: 4.4 },
+            { kind: 1, n: 12, x: 74.0,  z: 30.0,   r: 6.5 },
+            { kind: 1, n: 9,  x: -14.8, z: -274.0, r: 4.0 },
+        ];
+        const BIRDS = [];
+        for (const f of FLOCKS) {
+            for (let i = 0; i < f.n; i++) {
+                const a = rr(0, 6.283), rad = f.r * Math.sqrt(rnd());
+                BIRDS.push({
+                    kind: f.kind, fight: !!f.fight, hx: f.x, hz: f.z, hr: f.r,
+                    x: f.x + Math.cos(a) * rad, z: f.z + Math.sin(a) * rad,
+                    tx: f.x, tz: f.z, ry: rr(0, 6.283), y: 0,
+                    st: irr(0, 2), t: rr(0.1, 1.4), sp: rr(0.55, 1.05) * (f.kind ? 0.72 : 1.0),
+                    bob: rr(0, 6.283),
+                });
+            }
+        }
+        const nG = BIRDS.filter((b) => b.kind === 0).length;
+        const nP = BIRDS.length - nG;
+        const gullIM = new THREE.InstancedMesh(gullG(), bmat(), nG);
+        const pigIM = new THREE.InstancedMesh(pigeonG(), bmat(), nP);
+        scene.add(gullIM); scene.add(pigIM);
+        world.ghost(gullIM); world.ghost(pigIM);
+
+        // the chips they are arguing over, and the box they came out of
+        {
+            const parts = [];
+            let g = boxG(0.20, 0.05, 0.14); put(g, CHIP.x, KERB_H + 0.03, CHIP.z, 0, 0.4, 0);
+            parts.push(bcol(g, 0xe8d9a8));
+            for (let i = 0; i < 22; i++) {
+                const a = rr(0, 6.283), rad = rr(0.05, 0.95);
+                g = boxG(rr(0.035, 0.085), 0.022, 0.022);
+                put(g, CHIP.x + Math.cos(a) * rad, KERB_H + 0.012, CHIP.z + Math.sin(a) * rad, 0, rr(0, 3.14), 0);
+                parts.push(bcol(g, i % 4 ? 0xe4c878 : 0xd8b45e));
+            }
+            const chips = mesh(merge(parts), bmat());
+            scene.add(chips); world.ghost(chips);
+        }
+
+        /* Nothing in here allocates. The matrix and its three parts are made
+           once and composed into every bird every frame, which is the whole
+           reason ninety of them cost what they cost. */
+        const _bm = new THREE.Matrix4();
+        const _bp = new THREE.Vector3();
+        const _bq = new THREE.Quaternion();
+        const _be = new THREE.Euler();
+        const _bs = new THREE.Vector3(1, 1, 1);
+
+        world.frame((dt) => {
+            let gi = 0, pi = 0;
+            for (const b of BIRDS) {
+                b.t -= dt;
+                if (b.t <= 0) {
+                    /* A bird that has arrived decides again. The fighters skip
+                       standing still: there is a chip under somebody else. */
+                    b.st = b.fight ? (rnd() < 0.45 ? 2 : 0)
+                                   : (rnd() < 0.44 ? 1 : (rnd() < 0.82 ? 0 : 2));
+                    if (b.st === 0) {
+                        const a = rr(0, 6.283), rad = b.hr * Math.sqrt(rnd());
+                        b.tx = b.hx + Math.cos(a) * rad;
+                        b.tz = b.hz + Math.sin(a) * rad;
+                        b.t = rr(0.7, 2.0);
+                    } else if (b.st === 1) {
+                        b.t = rr(0.5, 1.5);
+                    } else {
+                        const a = rr(0, 6.283), rad = b.fight ? rr(0.15, 0.85) : rr(0.4, 1.4);
+                        b.tx = (b.fight ? b.hx : b.x) + Math.cos(a) * rad;
+                        b.tz = (b.fight ? b.hz : b.z) + Math.sin(a) * rad;
+                        b.t = 0.42;
+                    }
+                }
+                const dx = b.tx - b.x, dz = b.tz - b.z;
+                const d = Math.hypot(dx, dz);
+                if (b.st !== 1 && d > 0.04) {
+                    const v = (b.st === 2 ? 2.6 : 1.0) * b.sp;
+                    const k = Math.min(1, (v * dt) / d);
+                    b.x += dx * k; b.z += dz * k;
+                    // turn towards where it is going rather than snapping
+                    const want = Math.atan2(dx, dz);
+                    let turn = want - b.ry;
+                    while (turn > Math.PI) turn -= 6.283;
+                    while (turn < -Math.PI) turn += 6.283;
+                    b.ry += turn * Math.min(1, dt * 9.0);
+                }
+                b.y = b.st === 2 ? Math.sin(Math.PI * clamp(1 - b.t / 0.42, 0, 1)) * 0.32 : 0;
+                b.bob += dt * (b.st === 1 ? 7.5 : 3.0);
+                const pitch = b.st === 1 ? 0.75 + Math.sin(b.bob) * 0.30 : Math.sin(b.bob) * 0.05;
+
+                _be.set(pitch, b.ry, 0);
+                _bm.compose(_bp.set(b.x, KERB_H + b.y, b.z), _bq.setFromEuler(_be), _bs);
+                if (b.kind === 0) gullIM.setMatrixAt(gi++, _bm); else pigIM.setMatrixAt(pi++, _bm);
+            }
+            gullIM.instanceMatrix.needsUpdate = true;
+            pigIM.instanceMatrix.needsUpdate = true;
+        });
+    }
 
     /* ============================================================
        20 · what moves
