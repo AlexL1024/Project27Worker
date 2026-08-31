@@ -5,11 +5,11 @@
   "parts" : {
     "fedsquare_00" : {
       "position" : [
+        -7.101,
         0,
-        0,
-        0
+        -176.2437
       ],
-      "rotationY" : 6.618
+      "rotationY" : 0
     },
     "station_00" : {
       "position" : [
