@@ -3466,7 +3466,10 @@ export default function build(world) {
 
         // NGV Australia in the Ian Potter Centre, holding the Swanston Street
         // frontage and the tallest thing on the site after SBS
-        fedMass(MX(31, 0, 62, 0, -0.02, 0), 22, 40, 20, { clad: 'sand', rise: 3.8, plant: 1, cladRoof: 2 });
+        /* and the tall wing behind it, which stood from z 42 to 82 hard on the
+           Swanston boundary. With the corner mass gone it was the thing still
+           standing in the entrance's quadrant, so it goes too. What is left of
+           Federation Square starts at the Atrium and runs east. */
         fedMass(MX(37, 0, 92, 0, 0.11, 0), 18, 22, 16, { clad: 'sand', rise: 3.0 });
         // its lower northern wing, stepping down to the Flinders Street corner
         /* The low northern wing that used to stand on the Flinders Street
@@ -7306,237 +7309,13 @@ export default function build(world) {
 
         }
 
-        /* ------------------------------------------------------------
-           21h · the other end — Flinders Street, at Federation Square
-
-           The same station, four hundred metres away, and nothing like the
-           same object. City Square's entrance is a building: batten walls
-           either side of the hole, a head canopy over the top of it, a lift
-           and a pavilion on the plaza beside it. This one is a hole in the
-           footpath and nothing else. There is no head-house on the real one
-           and there is none here — what you see from across Flinders Street is
-           a rectangle of frameless glass set into the paving, an escalator
-           bank going down out of it, and the descent disappearing under
-           Federation Square's forecourt.
-
-           So the vocabulary is 21f's and the object is not. Escalators, a
-           stair, an inclined glass balustrade with a lit handrail along it,
-           and a lined concrete room at the bottom: all of that is the same and
-           accumulates into the same arrays, because it is the same station.
-           What is different is everything above the paving. The balustrade
-           round the opening is frameless — clear panes in a slim brushed-steel
-           base shoe with a thin cap rail on top, rather than City Square's
-           bronze — the signs stand on a slim post instead of hanging off a
-           canopy, and along the kerb beside it there is the grey tubular guard
-           railing that stops people stepping into Flinders Street.
-
-           Two things about the shape of it are collision rather than design.
-
-           The flight runs south, which is the only direction the footpath will
-           take it: twenty-six and a half metres of escalator at thirty degrees
-           does not fit in seven metres of kerb-to-building, so the opening is
-           four metres of it and the rest goes under Federation Square's
-           forecourt, which is where the real one goes as well. The slab over
-           that is the footpath's own, left uncut — a tunnel with the roof
-           taken off is a trench.
-
-           And the frameless balustrade is two objects rather than one. Every
-           pane here — the three round the opening and the six standing on the
-           escalators and the stair — is ghosted, because a metre of glass
-           standing on the paving merges with the paving and the walk would
-           offer the top of the cap rail as somewhere to stand, which is the
-           same thing that put a person a metre above the steps at City Square.
-           What stops anybody is the base shoe and the cap rail themselves:
-           they are solid, they are a metre apart, and the walk merges anything
-           closer together than 1.4 m into one span — so a shoe at the paving
-           and a rail at chest height come out of the encoder as the wall the
-           balustrade actually is, with the glass between them costing nothing.
-           Which is also the truth of the thing: in a frameless balustrade the
-           glass is the infill and the shoe is the structure.
-           ------------------------------------------------------------ */
-        {
-            const D = FQ.DECK;
-            const F2 = { ZT: FQ.VZ0, ZB: FQ.ZB, YT: D, YB: FQ.HALL };
-            // Read off the two ends, the way 21f's is, and for the same
-            // reason: the two ends are the footpath and the floor of the room,
-            // and an escalator that arrives half a metre under its landing is
-            // a hole somebody falls down.
-            const slope = (F2.YB - F2.YT) / (F2.ZB - F2.ZT);      // −15.16 over 26.5
-            const yAt = (z) => F2.YT + (z - F2.ZT) * slope;
-            const DOWN = Math.sign(F2.ZB - F2.ZT);                 // +1: south, under the forecourt
-            const OVER = 1.4;
-            const ZB2 = F2.ZB + DOWN * OVER;
-
-            const S = (k, x0, y0, z0, x1, y1, z1) => {
-                const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
-                put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
-                P.sSign.push(sgn(g, k));
-            };
-
-            /* ---- the flight: two escalators and a stair beside them. Two,
-                    not three — this is the quieter end of the station and the
-                    footpath is seven metres wide. The trusses are deliberately
-                    wider than what stands on them and overlap each other,
-                    because the walk's cells are about a metre and a half here
-                    and the gaps between the machines are two hundred
-                    millimetres: a cell centre that lands in a gap must still
-                    find solid, or the bank has a slot down it. ---- */
-            const escalator = (cx, w) => {
-                rampZ(w, 0.24, F2.ZT, F2.YT - 0.12, ZB2, yAt(ZB2) - 0.12, cx, P.sSteel);
-                rampZ(w + 0.90, 1.30, F2.ZT, F2.YT - 0.95, ZB2, yAt(ZB2) - 0.95, cx, P.sCrete);
-                for (const s of [-1, 1]) {
-                    const bxx = cx + s * (w / 2 + 0.14);
-                    rampZ(0.10, 1.02, F2.ZT, F2.YT + 0.51, ZB2, yAt(ZB2) + 0.51, bxx, P.sPane);
-                    rampZ(0.16, 0.11, F2.ZT, F2.YT + 1.07, ZB2, yAt(ZB2) + 1.07, bxx, P.gTrim);
-                }
-                for (const zz of [F2.ZT + DOWN * 0.4, F2.ZB - DOWN * 0.4]) {
-                    bx3(P.sTrim, null, cx - w / 2, yAt(zz) - 0.02, zz - 0.55, cx + w / 2, yAt(zz) + 0.05, zz + 0.55);
-                }
-            };
-            escalator(26.60, 1.62);
-            escalator(28.40, 1.62);
-
-            {
-                const cx = 31.60, w = 3.00, n = 83;
-                rampZ(w + 1.60, 1.10, F2.ZT, F2.YT - 0.80, ZB2, yAt(ZB2) - 0.80, cx, P.sCrete);
-                for (let i = 0; i < n; i++) {
-                    const z0 = F2.ZT - (F2.ZT - F2.ZB) * (i / n);
-                    const z1 = F2.ZT - (F2.ZT - F2.ZB) * ((i + 1) / n);
-                    bx3(P.sCrete, null, cx - w / 2, yAt(z1) - 0.34, z0, cx + w / 2, yAt(z1), z1);
-                }
-                for (const s of [-1, 1]) {
-                    const bxx = cx + s * (w / 2 + 0.10);
-                    rampZ(0.09, 1.02, F2.ZT, F2.YT + 0.53, ZB2, yAt(ZB2) + 0.53, bxx, P.sPane);
-                    rampZ(0.15, 0.10, F2.ZT, F2.YT + 1.09, ZB2, yAt(ZB2) + 1.09, bxx, P.gTrim);
-                }
-            }
-
-            /* ---- the frameless balustrade round the opening.
-
-                   Three runs and no fourth: the north edge is the head of the
-                   flight and you walk straight into it off the footpath, which
-                   is the whole of what an entrance without a building is. The
-                   far run stands on the two hundred millimetres of paving
-                   between the opening and the forecourt, over the top of the
-                   shaft as it goes under. ---- */
-            {
-                const rail = (x0, z0, x1, z1, ox, oz) => {
-                    bx3(P.sPane, null, x0, D, z0, x1, D + 1.12, z1);            // the pane, ghosted
-                    // Both of these are slimmer than they want to be drawn.
-                    // A shoe and a cap heavy enough to see from across the
-                    // road stop reading as steel sections and start reading as
-                    // two planks lying round a hole, which is what the first
-                    // pass of this looked like — the rectangle is made by the
-                    // light line and by the gap between the two lines, not by
-                    // the sections themselves.
-                    bx3(P.sSteel, null, x0 - 0.03, D, z0 - 0.03,
-                                        x1 + 0.03, D + 0.10, z1 + 0.03);        // the base shoe
-                    bx3(P.sSteel, null, x0 - 0.025, D + 1.10, z0 - 0.025,
-                                        x1 + 0.025, D + 1.16, z1 + 0.025);      // and the cap rail
-                    // The light line recessed into the face of the shoe that
-                    // looks into the opening, which is what makes the
-                    // rectangle read from the far kerb once the sun is off the
-                    // paving. Emissive; there is no light in it, and there is
-                    // no light to spare.
-                    const g = boxG(ox ? 0.05 : Math.abs(x1 - x0) + 0.12, 0.06,
-                                   oz ? 0.05 : Math.abs(z1 - z0) + 0.12);
-                    put(g, (x0 + x1) / 2 - ox * 0.06, D + 0.06, (z0 + z1) / 2 - oz * 0.06);
-                    P.sSign.push(sgn(g, 'strip'));
-                };
-                rail(FQ.VX0 - 0.06, FQ.VZ0, FQ.VX0, FQ.VZ1, -1, 0);            // west
-                rail(FQ.VX1, FQ.VZ0, FQ.VX1 + 0.06, FQ.VZ1, 1, 0);             // east
-                rail(FQ.VX0 - 0.06, FQ.VZ1, FQ.VX1 + 0.06, FQ.VZ1 + 0.06, 0, 1); // and across the far end
-            }
-
-            /* ---- the tactile indicators at the head of the descent, in the
-                    brass they are laid in here, and the wayfinding beside
-                    them: the station's name on a slim post at the corner of
-                    the opening, the roundel under it, and one more panel flat
-                    on the balustrade facing the crossing. ---- */
-            bx3(P.sTrim, null, FQ.VX0 + 0.10, D, FQ.VZ0 - 0.78, FQ.VX1 - 0.10, D + 0.03, FQ.VZ0 - 0.02);
-
-            // The post stands behind its own blades rather than through them:
-            // a sign box two centimetres thick and a post twelve is a post
-            // that reads as a stripe down the middle of the lettering from the
-            // one side anybody looks at it from.
-            bx3(P.sSteel, null, 23.44, D, 16.18, 23.56, D + 3.30, 16.30);
-            S('townhall', 22.55, D + 2.36, 16.10, 24.45, D + 2.98, 16.14);
-            S('metro', 22.72, D + 1.55, 16.10, 24.28, D + 2.17, 16.14);
-            S('metro', 24.90, D + 0.40, 17.10, 24.93, D + 0.82, 18.20);
-
-            /* ---- the guard railing along the kerb, either side of the
-                    opening and not across the front of it — which is where the
-                    real one stops as well, because the front of it is where
-                    everybody is walking in. Two rails on posts, a metre high,
-                    and in the encoder the whole thing merges into the one span
-                    it is meant to be: a barrier. ---- */
-            {
-                const guard = (x0, x1) => {
-                    const zr = 14.10;
-                    const n = Math.round((x1 - x0) / 1.9);
-                    for (let i = 0; i <= n; i++) {
-                        const g = cylG(0.045, 0.045, 1.02, 8);
-                        put(g, x0 + (x1 - x0) * (i / n), D + 0.51, zr);
-                        P.sSteel.push(g);
-                    }
-                    for (const yy of [0.50, 0.98]) {
-                        const g = cylG(0.035, 0.035, x1 - x0, 8);
-                        put(g, (x0 + x1) / 2, D + yy, zr, 0, 0, Math.PI / 2);
-                        P.sSteel.push(g);
-                    }
-                };
-                guard(12.60, 20.50);
-                guard(36.60, 46.10);
-            }
-
-            /* ---- the bottom of the shaft, and it is the same room as the one
-                    at the bottom of the other flight: fifteen metres under the
-                    footpath, four walls and a floor. The far wall used to be
-                    where the concourse would have been and was a wall anyway,
-                    because the station under this world had been taken out.
-                    It has the way through to the south link hall cut out of it
-                    now — the same seven metres of opening the City Square end
-                    has, dead ahead of the flight, because this is the same
-                    station and it is section 28 that put it back.
-
-                    Lined the whole way up to the soffit of the footpath slab,
-                    so the sides of the shaft are concrete rather than a hole
-                    in the air with escalators hanging in it — and lit by
-                    nothing. The four real-time lights are all spent above
-                    ground; what carries down here is the third of a stop of
-                    emissive in the concrete itself, the lit handrails on the
-                    balustrades, and a run of light strips down the two walls
-                    where the shaft is deep enough for them to clear the
-                    paving. ---- */
-            {
-                const T = 0.5, TOP = FQ.SOFF;
-                const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
-                C_(FQ.IX0 - T, FQ.HALL - T, FQ.IZN - T, FQ.IX1 + T, FQ.HALL, FQ.IZS + T);   // the floor
-                /* west, in two with a way through it — the link out to the
-                   platform leaves here, the same as at City Square */
-                const WZ0 = 38.5, WZ1 = 44.5, WH = FQ.HALL + 5.2;
-                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX0, TOP, WZ0);
-                C_(FQ.IX0 - T, FQ.HALL, WZ1, FQ.IX0, TOP, FQ.IZS + T);
-                C_(FQ.IX0 - T, WH, WZ0, FQ.IX0, TOP, WZ1);
-                C_(FQ.IX1, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZS + T);               // east
-                C_(FQ.IX0 - T, FQ.HALL, FQ.IZN - T, FQ.IX1 + T, TOP, FQ.IZN);               // the head end
-                // and the far one, which is now two jambs and a head over the
-                // way into the south link hall — see section 28l
-                const OX0 = 26.0, OX1 = 33.0, OH = FQ.HALL + 3.6;
-                C_(FQ.IX0 - T, FQ.HALL, FQ.IZS, OX0, TOP, FQ.IZS + T);
-                C_(OX1, FQ.HALL, FQ.IZS, FQ.IX1 + T, TOP, FQ.IZS + T);
-                C_(OX0, OH, FQ.IZS, OX1, TOP, FQ.IZS + T);
-
-                for (let i = 0; i < 6; i++) {
-                    const zz = 21.5 + i * 3.4;
-                    for (const s of [-1, 1]) {
-                        const g = boxG(0.06, 0.20, 2.20);
-                        put(g, s < 0 ? FQ.IX0 + 0.03 : FQ.IX1 - 0.03, yAt(zz) + 2.35, zz);
-                        P.sSign.push(sgn(g, 'strip'));
-                    }
-                }
-            }
-        }
+        /* 21h, the Federation Square entrance, was here and is gone. It was
+           a rectangle cut in the footpath with a glass balustrade round it and
+           two escalators running south, away from the station, into a lined
+           room that then had to be walked back out of. Section 30 builds the
+           entrance the photograph shows instead: the canopy and its glazed
+           pavilion over the whole corner, and the flights running north, which
+           is the way the platform is. */
 
         /* ---- the bollards along the Swanston edge, stainless and knocked
                 about, which is how you know where the footpath stops and the
@@ -14934,6 +14713,7 @@ export default function build(world) {
            climb. Landing on the platform is also what the station itself does:
            the escalators come down onto it near the end. */
         const EX = 8.5;
+        const ST = KERB_H;           // the street the pavilion stands on
 
         /* ---- Exit 1, off the City Square shaft, out to the Collins end ---- */
         /* Stopped at the room's own inside face, not run through it. Taken
@@ -14951,11 +14731,73 @@ export default function build(world) {
         foot(-214.0, 1);
 
         /* ---- Exit 3, off the Federation Square shaft, out to the south ---- */
-        passX(41.5, LX, 24.7, LINK, 4.0);
-        passZ(LX, 44.0, 6.0, LINK, 4.0);
-        bx(A, -2.4, LINK - 0.5, 1.5, LX + 2.3, LINK, 6.5);
-        flight(EX, 4.0, 2.0, LINK, -20.0, DEEP);
-        foot(-20.0, -1);
+        /* ---- Exit 3, Federation Square ----
+
+           The flights run north now, which is the whole point of rebuilding
+           it: the old pair ran south, away from the platform, into a room you
+           then had to walk back out of. These go the way you are going. Two
+           down the ground east of the vault, a bridge west over the eastern
+           running tunnel, and a last flight onto the platform at its end.
+
+           The bridge is at -19 rather than -18. The vault is a cylinder and at
+           x = 8.5 its shell is at -16.27, so a deck a metre and a half under
+           it is inside the grid's merge and the two would fuse into one solid
+           over the platform. */
+        const FZ = 29.6;                                  // the descent, on the opening's line
+        flight(FZ, 4.4, 15.0, ST, 1.0, -8.9);             // out of the pavilion, heading north
+        bx(A, FZ - 2.4, -9.4, -4.5, FZ + 2.4, -8.9, 1.5); // the landing between the flights
+        flight(FZ, 4.4, -4.0, -8.9, -20.0, -19.0);
+        passX(-20.0, EX, FZ + 2.4, -19.0, 4.4);           // the bridge over the tunnel
+        bx(A, EX - 2.4, -19.5, -22.5, FZ + 2.4, -19.0, -17.5);
+        flight(EX, 4.0, -22.0, -19.0, -34.0, DEEP);       // and down onto the platform
+        foot(-34.0, -1);
+
+        /* ---- and what stands over it: the canopy on the corner ----
+
+           One plate, thin, flat and long, with the dark violet edge that is
+           the only colour on it, floating clear of a glazed pavilion on slim
+           round columns. It takes the whole quadrant, which is why the two
+           Federation Square masses that used to stand here are gone. */
+        {
+            const CX0 = 19.5, CX1 = 45.5, CZ0 = 12.0, CZ1 = 39.0;
+            const CY0 = 5.35, TH = 0.30;
+            bx(A, CX0, CY0, CZ0, CX1, CY0 + TH, CZ1);                       // the plate
+            for (const e of [[CX0 - 0.9, CX0], [CX1, CX1 + 0.9]])           // and its overhangs
+                bx(A, e[0], CY0 + 0.06, CZ0 - 0.9, e[1], CY0 + TH, CZ1 + 0.9);
+            bx(A, CX0 - 0.9, CY0 + 0.06, CZ0 - 0.9, CX1 + 0.9, CY0 + TH, CZ0);
+            bx(A, CX0 - 0.9, CY0 + 0.06, CZ1, CX1 + 0.9, CY0 + TH, CZ1 + 0.9);
+            // the violet band round the edge of it, which is what you see from
+            // the crossing — everything else up there is pale
+            const V = [];
+            V.push(boxG(CX1 - CX0 + 1.8, 0.20, 0.10));
+            put(V[0], (CX0 + CX1) / 2, CY0 + 0.11, CZ0 - 0.94);
+            let g = boxG(CX1 - CX0 + 1.8, 0.20, 0.10);
+            put(g, (CX0 + CX1) / 2, CY0 + 0.11, CZ1 + 0.94); V.push(g);
+            for (const x of [CX0 - 0.94, CX1 + 0.94]) {
+                g = boxG(0.10, 0.20, CZ1 - CZ0 + 1.8);
+                put(g, x, CY0 + 0.11, (CZ0 + CZ1) / 2); V.push(g);
+            }
+            for (const q of V) Adk.push(q);
+            // the columns, and the glazed pavilion they stand among
+            for (let i = 0; i <= 4; i++) for (const z of [CZ0 + 2.2, CZ1 - 2.2]) {
+                const x = CX0 + 2.2 + (CX1 - CX0 - 4.4) * (i / 4);
+                g = cylG(0.16, 0.17, CY0 - ST, 12); put(g, x, (ST + CY0) / 2, z); Ast.push(g);
+            }
+            const GX0 = 23.0, GX1 = 40.0, GZ0 = 14.5, GZ1 = 33.0, GH = 3.30;
+            for (const z of [GZ0, GZ1]) bx(Agl, GX0, ST, z - 0.03, GX1, ST + GH, z + 0.03);
+            for (const x of [GX0, GX1]) bx(Agl, x - 0.03, ST, GZ0, x + 0.03, ST + GH, GZ1);
+            for (let i = 0; i <= 8; i++) {                                   // the mullions
+                const x = GX0 + (GX1 - GX0) * (i / 8);
+                for (const z of [GZ0, GZ1]) bx(Ast, x - 0.05, ST, z - 0.06, x + 0.05, ST + GH + 0.1, z + 0.06);
+            }
+            for (const z of [GZ0, GZ1]) bx(Ast, GX0, ST + GH, z - 0.08, GX1, ST + GH + 0.12, z + 0.08);
+            // the void the flights leave through, and the rail round it
+            for (const x of [FZ - 2.7, FZ + 2.7])
+                bx(Agl, x - 0.03, ST, 12.6, x + 0.03, ST + 1.12, 17.0);
+            for (const x of [FZ - 2.7, FZ + 2.7])
+                bx(Ast, x - 0.06, ST + 1.10, 12.6, x + 0.06, ST + 1.20, 17.0);
+            bx(Alit, FZ - 2.2, CY0 - 0.10, CZ0 + 1.0, FZ + 2.2, CY0 - 0.02, CZ1 - 1.0);
+        }
 
         const put30 = (arr, mat, name, ghost) => {
             if (!arr.length) return;
