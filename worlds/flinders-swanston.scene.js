@@ -4802,9 +4802,11 @@ export default function build(world) {
            footpath: pale ash and brass with cloth on rails, near-black
            lacquer with lit cases in it, oiled boards under white tablecloths.
 
-           `SHOPFOLK` collects the people; they are stood up as two instanced
-           meshes at the end of the section, because forty people modelled
-           properly would be forty draws.
+           There is nobody behind any of the counters. There was — forty
+           shopkeepers, stood up as two instanced meshes at the end of the
+           section — and they have been taken out along with everybody else in
+           this world. The rooms are lit and open and empty, and the fitouts
+           are what has to carry them now.
 
            The names are two tiers and the comment at each call site says
            which: the ones I know are on these blocks — the burger shop on the
@@ -4812,7 +4814,6 @@ export default function build(world) {
            the rest, invented tenants sized to the tenancy. I cannot check a
            street directory from here, and a guess dressed up as a fact is
            worse than an honest invention. */
-        const SHOPFOLK = [];
         const shopUnit = (face, t0, t1, axis, kind, sign) => {
             const span = Math.abs(t1 - t0), cz = (t0 + t1) / 2;
             if (span < 3.0) return;
@@ -4880,15 +4881,6 @@ export default function build(world) {
                 const g = coneG(r, h, 8); put(g, x, y, z, Math.PI, 0, 0);
                 g.applyMatrix4(M0); P.shopLit.push(shp(g, 'warm')); return g;
             };
-            const person = (x, z, ry, cloth, skin) => {
-                _v.set(x, 0, z).applyMatrix4(M0);
-                SHOPFOLK.push({ x: _v.x, z: _v.z,
-                                ry: ry + (axis === 'z' ? Math.PI
-                                        : axis === 'X' ? Math.PI / 2 : -Math.PI / 2),
-                                cloth, skin });
-            };
-            const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0x2f4858];
-            const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c];
             const pick = (a) => a[irr(0, a.length - 1)];
 
             // ---- the shopfront: a riser and glass either side of the entrance
@@ -5055,8 +5047,6 @@ export default function build(world) {
                         LL('warm', x - 0.06, 3.66, tz - 0.06, x + 0.06, 3.71, tz + 0.06);
                     }
                 }
-                person(6.12, cz0 + 0.55, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(3.40, ZW + Math.min(1.05, band - 0.5), Math.PI, pick(CLOTH), pick(SKIN));
 
             } else if (kind === 'jewel') {
                 /* Almost nothing in the room, and all of it lit from inside.
@@ -5127,8 +5117,6 @@ export default function build(world) {
                 }
                 // and a downlight over each arm of the horseshoe
                 for (let i = 0; i < 4; i++) LS(1.45 + i * 1.15, Y_CEIL - 0.66, ZW + 0.62, 0.10, 0.15);
-                person(3.15, ZW + Math.min(1.32, band - 0.42), Math.PI, pick(CLOTH), pick(SKIN));
-                person(5.30, ZL - 0.55, Math.PI / 2, pick(CLOTH), pick(SKIN));
 
             } else {
                 /* Oiled boards, a green banquette the length of the far wall,
@@ -5203,9 +5191,6 @@ export default function build(world) {
                 // and a menu on a stand where you come in
                 LF(0x4a3a2a, 0.46, 0.14, ZL - 0.44, 0.62, 1.16, ZL - 0.30);
                 LL('warm', 0.42, 0.72, ZL - 0.44, 0.46, 1.12, ZL - 0.30);
-                person(6.14, ZW + 1.10, -Math.PI / 2, pick(CLOTH), pick(SKIN));
-                person(1.60, ZW + 0.28, 0, pick(CLOTH), pick(SKIN));
-                person(2.85, ZW + Math.min(1.45, band - 0.35), Math.PI, pick(CLOTH), pick(SKIN));
             }
         };
         /* Where a unit's entrance falls, in the street's own numbers, so that
@@ -6068,38 +6053,6 @@ export default function build(world) {
                     scene.add(m);
                     world.part(`${tag}far_00`, m);
                 }
-            }
-        }
-
-        /* ---- the people working in them.
-
-           Forty shopkeepers modelled properly would be forty draws, so they
-           are two instanced meshes with a colour on each instance — a body and
-           a head, the same trick the crowd on the crossing already uses. They
-           do not move, because somebody standing behind a counter mostly does
-           not, and a shop with nobody in it reads as a shop that has closed.
-           Instanced geometry is left out of the walk's grid by the app, which
-           is right here: you should be able to walk past a person, not into
-           one who is not really where the buffer says. ---- */
-        if (SHOPFOLK.length) {
-            const bodyP = [];
-            let g = boxG(0.42, 0.86, 0.26); put(g, 0, 0.43, 0); bodyP.push(g);
-            g = boxG(0.46, 0.62, 0.29); put(g, 0, 1.16, 0); bodyP.push(g);
-            for (const sd of [-0.30, 0.30]) { g = boxG(0.13, 0.55, 0.15); put(g, sd, 1.16, 0); bodyP.push(g); }
-            const headP = sphG(0.115, 8, 6); put(headP, 0, 1.60, 0);
-            const bodyIM = new THREE.InstancedMesh(merge(bodyP), stdMat(0xffffff, { roughness: 0.80 }), SHOPFOLK.length);
-            const headIM = new THREE.InstancedMesh(headP, stdMat(0xffffff, { roughness: 0.86 }), SHOPFOLK.length);
-            const tint = new THREE.Color();
-            SHOPFOLK.forEach((f, i) => {
-                const m = MX(f.x, 0.14, f.z, 0, f.ry, 0);
-                bodyIM.setMatrixAt(i, m); headIM.setMatrixAt(i, m);
-                tint.copy(srgb(f.cloth)); bodyIM.setColorAt(i, tint);
-                tint.copy(srgb(f.skin)); headIM.setColorAt(i, tint);
-            });
-            for (const im of [bodyIM, headIM]) {
-                im.instanceMatrix.needsUpdate = true;
-                if (im.instanceColor) im.instanceColor.needsUpdate = true;
-                scene.add(im); world.ghost(im);
             }
         }
 
@@ -7566,23 +7519,10 @@ export default function build(world) {
             g = sphG(0.15, 10, 6); put(g, s * 1.02, 2.720, s * (IZ - 0.62)); fit.push(atl(g, 6, 1));
         }
 
-        /* And the people in it, because a lit saloon with nobody in it reads
-           as a museum piece rather than a tram at twenty to five. Seven
-           sitting and three standing, the same seven and three in every car —
-           at the distance you see nine trams from, nobody is going to check. */
-        const SIT = [[-6.30, -1], [-3.22, 1], [-2.34, -1], [1.46, 1], [2.34, -1], [4.10, 1], [6.30, -1]];
-        SIT.forEach((p, i) => {
-            const z = p[0], x = p[1] * 0.72 + p[1] * (i % 2 ? -0.20 : 0.20), f = z < 0 ? -1 : 1;
-            g = boxG(0.40, 0.52, 0.30); put(g, x, 1.680, z + f * 0.02); fit.push(atl(g, i % 3, 2));
-            g = sphG(0.105, 8, 6); put(g, x, 2.030, z + f * 0.02); fit.push(atl(g, 3, 2));
-            g = sphG(0.108, 8, 6); put(g, x, 2.065, z + f * 0.02, 0, 0, 0, 1, 0.62, 1); fit.push(atl(g, 4, 2));
-        });
-        [[-0.55, -2.90, 0], [0.58, 1.35, 1], [-0.60, 3.40, 2]].forEach((p) => {
-            g = boxG(0.42, 0.62, 0.30); put(g, p[0], 1.560, p[1]); fit.push(atl(g, p[2], 2));
-            g = boxG(0.34, 0.52, 0.22); put(g, p[0], 1.000, p[1]); fit.push(atl(g, 7, 2));
-            g = sphG(0.108, 8, 6); put(g, p[0], 1.960, p[1]); fit.push(atl(g, 3, 2));
-            g = sphG(0.111, 8, 6); put(g, p[0], 1.996, p[1], 0, 0, 0, 1, 0.62, 1); fit.push(atl(g, 4, 2));
-        });
+        /* The saloon is empty, and lit. Seven sitting and three standing used
+           to ride in every car; they have gone the way of everybody else in
+           this world. What is left is a tram at twenty to five with its lights
+           on and nobody aboard, which is its own kind of true. */
         return { fit, floor };
     };
 
@@ -7870,83 +7810,21 @@ export default function build(world) {
         scene.add(bikeIM); world.ghost(bikeIM);
     }
 
-    /* ---- the crowd.
+    /* ---- the crowd, which is not here any more.
 
-       Half of them are waiting at the four corners for the scramble, half are
-       walking the footpaths, and two thirds of them have an umbrella up —
-       which, seen from above, is what this crossing looks like in the rain. ---- */
-    const PEDS = [];
-    /* Every crossing now, not one. Everybody in this world used to be standing
-       at Flinders and Swanston, which is why the four hundred metres north of
-       it read as evacuated — so the corners are taken from the intersections
-       themselves, four apiece, in the order the signals were built in: the
-       north-west, the north-east, the south-east and the south-west of each.
-       That order is what lets a person work out, from the corner they are
-       standing on, which lantern is theirs. */
-    const CORNERS = [];
-    for (const X of XSEC) {
-        CORNERS.push([-(SW + 2.4), X.z - (X.h + 2.4)], [SW + 2.4, X.z - (X.h + 2.4)],
-                     [SW + 2.4, X.z + (X.h + 2.4)], [-(SW + 2.4), X.z + (X.h + 2.4)]);
-    }
-    let pedBodyIM, pedHeadIM, brollyIM;
-    {
-        const SKIN = [0xf0c8a0, 0xd9a273, 0xa8724a, 0x6f4a30, 0x3f2a1c, 0xf6d9bd];
-        const CLOTH = [0x2b3138, 0x1f2a3a, 0x6d2f2a, 0x39473a, 0x8a8378, 0xc9c3b6, 0x2f4858, 0x53344a, 0xb0533a];
-        const UMB = [0x14171b, 0x1b1f24, 0x232a33, 0x2b2320, 0x33272c, 0x1f2a2e, 0x5e1c1f, 0x1d3350, 0x2e2f28];
+       There were three hundred people on this street: a hundred and ten
+       waiting at the four crossings for the scramble, a hundred and eighty
+       walking the footpaths, a shopkeeper behind every counter and ten
+       passengers in every tram. They have all been taken out — deliberately,
+       and everywhere. No figure of a person stands in this world.
 
-        for (let i = 0; i < 110; i++) {                   // waiting at the crossings
-            const c = irr(0, CORNERS.length - 1);
-            PEDS.push({
-                mode: 'wait', corner: c, sp: rr(1.15, 1.65), phase: rr(0, 6.3),
-                x: CORNERS[c][0] + rr(-3.4, 3.4), z: CORNERS[c][1] + rr(-3.4, 3.4),
-                t: rr(0, 10), ry: rr(0, 6.3), wx: 0, wz: 0, tx: 0, tz: 0, tgt: 0,
-                brolly: rnd() < 0.72, lean: rr(-0.10, 0.10),
-            });
-        }
-        /* And a great many more walking, over the whole length of the street
-           rather than the hundred metres either side of the crossing. Swanston
-           between Flinders Lane and Little Collins is one of the busiest
-           footpaths in the country at this hour; two dozen people on it read
-           as a public holiday. */
-        for (let i = 0; i < 180; i++) {                   // walking the footpaths
-            const onSwanston = rnd() < 0.74;
-            const side = rnd() < 0.5 ? -1 : 1, dir = rnd() < 0.5 ? -1 : 1;
-            const off = onSwanston ? side * (SW + rr(1.8, 6.2)) : side * (FL + rr(1.8, 5.6));
-            const s = onSwanston ? rr(-338, 232) : rr(-150, 150);
-            PEDS.push({
-                mode: 'walk', ax: onSwanston ? 'z' : 'x', off, s, dir,
-                sp: rr(1.1, 1.7), phase: rr(0, 6.3),
-                x: onSwanston ? off : s, z: onSwanston ? s : off,
-                ry: onSwanston ? (dir > 0 ? 0 : Math.PI) : (dir > 0 ? Math.PI / 2 : -Math.PI / 2),
-                wx: 0, wz: 0, tx: 0, tz: 0, tgt: 0, t: 0,
-                brolly: rnd() < 0.72, lean: rr(-0.10, 0.10),
-            });
-        }
-
-        const bodyP = [];
-        let g = boxG(0.42, 0.86, 0.26); put(g, 0, 0.43, 0); bodyP.push(g);
-        g = boxG(0.46, 0.62, 0.29); put(g, 0, 1.16, 0); bodyP.push(g);
-        for (const s of [-0.30, 0.30]) { g = boxG(0.13, 0.55, 0.15); put(g, s, 1.16, 0); bodyP.push(g); }
-        pedBodyIM = new THREE.InstancedMesh(merge(bodyP), stdMat(0xffffff, { roughness: 0.80 }), PEDS.length);
-        const headP = [];
-        g = sphG(0.115, 8, 6); put(g, 0, 1.60, 0); headP.push(g);
-        pedHeadIM = new THREE.InstancedMesh(merge(headP), stdMat(0xffffff, { roughness: 0.86 }), PEDS.length);
-        const umbP = [];
-        g = coneG(0.56, 0.34, 10); put(g, 0, 2.06, 0); umbP.push(g);
-        g = cylG(0.017, 0.017, 1.02, 6); put(g, 0, 1.60, 0); umbP.push(g);
-        brollyIM = new THREE.InstancedMesh(merge(umbP), stdMat(0xffffff, { roughness: 0.44, metalness: 0.10, side: THREE.DoubleSide }), PEDS.length);
-
-        const tint = new THREE.Color();
-        PEDS.forEach((p, i) => {
-            tint.copy(srgb(pickOf(CLOTH))); pedBodyIM.setColorAt(i, tint);
-            tint.copy(srgb(pickOf(SKIN))); pedHeadIM.setColorAt(i, tint);
-            tint.copy(srgb(pickOf(UMB))); brollyIM.setColorAt(i, tint);
-        });
-        for (const m of [pedBodyIM, pedHeadIM, brollyIM]) {
-            if (m.instanceColor) m.instanceColor.needsUpdate = true;
-            scene.add(m); world.ghost(m);
-        }
-    }
+       The machinery they drove is still here, because it was never really
+       theirs: the signals run their phases, the cars stop for the red, the
+       trams keep their dwell, and the walk goes everywhere it went. The one
+       human shape left is the green walking figure on the pedestrian lanterns,
+       and that is a pictogram painted on a signal head rather than somebody
+       standing on a corner — without it the crossings have nothing to say.
+       ---- */
 
     /* ============================================================
        19 · the rain
@@ -8658,101 +8536,6 @@ export default function build(world) {
             setM(bikeIM, i, x, 0, z, ry);
         }
         bikeIM.instanceMatrix.needsUpdate = true;
-
-        /* ---- the crowd ----------------------------------------------- */
-        for (let i = 0; i < PEDS.length; i++) {
-            const o = PEDS[i];
-            let moving = false;
-            if (o.mode === 'walk') {
-                /* Somebody walking the footpath is stopped by the kerb of a
-                   street they are about to cross, and by nothing else. The test
-                   is on the step rather than on the position, because a person
-                   who is already out in the road when the figure goes red has to
-                   finish crossing — freezing them on the centre line is the one
-                   thing a crossing never does. */
-                const step = o.dir * o.sp * dt;
-                const s1 = o.s + step;
-                const X = (o.ax === 'z') ? xsecAt(o.s) : XSEC[0];
-                const mid = (o.ax === 'z') ? X.z : 0;
-                const zone = ((o.ax === 'z') ? X.h : SW) + 3.0;
-                const walkable = (o.ax === 'z') ? (X.pns === 'w' || X.pns === 'c')
-                                                : (X.pew === 'w' || X.pew === 'c');
-                if (!walkable && Math.abs(o.s - mid) > zone && Math.abs(s1 - mid) < zone) {
-                    // held at the kerb, and shuffling the way people do
-                } else {
-                    o.s = s1; moving = true;
-                }
-                /* And off the end of the footpath and back on at the other, over
-                   the length the walkers were dealt out across rather than the
-                   hundred and eighteen metres this used to use — which quietly
-                   swept everybody north of Flinders Lane back down to the
-                   station on the first frame and left the top half of the
-                   corridor with nobody standing at its kerbs at all. */
-                if (o.ax === 'z') {
-                    if (o.s > 234) o.s = -352; else if (o.s < -352) o.s = 234;
-                } else if (o.s > 150) o.s = -150; else if (o.s < -150) o.s = 150;
-                o.x = (o.ax === 'z') ? o.off : o.s;
-                o.z = (o.ax === 'z') ? o.s : o.off;
-            } else if (o.mode === 'wait') {
-                o.t -= dt;
-                /* Which of the two crossings this corner touches is walking, if
-                   either. Crossing Swanston runs with the cross street's green;
-                   crossing the cross street runs with Swanston's. The diagonal
-                   exists at Flinders Street and nowhere else, and only while the
-                   scramble is actually up. */
-                const X = XSEC[o.corner >> 2], lc = o.corner & 3, base = o.corner & ~3;
-                let tgt = -1;
-                if (o.t < 0 && rnd() < dt * 2.4) {
-                    if (X.scr && rnd() < 0.42) tgt = (lc + 2) % 4;
-                    else if (X.pew === 'w' && (X.pns !== 'w' || rnd() < 0.5)) tgt = lc ^ 1;
-                    else if (X.pns === 'w') tgt = 3 - lc;
-                }
-                if (tgt >= 0) {
-                    /* And then the thing everybody does without thinking about
-                       it: work out whether there is enough of the phase left to
-                       get across. What is left of the walk plus the six seconds
-                       of clearance behind it is the whole of the time on offer,
-                       and somebody who cannot make Swanston Street in it stays
-                       on the kerb — which is why the diagonal empties out well
-                       before the scramble ends rather than at the end of it. */
-                    const px = CORNERS[base + tgt][0], pz = CORNERS[base + tgt][1];
-                    if (Math.hypot(px - o.x, pz - o.z) / (o.sp * 1.35) > X.left + 6.0) tgt = -1;
-                }
-                if (tgt >= 0) {
-                    o.tx = CORNERS[base + tgt][0] + rr(-2.4, 2.4);
-                    o.tz = CORNERS[base + tgt][1] + rr(-2.4, 2.4);
-                    o.tgt = base + tgt; o.mode = 'cross';
-                } else if (rnd() < dt * 0.25) {
-                    o.wx = rr(-0.4, 0.4); o.wz = rr(-0.4, 0.4);
-                }
-                o.x += o.wx * dt * 0.4; o.z += o.wz * dt * 0.4;
-            } else {
-                const dx = o.tx - o.x, dz = o.tz - o.z, len = Math.hypot(dx, dz);
-                if (len < 0.6) {
-                    o.mode = 'wait'; o.corner = o.tgt; o.t = rr(2, 14); o.wx = 0; o.wz = 0;
-                } else {
-                    /* Nobody crosses a road at the pace they walk down a
-                       footpath, and the flashing red is what everybody still out
-                       there is reading — so a crossing is a third quicker than a
-                       stroll and a clearance is quicker again. */
-                    const X = XSEC[o.corner >> 2];
-                    const sp = o.sp * ((X.pns === 'c' || X.pew === 'c') ? 1.75 : 1.35);
-                    o.x += dx / len * sp * dt; o.z += dz / len * sp * dt;
-                    o.ry = Math.atan2(dx, dz);
-                    moving = true;
-                }
-            }
-            const ph = o.phase + t * 7.4;
-            const y = KERB_H + (moving ? Math.abs(Math.sin(ph)) * 0.035 : 0);
-            setM(pedBodyIM, i, o.x, y, o.z, o.ry);
-            setM(pedHeadIM, i, o.x, y, o.z, o.ry);
-            // the umbrella sits a little forward and off to one side, and every
-            // one of them is tilted its own way into the weather
-            setM(brollyIM, i, o.x + 0.07, o.brolly ? y : -60, o.z + 0.03, o.ry + o.lean);
-        }
-        pedBodyIM.instanceMatrix.needsUpdate = true;
-        pedHeadIM.instanceMatrix.needsUpdate = true;
-        brollyIM.instanceMatrix.needsUpdate = true;
 
         /* ---- and the billboards, which change every eight seconds or so -- */
         adT += dt;
