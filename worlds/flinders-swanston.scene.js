@@ -6113,6 +6113,309 @@ export default function build(world) {
             euBase:   0x6c6f70,
         };
 
+        /* ---- the kit that makes a wall look its age -------------------
+
+           Every frontage from Flinders Lane to Little Collins was clean.
+           Not plain — plain is honest, a 1965 slab is plain — but clean:
+           a wall, its openings, a parapet, and nothing whatever had ever
+           happened to it since the day it was finished. What is actually
+           on an old commercial street is a hundred and thirty years of
+           other people's decisions bolted to the front of the building:
+           a downpipe from the parapet to the footpath, an air-conditioner
+           hung out of a window that used to open and the stain running
+           down the render under it, a vent, an opening bricked up when
+           the floor behind it was subdivided, a patch of render done in a
+           different decade to the render beside it, the rods that hold
+           the verandah back to the wall, the name of a firm nobody
+           remembers cut into the parapet, the ghost of a painted sign
+           that has been fading since before the war, and a roof covered
+           in plant nobody was ever meant to see.
+
+           None of it is expensive. It is all boxes, it all goes into the
+           building's own array and is merged with its wall, and it is
+           most of what the eye reads as age. `aged` is the whole kit: it
+           takes the wall it is standing on — which way the frontage runs,
+           where its face is, which way that face looks, how far the run
+           goes and how high — and lays on as much of it as the seed says.
+
+           `u` runs along the frontage, `v` is up, and `d` is out from the
+           wall, which is the only sane way to write this once for a face
+           that looks east on Swanston and a face that looks south on
+           Collins Street. ---- */
+        // the same colour a few years older, or a few years newer than
+        // the wall it is going on
+        const shade = (hex, k, warm) => {
+            const w = warm === undefined ? 1 : warm;
+            const q = (c, m) => clamp(Math.round(c * k * m), 0, 255);
+            return (q((hex >> 16) & 255, w) << 16) | (q((hex >> 8) & 255, 1) << 8) | q(hex & 255, 2 - w);
+        };
+
+        /* `aged` deals off a stream of its own rather than off the file's
+           `rnd`. Everything built after this point reads the same sequence —
+           section 26 takes the width and the height of every cross-street
+           building out of it — so a helper that quietly draws forty numbers
+           moves every building on four streets and changes how many meshes
+           the world has. Seeded off the frontage's own coordinates instead,
+           which keeps it deterministic, keeps every wall different from its
+           neighbour, and leaves the rest of the file exactly where it was. */
+        let _aSeed = 1;
+        const arnd = () => { _aSeed = (_aSeed * 1664525 + 1013904223) % 4294967296; return _aSeed / 4294967296; };
+        const arr2 = (x, y) => x + (y - x) * arnd();
+        const airr = (x, y) => Math.floor(arr2(x, y + 0.999));
+
+        const aged = (arr, q) => {
+            _aSeed = Math.abs(Math.round(q.fx * 7919 + q.a * 104729 + q.b * 1299709 + q.y1 * 15485863)) % 4294967296 || 20250831;
+            const ax = q.ax, fx = q.fx, o = q.o;
+            const a = Math.min(q.a, q.b), b = Math.max(q.a, q.b), run = b - a;
+            const y0 = q.y0, y1 = q.y1;                 // awning head, and the parapet
+            if (run < 5) return;
+            const body = q.body, trim = q.trim === undefined ? shade(body, 1.16) : q.trim;
+            const dark = q.dark === undefined ? shade(body, 0.34) : q.dark;
+            /* How far the parapet band stands proud of the wall. The ghost
+               sign and the patches under the cornice are painted onto that
+               band and not onto the wall behind it, so they have to start
+               outside whatever blade the building already has up there —
+               drawn at the wall's own face, the sign on the Victorian was
+               a hundred and eighty millimetres inside its own parapet and
+               nobody ever saw it. */
+            const pd = q.pd === undefined ? 0.03 : q.pd;
+
+            const B = (hex, u0, v0, d0, u1, v1, d1) => (ax === 'z'
+                ? F(arr, hex, fx + o * d0, v0, u0, fx + o * d1, v1, u1)
+                : F(arr, hex, u0, v0, fx + o * d0, u1, v1, fx + o * d1));
+            const C = (hex, r, h, u, v, d) => {
+                const g = cylG(r, r, h, 8);
+                if (ax === 'z') put(g, fx + o * d, v, u); else put(g, u, v, fx + o * d);
+                return FG(arr, hex, g);
+            };
+            // a rod leaning back to the wall, which needs to lean in the
+            // plane the wall is in and not across it
+            const rod = (hex, u, v0, d0, v1, d1, t) => {
+                const L = Math.hypot(v1 - v0, d1 - d0);
+                const g = boxG(t, L, t);
+                /* Which way it tips depends on which plane the wall is in:
+                   a rod on a face that looks along x leans about z, one on a
+                   face that looks along z leans about x, and the sign of the
+                   lean follows the face's own normal. Got either of those
+                   wrong and the rods lean out over the road. */
+                const lean = Math.atan2((ax === 'z' ? -o : o) * (d1 - d0), v1 - v0);
+                if (ax === 'z') put(g, fx + o * (d0 + d1) / 2, (v0 + v1) / 2, u, 0, 0, lean);
+                else put(g, u, (v0 + v1) / 2, fx + o * (d0 + d1) / 2, lean, 0, 0);
+                return FG(arr, hex, g);
+            };
+
+            /* The downpipes. One at each party wall and one every eleven
+               metres between, each with its hopper head under the parapet
+               and a bracket or two down the wall.
+
+               Each of them stops at the verandah rather than running on to
+               the footpath, which is both what a real one does — it
+               discharges into the awning's own gutter, and the length below
+               is boxed in behind the shopfront — and what the walk needs.
+               `stamp` marks a whole cell solid the moment a triangle's
+               corner lands in it, so a pipe standing two hundred
+               millimetres off the wall at footpath level takes out the
+               entire 1.365 m cell beside the building wherever a cell
+               boundary happens to fall on it, which is a metre and a half
+               of footpath lost to a hundred millimetres of cast iron. */
+            const np = Math.max(1, Math.round(run / 11.5));
+            const pv0 = Math.max(3.90, y0 - 1.30);
+            for (let i = 0; i <= np; i++) {
+                const u = i === 0 ? a + 0.34 : i === np ? b - 0.34 : a + run * (i / np) + arr2(-0.6, 0.6);
+                B(dark, u - 0.23, y1 - 0.62, 0.05, u + 0.23, y1 - 0.18, 0.36);      // the hopper head
+                C(dark, 0.07, y1 - 0.72 - pv0, u, (y1 - 0.72 + pv0) / 2, 0.13);
+                for (let k = 1; k < 4; k++) {
+                    const v = pv0 + (y1 - pv0) * (k / 4);
+                    B(dark, u - 0.13, v, 0.02, u + 0.13, v + 0.09, 0.19);            // its brackets
+                }
+                // and the shoe that turns it into the verandah's gutter
+                B(dark, u - 0.11, pv0 - 0.26, 0.03, u + 0.11, pv0 + 0.06, 0.30);
+            }
+
+            /* the air conditioning, which on a building of this age is
+               always somebody's afterthought: a box hung off a window
+               that used to open, a bracket under it, and the stain the
+               condensate has been running down the wall since. */
+            const nac = q.ac === false ? 0 : airr(2, 4);
+            for (let i = 0; i < nac; i++) {
+                const u = a + arr2(1.4, run - 1.4), v = y0 + arr2(1.6, Math.max(2.2, y1 - y0 - 3.4));
+                B(shade(body, 0.86), u - 0.44, v, 0.02, u + 0.44, v + 0.62, 0.56);
+                B(dark, u - 0.36, v + 0.06, 0.56, u + 0.36, v + 0.54, 0.60);         // the grille in its face
+                B(dark, u - 0.40, v - 0.10, 0.05, u - 0.34, v, 0.50);                // and the shelf it sits on
+                B(dark, u + 0.34, v - 0.10, 0.05, u + 0.40, v, 0.50);
+                B(shade(body, 0.80, 0.96), u - 0.16, Math.max(y0, v - arr2(2.0, 5.0)), 0.005,
+                                           u + 0.16, v, 0.02);                       // the stain under it
+            }
+
+            /* a vent or two — the round steel cowl over a kitchen, or the
+               square louvre of a lift motor room */
+            for (let i = 0, nv = q.vent === false ? 0 : airr(1, 3); i < nv; i++) {
+                const u = a + arr2(1.0, run - 1.0), v = y0 + arr2(1.0, Math.max(1.4, y1 - y0 - 2.0));
+                B(dark, u - 0.24, v, 0.02, u + 0.24, v + 0.46, 0.16);
+                B(shade(body, 0.55), u - 0.19, v + 0.05, 0.16, u + 0.19, v + 0.41, 0.19);
+            }
+
+            /* Weathering, and a patch of render done in a different decade
+               to the render beside it.
+
+               The first pass of this laid a three-metre rectangle of a
+               different tone anywhere on the wall, which was wrong twice
+               over: it covered whatever windows were behind it, and a wall
+               is not patched in the middle of its glazing, it is patched
+               where there is wall. So the patches keep to the band under the
+               cornice, which every building on this street has solid, and
+               the aging that does run the whole height is what actually
+               ages a wall anyway — the soot and the rain that have been
+               running down off every string course and sill since the
+               trams were cable-hauled. Narrow, dark, and they obscure
+               nothing. */
+            if (q.patch !== false) {
+                for (let i = 0, ns = airr(3, 6); i < ns; i++) {
+                    const u = a + arr2(0.5, run - 0.5), w = arr2(0.12, 0.34);
+                    const v1s = y1 - arr2(0.6, 2.2), h = arr2(2.6, Math.max(3.0, (y1 - y0) * 0.62));
+                    B(shade(body, 0.82, 0.98), u - w, Math.max(y0, v1s - h), 0.004, u + w, v1s, 0.016);
+                }
+                for (let i = 0, npa = airr(1, 2); i < npa; i++) {
+                    const w = arr2(1.4, Math.max(1.6, run * 0.30)), h = arr2(0.9, 1.7);
+                    const u = a + arr2(0.4, Math.max(0.5, run - w - 0.4));
+                    const v = y1 - arr2(1.0, 2.6) - h;
+                    if (v < y0) continue;
+                    B(shade(body, arnd() < 0.5 ? 0.90 : 1.08), u, v, pd, u + w, v + h, pd + 0.016);
+                }
+            }
+
+            /* the ghost sign. Somebody's name in three-metre letters,
+               painted straight onto the render when this was a warehouse,
+               and left to fade for eighty years. Drawn as the panel it was
+               painted on with the lines of type in it rather than as
+               letters, because from the footpath opposite that is exactly
+               what is left of it. */
+            if (q.ghost && run > 9) {
+                /* On the parapet, and only there. A ghost sign painted
+                   across a shopfront's worth of glazing is a ghost sign
+                   painted on a window, and the wall between two windows on
+                   any of these buildings is six hundred millimetres wide —
+                   so the only place a sign this size ever went, and the only
+                   place it can go, is the run of solid wall between the top
+                   floor's heads and the cornice. */
+                const h = Math.min(2.4, Math.max(1.2, (y1 - y0) * 0.10));
+                const v = y1 - 0.55 - h;
+                if (v > y0) {
+                    const w = Math.min(run - 1.8, arr2(6.0, 11.0));
+                    const u = a + (run - w) / 2 + arr2(-0.8, 0.8);
+                    B(shade(body, 1.12, 1.03), u, v, pd, u + w, v + h, pd + 0.014);
+                    const lines = airr(1, 2);
+                    for (let k = 0; k < lines; k++) {
+                        const lh = (h - 0.22) / lines * arr2(0.46, 0.64);
+                        const lv = v + 0.11 + (h - 0.22) * ((k + 0.5) / lines) - lh / 2;
+                        const inset = arr2(0.4, 1.2);
+                        B(shade(body, 0.70, 0.97), u + inset, lv, pd + 0.014, u + w - inset, lv + lh, pd + 0.022);
+                    }
+                }
+            }
+
+            /* the tie rods. A Melbourne verandah is a cantilever and the
+               thing that stops it folding down onto the footpath is a pair
+               of rods back to the wall above it — which every one of these
+               awnings has been doing without since they were built. */
+            if (q.ties !== false) {
+                for (let u = a + 1.2; u < b - 0.6; u += arr2(3.2, 4.6)) {
+                    rod(dark, u, 3.70, 2.16, 5.72, 0.10, 0.055);
+                    B(dark, u - 0.09, 5.62, 0.02, u + 0.09, 5.86, 0.16);
+                }
+            }
+
+            /* the name plate. A firm that took a lease in 1911 and put its
+               name where nobody could miss it, and is now four owners gone
+               — a moulded surround with a sunk field in it, standing on
+               the parapet in the middle of the frontage. */
+            if (q.plate && run > 8) {
+                const w = Math.min(run * 0.46, 9.0), u = a + run / 2;
+                B(trim, u - w / 2, y1 + 0.06, 0.0, u + w / 2, y1 + 1.30, 0.30);
+                B(shade(body, 0.90), u - w / 2 + 0.22, y1 + 0.26, 0.30, u + w / 2 - 0.22, y1 + 1.10, 0.34);
+                for (const e of [-1, 1]) {                        // a scroll either end of it
+                    B(trim, u + e * (w / 2 + 0.16), y1 + 0.30, 0.02, u + e * (w / 2 - 0.02), y1 + 1.06, 0.26);
+                }
+            }
+
+            /* and the roof, which nobody was meant to see and everybody
+               standing on the opposite footpath can: the lift overrun, the
+               water tank on its legs, a row of condensers and an aerial. */
+            if (q.roof !== false) {
+                /* `d` counts outward from the wall, so every one of these
+                   wanted a negative one: written positive, the lift overrun
+                   and the water tank stood two metres in front of the
+                   parapet, hanging in the air over the footpath, which is
+                   what the first pass of this looked like from the opposite
+                   side of the street. They stand behind the parapet, where
+                   the roof is. */
+                /* Nine metres back from the parapet at the very least, and
+                   that is a collision decision rather than a compositional
+                   one. Every shop in this world is a room seven and a half
+                   metres deep with a walkable floor and a ceiling over it,
+                   and `ground.js` remembers four vertical spans to a cell:
+                   plant standing three metres behind the parapet put two
+                   more horizontal surfaces into the same column, the column
+                   overflowed, and the encoder merged the two nearest — which
+                   welded the shop's floor to its own ceiling and filled the
+                   room in solid. Three cells of Little Collins Street went
+                   that way before this was moved back behind the rooms. */
+                /* Everything up here stands on `rf`, the roof itself, and not
+                   on the parapet — which is a metre or two higher and is the
+                   difference between a water tank and a water tank hovering
+                   over one. */
+                const rf = q.rf === undefined ? y1 - 1.6 : q.rf;
+                const ru = a + arr2(0.2, 0.6) * run, rd = -arr2(9.0, 12.5);
+                B(shade(body, 0.94), ru - arr2(1.4, 2.4), rf, rd, ru + arr2(1.4, 2.4), rf + arr2(2.4, 4.0), rd - arr2(2.6, 4.2));
+                const tu = a + arr2(0.3, 0.7) * run, td = -arr2(9.5, 12.5);
+                for (const e of [-1, 1]) {                       // the tank, on its legs
+                    B(dark, tu + e * 0.90 - 0.09, rf, td + 0.80, tu + e * 0.90 + 0.09, rf + 1.55, td + 0.98);
+                    B(dark, tu + e * 0.90 - 0.09, rf, td - 0.98, tu + e * 0.90 + 0.09, rf + 1.55, td - 0.80);
+                }
+                B(shade(body, 0.62), tu - 1.10, rf + 1.55, td - 1.10, tu + 1.10, rf + 2.95, td + 1.10);
+                for (let i = 0, nc = airr(2, 4); i < nc; i++) {    // and the condensers
+                    const cu = a + arr2(0.8, run - 0.8), cd = -arr2(8.6, 12.0);
+                    B(dark, cu - 0.46, rf, cd, cu + 0.46, rf + 1.12, cd - 0.72);
+                }
+                C(dark, 0.05, 3.8, a + arr2(0.15, 0.85) * run, rf + 1.9, -arr2(9.0, 11.5));
+            }
+
+            /* the fire stair. Bolted to the front of a building it was not
+               designed for, some time around 1962, by an owner who had run
+               out of other ways to satisfy the regulation — which is why
+               the ones that survive are on the street elevation where
+               nobody would ever have put one on purpose.
+
+               Its lowest member is at six metres and the verandah's top is
+               at 3.72, which is not an accident: the walk merges two
+               vertical spans in a cell when they come within 1.4 m of each
+               other, and a stair hung any lower would join hands with the
+               awning under it and roof the footpath over. */
+            if (q.escape) {
+                const u = q.escape, W2 = 1.55, fh = q.efh || 3.6;
+                for (let v = 6.20; v < y1 - fh - 1.6; v += fh) {
+                    B(dark, u - 1.30, v, 0.02, u + 1.30, v + 0.10, W2);              // the landing
+                    for (const e of [-1, 1]) {                                        // its rails
+                        B(dark, u + e * 1.28, v + 0.10, 0.02, u + e * 1.30, v + 1.05, W2);
+                        B(dark, u - 1.30, v + 0.98, W2 - 0.06, u + 1.30, v + 1.05, W2);
+                    }
+                    for (let k = 0; k < 7; k++) {                                     // the flight up to the next
+                        const t = k / 7;
+                        B(dark, u - 1.20 + 2.30 * t, v + 0.10 + fh * t, 0.30,
+                                u - 0.90 + 2.30 * t, v + 0.22 + fh * t, W2 - 0.24);
+                    }
+                    B(dark, u - 1.34, v - 0.06, 0.30, u - 1.24, v + 1.05, 0.42);      // the standards
+                    B(dark, u + 1.24, v - 0.06, W2 - 0.30, u + 1.34, v + 1.05, W2 - 0.18);
+                }
+                // and the counterweighted ladder that drops to the footpath,
+                // stowed, which is how one is ever actually seen
+                for (const e of [-1, 1]) B(dark, u + e * 0.52 - 0.04, 4.30, 1.02, u + e * 0.52 + 0.04, 6.24, 1.10);
+                for (let k = 0; k < 6; k++) {
+                    B(dark, u - 0.56, 4.42 + k * 0.32, 1.02, u + 0.56, 4.48 + k * 0.32, 1.08);
+                }
+            }
+        };
+
         /* Every surface accumulates into one of these and is merged once at
            the end of the section. Grouped by what it is part of rather than
            only by what it is made of, because a part is a thing somebody picks
@@ -8096,14 +8399,28 @@ export default function build(world) {
                 F(A, E.h, XF - 0.96, Y_TOP + 1.05, ZS - 0.2, XC, Y_TOP + 1.48, ZN + 0.2);
                 F(A, E.f, XF - 0.24, Y_TOP + 1.48, ZS, XF + 0.20, Y_TOP + 3.10, ZN);
                 shopRun(ZS, ZN, 2, [['sbux', 'restaurant'], ['facet', 'jewel']]);
+                // and a hundred and twenty years of everything else: the
+                // firm's name still on the parapet, the downpipes, the boxes
+                // hung out of the second floor, and the rods holding the
+                // verandah back to the wall
+                aged(A, { ax: 'z', fx: XF, o: 1, a: ZN, b: ZS, y0: Y0, y1: Y_TOP + 3.10, pd: 0.22,
+                          rf: Y_TOP, body: E.f, trim: E.h, plate: true });
             }
 
             // ---- the brown Victorian in the middle
             {
                 const ZS = -276.0, ZN = -296.0, Y0 = 5.20, FH = 3.95, FLOORS = 4;
                 const Y_TOP = Y0 + FH * FLOORS, V = { f: 0x8f7357, h: 0xc0a888, l: 0x6b5643 };
-                F(A, V.l, X0, Y0, ZS, XC, Y_TOP, ZN);
-                F(A, V.l, XF - 9, 0, ZS, X0, Y0, ZN);
+                /* The core is run fifty millimetres into each neighbour on
+                   purpose. Three buildings whose party walls all landed on
+                   exactly z = −276 and z = −296 gave two pairs of coplanar
+                   faces the full height of the block, and the depth buffer
+                   could not choose: the seam between every pair flickered as
+                   a ladder of stripes from the far footpath. Overlapped
+                   rather than gapped, because a gap of the same size is a
+                   slot you can see the inside of the building through. */
+                F(A, V.l, X0, Y0, ZS + 0.05, XC, Y_TOP, ZN - 0.05);
+                F(A, V.l, XF - 9, 0, ZS + 0.05, X0, Y0, ZN - 0.05);
                 for (let i = 0; i <= 5; i++) {
                     const z = ZS - i * ((ZS - ZN) / 5);
                     F(A, V.f, XF, Y0, z + 0.55, XC, Y_TOP, z - 0.55);
@@ -8115,10 +8432,26 @@ export default function build(world) {
                     for (let f = 0; f < FLOORS; f++) {
                         const y = Y0 + 0.5 + f * FH;
                         const h = y + FH - 1.35;
-                        W(A, XC, y + 0.6, zc + 1.05, XC + 0.07, h, zc - 1.05);
-                        const arc = new THREE.CircleGeometry(1.05, 12, 0, Math.PI);
-                        put(arc, XC + 0.03, h, zc, 0, Math.PI / 2, 0);
-                        A.push(pane(arc, CF.glassLo, CF.glassHi, h - 2.1, h));
+                        /* Two of the twenty are not windows any more. The
+                           first floor was subdivided at some point and the
+                           lift went up the party wall, and each of those
+                           openings was bricked up and rendered in a colour
+                           that was meant to match and never has. It is the
+                           cheapest possible way of saying that something has
+                           happened to a building since it was built, and on
+                           a facade this regular it is the only irregularity
+                           there is. */
+                        if ((i === 1 && f === 0) || (i === 4 && f === 2)) {
+                            F(A, shade(V.f, 0.95, 1.04), XC, y + 0.6, zc + 1.05, XC + 0.12, h, zc - 1.05);
+                            const shut = new THREE.CircleGeometry(1.05, 12, 0, Math.PI);
+                            put(shut, XC + 0.09, h, zc, 0, Math.PI / 2, 0);
+                            FG(A, shade(V.f, 0.95, 1.04), shut);
+                        } else {
+                            W(A, XC, y + 0.6, zc + 1.05, XC + 0.07, h, zc - 1.05);
+                            const arc = new THREE.CircleGeometry(1.05, 12, 0, Math.PI);
+                            put(arc, XC + 0.03, h, zc, 0, Math.PI / 2, 0);
+                            A.push(pane(arc, CF.glassLo, CF.glassHi, h - 2.1, h));
+                        }
                         const ring = new THREE.TorusGeometry(1.20, 0.16, 5, 12, Math.PI);
                         put(ring, XF - 0.08, h, zc, 0, Math.PI / 2, 0);
                         FG(A, V.h, ring);
@@ -8144,6 +8477,12 @@ export default function build(world) {
                     FG(A, V.h, g);
                 }
                 shopRun(ZS, ZN, 3, [['linen', 'clothes'], ['cup', 'restaurant'], ['boss', 'clothes']]);
+                // this is the one on the block old enough to still be
+                // carrying a painted sign, and it gets the fire stair as
+                // well — bolted to the front some time around 1962 by an
+                // owner who had run out of other ways to satisfy the rule
+                aged(A, { ax: 'z', fx: XF, o: 1, a: ZN, b: ZS, y0: Y0, y1: Y_TOP + 2.60, pd: 0.20,
+                          rf: Y_TOP, body: V.f, trim: V.h, ghost: true, escape: -286.5, efh: 3.95 });
             }
 
             // ---- and the sixties slab at the Collins end
@@ -8167,6 +8506,12 @@ export default function build(world) {
                 F(A, S6.h, XF - 0.30, Y_TOP, ZS, XC, Y_TOP + 0.44, ZN);
                 F(A, S6.l, XF - 0.10, Y_TOP + 0.44, ZS, XF + 0.16, Y_TOP + 1.60, ZN);
                 shopRun(ZS, ZN, 3, [['kozmin', 'jewel'], ['noodle', 'restaurant'], ['atelier', 'clothes']]);
+                /* A slab of 1965 gets no name plate and no ghost sign — it
+                   never had either — but it is the one on the block with a
+                   roof full of plant and a wall full of window units, which
+                   is what happened to every one of them by about 1990. */
+                aged(A, { ax: 'z', fx: XF, o: 1, a: ZN, b: ZS, y0: Y0, y1: Y_TOP + 1.60,
+                          rf: Y_TOP, body: S6.f, trim: S6.h });
             }
         }
 
@@ -8378,6 +8723,24 @@ export default function build(world) {
                         F(A, 0xefe6cc, XF - 1.14, B.top - 0.5, B.z0 - 0.2, XC, B.top, B.z1 + 0.2);
                         F(A, 0xcfc4a8, XF - 0.30, B.top, B.z0, XF + 0.22, B.top + 1.9, B.z1);
                     }
+
+                    /* and what a hundred years of tenants left on the front
+                       of each of them. The rendered one carries the ghost
+                       sign and the fire stair, because it is the only one on
+                       this block old enough to have earned either; the bank
+                       gets a downpipe and a roof and nothing else, since an
+                       air-conditioner bolted to a giant order is a thing that
+                       has happened to real banks and still looks like a
+                       mistake somebody else made. */
+                    const AG = {
+                        fin:    { y1: B.top + 1.2, body: 0x8b8f93, trim: 0x9aa0a4 },
+                        bronze: { y1: B.top + 1.0, body: 0x9e8866, trim: 0xb39b76 },
+                        render: { y1: B.top + 2.4, body: 0xc6bda8, trim: 0xdad2bc, pd: 0.22,
+                                  ghost: true, plate: true, escape: (B.z0 + B.z1) / 2 + 3.2, efh: 3.20 },
+                        bank:   { y1: B.top + 1.9, body: 0xcfc4a8, trim: 0xe0d6ba,
+                                  ac: false, vent: false, patch: false, ties: false },
+                    }[B.kind];
+                    aged(A, Object.assign({ ax: 'z', fx: XF, o: 1, a: B.z0, b: B.z1, y0: 5.20, rf: B.top }, AG));
 
                     /* the shops under every one of them, because this side of
                        the street is shops the whole way and always has been —
@@ -8615,6 +8978,27 @@ export default function build(world) {
                     const y1 = yb + fh - (t.emph === 'c' ? 0.24 : 0.52);
                     for (let k = 0; k < nbay; k++) {
                         const cx = x0 + bw * (k + 0.5), oa = cx - ow / 2, ob = cx + ow / 2;
+                        /* One opening in fifteen is not a window any more. A
+                           floor gets subdivided, a lift shaft goes up the back
+                           of it, the building next door is built to the
+                           boundary — and the opening is bricked up and
+                           rendered over, a shade off the wall it sits in and
+                           set back in its own reveal. A street of old
+                           buildings has one of these in every second frontage,
+                           and it is the cheapest thing there is that says a
+                           building has been altered rather than drawn.
+
+                           Chosen off the bay's own numbers rather than off
+                           `rnd`, because this loop's widths and heights come
+                           out of that same stream: one extra draw from it here
+                           and every building on four cross streets moves. */
+                        if ((k * 7 + f * 13 + Math.round(Math.abs(x0)) * 3) % 15 === 0) {
+                            F(A, shade(body, 0.93, 1.02), oa, y0, zc, ob, y1, zc + o * 0.10);
+                            F(A, shade(body, 0.86), oa + 0.12, y0 + 0.10, zc + o * 0.10,
+                                                    ob - 0.12, y1 - 0.10, zc + o * 0.13);
+                            if (t.sill) F(A, trim, oa - 0.16, y0 - 0.18, zc, ob + 0.16, y0, zf + o * 0.10);
+                            continue;
+                        }
                         W(A, oa, y0, zc, ob, y1, zc + o * 0.06);
                         for (let m = 1; m < t.mull; m++) {
                             const mx = oa + ow * (m / t.mull);
@@ -8642,7 +9026,8 @@ export default function build(world) {
                     F(A, trim, cx - 0.13, H - 0.58, zf + o * 0.44, cx + 0.13, H, zf);
                 }
                 F(A, trim, x0 - 0.32, H, zf + o * 0.58, x1 + 0.32, H + 0.62, zc);
-                F(A, body, x0 - 0.18, H + 0.62, zf + o * 0.28, x1 + 0.18, H + 0.62 + rr(0.9, 2.1), zf - o * 0.50);
+                const PARA = rr(0.9, 2.1);
+                F(A, body, x0 - 0.18, H + 0.62, zf + o * 0.28, x1 + 0.18, H + 0.62 + PARA, zf - o * 0.50);
                 if (detail && rnd() < 0.7) {                  // a lift overrun on the roof
                     const px = x0 + rr(0.25, 0.75) * w, pw = rr(2.4, 4.6);
                     const pz = rr(3.0, 7.0), pd = rr(3.0, 6.0);
@@ -8738,6 +9123,21 @@ export default function build(world) {
                         }
                     }
                 }
+
+                /* and the same century of other people's decisions that the
+                   Swanston frontages carry, on the same terms: only the near
+                   field gets it, because a downpipe on a building a hundred
+                   and forty metres down Collins Street is geometry nobody
+                   will ever resolve. Which of them ends up with a name plate
+                   or a ghost sign is decided off the building's own position
+                   for the reason the blocked window above is — nothing in
+                   here may touch `rnd`. */
+                aged(A, {
+                    ax: 'x', fx: zf, o, a: x0, b: x1, y0: HG, y1: H + 0.62 + PARA, pd: 0.30, rf: H,
+                    body, trim,
+                    plate: t.arch && ((Math.round(Math.abs(x0)) & 1) === 0),
+                    ghost: t.arch && ((Math.round(Math.abs(x0)) & 3) === 1),
+                });
             };
 
             /* The clear stretches, read off what is already standing: the
@@ -10134,89 +10534,313 @@ export default function build(world) {
         world.ghost(trunkIM); world.ghost(leafIM); world.ghost(pitIM);
     }
 
-    // ---- tram poles, their mast-arm lamps and the overhead
+    /* ---- tram poles, their mast-arm lamps, and the overhead
+
+       The wire is the most recognisable thing about a Melbourne street and it
+       was the thinnest thing in this world: two dead-straight boxes at five
+       ninety, one span every twenty-six metres, and nothing at all over
+       Collins Street. What is really up there is a cat's cradle, and every
+       strand of it is there for a reason worth building.
+
+         · The running wire is not straight. It is pulled to one side of the
+           track at one span and to the other side at the next, so the
+           pantograph's carbon wears across its whole width instead of cutting
+           a groove in the middle of it, and it sags between the two. Looking
+           up at a zig-zag with a droop in it rather than at a ruled line is
+           most of the difference between this street and a diagram of one.
+         · A span wire across the street at every pole, with the running wire
+           hung off it on droppers.
+         · The feeder cable, running pole top to pole top the whole length of
+           the street above everything else, which is the strand that reads
+           first because it is the thickest and the highest.
+         · Pull-offs at the four curves, dragging the wire round the corner
+           and back to a pole, because a wire will not turn on its own.
+         · Section insulators — where one electrically fed length of wire ends
+           and the next begins — spliced in as a pale runner a metre long.
+         · And rosettes: the eyebolt and its backing plate bolted into a
+           building's front where there is no pole to hang a span from, which
+           on a street of nineteenth-century frontages is how half of it is
+           held up.
+
+       All of it goes into the one merged mesh and the one LineSegments this
+       block already had, so the whole cradle costs no meshes at all. What it
+       did cost is a colour attribute on every strand — the wire material is
+       vertex-coloured now, because an insulator is pale, a feeder is black
+       and a contact wire is worn bronze, and three of those out of one draw
+       is worth painting for. Mixing a coloured geometry with an uncoloured
+       one in the same merge answers null, so every strand below goes through
+       `strand`, which paints. ---- */
     {
+        const HH = 8.3 + KERB_H;          // the span wires, and the top of a pole
+        const STAG = 0.23;                // how far the wire is pulled off track centre
+        const SAG = 0.06;                 // and how far it droops between two spans
+
+        /* Where a pair of poles stands, and therefore where a span wire
+           crosses and where the wire is pulled over. Written out rather than
+           stepped, because the steps have to miss four intersections, and the
+           old loop put a pole in the middle of Collins Street and two more
+           within six metres of each other north of Flinders Lane. */
+        const SPAN_Z = [228, 202, 176, 150, 124, 98, 72, 46, 20,
+                        -20, -46, -72, -98, -134, -160, -186, -212,
+                        -248, -274, -300, -326, -356, -382];
+        const SPAN_XF = [-152, -126, -100, -74, -48, -22, 22, 48, 74, 100, 126, 152];
+        const SPAN_XC = [-126, -100, -74, -48, -22, 22, 48, 74, 100, 126];
+
+        /* Rosettes. A span anchored into a wall instead of to a pole, which
+           needs a building on both sides of the street at that point: opposite
+           the Town Hall, where the frontage of section 22 faces it across
+           thirty-seven metres, and on Flinders Street between Young & Jackson
+           and the station. */
+        const ROS_Z = [-287, -313];
+        const ROS_X = [-35, -61];
+
         const poles = [];
-        for (let i = 0; i < 6; i++) {
-            const z = -20 - i * 26;
-            poles.push([-(SW + 1.4), z, Math.PI / 2], [SW + 1.4, z, -Math.PI / 2],
-                       [-(SW + 1.4), -z, Math.PI / 2], [SW + 1.4, -z, -Math.PI / 2]);
+        for (const z of SPAN_Z) {
+            poles.push([-(SW + 1.4), z, Math.PI / 2], [SW + 1.4, z, -Math.PI / 2]);
         }
-        for (let i = 0; i < 5; i++) {
-            const x = 22 + i * 26;
-            poles.push([x, -(FL + 1.4), Math.PI], [x, FL + 1.4, 0],
-                       [-x, -(FL + 1.4), Math.PI], [-x, FL + 1.4, 0]);
-        }
-        for (let i = 0; i < 9; i++) {                       // Swanston carried north
-            const z = -130 - i * 26;
-            if (z < NZ_END) break;
-            poles.push([-(SW + 1.2), z, Math.PI / 2], [SW + 1.2, z, -Math.PI / 2]);
+        /* The Flinders Street lamps were all pointing at the buildings. `MX`
+           turns the arm's local +z by the pole's own rotation, so a pole on
+           the north kerb wants no rotation at all to reach south over the
+           road and the one opposite wants half a turn — which is the other
+           way round from how this list was written, and every cobra head on
+           Flinders Street was hanging over a shopfront. */
+        for (const x of SPAN_XF) poles.push([x, -(FL + 1.4), 0], [x, FL + 1.4, Math.PI]);
+        // and Collins Street, which had a running wire over it and nothing
+        // whatever holding it up
+        for (const x of SPAN_XC) {
+            poles.push([x, -230 - (13.5 + 1.4), 0], [x, -230 + (13.5 + 1.4), Math.PI]);
         }
 
+        /* The pole. A tapered shaft on a cast base, the door in the base a
+           person can see from the footpath, the ear the span wire is bolted
+           through, the bracket that carries the feeder up the back — and an
+           outreach arm that curves. The old one was a horizontal box with the
+           luminaire sitting on top of it a metre short of the kerb, which is
+           the one part of this pole nobody in Melbourne would recognise: the
+           real arm leaves the shaft a metre and a half below the top, sweeps
+           up in a shallow arc and carries the lamp out over the kerbside
+           lane. Six short lengths on that arc, which from anywhere anybody
+           stands is an arc. */
+        const AY0 = 7.80, AY1 = 9.36, AR = 3.10;
+        const apt = (t) => [0, AY0 + (AY1 - AY0) * (1 - (1 - t) * (1 - t)), AR * t];
+
         const body = [];
-        let g = cylG(0.20, 0.26, 9.4, 10); put(g, 0, 4.7, 0); body.push(g);
-        g = cylG(0.34, 0.40, 0.9, 10); put(g, 0, 0.45, 0); body.push(g);
-        g = boxG(0.13, 0.13, 2.7); put(g, 0, 8.95, 1.35); body.push(g);      // the outreach arm
-        g = boxG(0.55, 0.22, 1.3); put(g, 0, 9.06, 2.55); body.push(g);      // the luminaire's housing
-        const poleIM = new THREE.InstancedMesh(merge(body), stdMat(0x39423f, { roughness: 0.42, metalness: 0.34 }), poles.length);
-        // The lamps are emissive, not lights: forty-four cobra heads would be
-        // forty-four full-screen passes, and bloom does the same job for free.
+        let g = cylG(0.185, 0.285, 9.55, 12); put(g, 0, 4.78, 0); body.push(g);
+        g = cylG(0.34, 0.40, 0.92, 12); put(g, 0, 0.46, 0); body.push(g);
+        g = boxG(0.26, 0.52, 0.05); put(g, 0, 1.46, 0.20); body.push(g);        // the access door
+        g = cylG(0.23, 0.23, 0.09, 12); put(g, 0, 9.58, 0); body.push(g);       // the cap
+        for (const s of [-1, 1]) {                                              // the span wire's ear
+            g = boxG(0.05, 0.17, 0.30); put(g, s * 0.24, HH, 0); body.push(g);
+        }
+        g = boxG(0.08, 0.08, 0.30); put(g, 0, HH + 0.62, -0.20); body.push(g);  // the feeder's bracket
+        g = boxG(0.10, 1.05, 0.10); put(g, 0, 3.30, -0.20); body.push(g);       // the cable duct up the back
+
+        /* One helper for every strand in the world: a thin box turned to lie
+           between two points, painted, and filed. Everything overhead — arm,
+           span, feeder, dropper, pull-off — is one of these. */
+        const _wU = new THREE.Vector3(0, 0, 1), _wD = new THREE.Vector3();
+        const _wQ = new THREE.Quaternion(), _wP = new THREE.Vector3(), _wS = new THREE.Vector3(1, 1, 1);
+        const tone = (geo, hex) => {
+            const c = srgb(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return geo;
+        };
+        const strand = (arr, a, b, t, hex) => {
+            _wD.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+            const L = _wD.length();
+            if (L < 0.04) return;
+            const geo = boxG(t, t, L);
+            _wD.divideScalar(L);
+            _wQ.setFromUnitVectors(_wU, _wD);
+            _wP.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+            geo.applyMatrix4(new THREE.Matrix4().compose(_wP, _wQ, _wS));
+            arr.push(hex === undefined ? geo : tone(geo, hex));
+            return geo;
+        };
+
+        {   // the arc, filed through the same `strand` everything overhead uses
+            const arm = [];
+            for (let i = 0; i < 6; i++) strand(arm, apt(i / 6), apt((i + 1) / 6), 0.115);
+            strand(arm, [0, AY0 - 1.35, 0.09], apt(0.60), 0.055);        // the stay under it
+            for (const a of arm) body.push(a);
+        }
+        g = boxG(0.46, 0.21, 1.18); put(g, 0, AY1 - 0.02, AR + 0.44, -0.11); body.push(g);
+
+        const poleIM = new THREE.InstancedMesh(merge(body), stdMat(0x39423f, { roughness: 0.42, metalness: 0.04 }), poles.length);
+        // The lamps are emissive, not lights: eighty cobra heads would be
+        // eighty full-screen passes, and bloom does the same job for free.
         const lampMat = emissive(0xf6efdc, 0xffdca8, 2.6, { roughness: 0.34 });
-        const lensIM = new THREE.InstancedMesh(boxG(0.44, 0.06, 1.1), lampMat, poles.length);
+        const lensIM = new THREE.InstancedMesh(boxG(0.40, 0.055, 1.02), lampMat, poles.length);
         poles.forEach((p, i) => {
             poleIM.setMatrixAt(i, MX(p[0], KERB_H, p[1], 0, p[2], 0));
             _e.set(0, p[2], 0);
-            _v.set(0, 0, 2.55).applyEuler(_e);
-            lensIM.setMatrixAt(i, MX(p[0] + _v.x, KERB_H + 8.94, p[1] + _v.z, 0, p[2], 0));
+            _v.set(0, 0, AR + 0.44).applyEuler(_e);
+            lensIM.setMatrixAt(i, MX(p[0] + _v.x, KERB_H + AY1 - 0.16, p[1] + _v.z, 0, p[2], 0));
         });
         poleIM.instanceMatrix.needsUpdate = true;
         lensIM.instanceMatrix.needsUpdate = true;
         scene.add(poleIM, lensIM);
         world.ghost(lensIM);
 
-        // contact wires, as thin boxes so they catch what light there is, and
-        // the span wires as lines, which cost nothing and collide with nothing
+        /* ---- and now the wire itself ---- */
         const wires = [];
-        const wireMat = stdMat(0x22262a, { roughness: 0.30, metalness: 0.62 });
-        for (const o of [-TRS, TRS]) { g = boxG(0.035, 0.035, 660); put(g, o, WIRE_H, -80); wires.push(g); }
-        for (const o of [-TRF, TRF]) { g = boxG(2 * NX, 0.035, 0.035); put(g, 0, WIRE_H, o); wires.push(g); }
-        for (const o of [-230 - TRF, -230 + TRF]) { g = boxG(2 * NX, 0.035, 0.035); put(g, 0, WIRE_H, o); wires.push(g); }
+        const wireMat = new THREE.MeshStandardMaterial({
+            vertexColors: true, roughness: 0.34, metalness: 0.05,
+        });
+        const WIRE = 0x2a2b28, FEED = 0x191b1d, INSUL = 0xb9b2a2, SPANC = 0x23262a;
+
+        // where a span crosses, in order along the street, poles and rosettes
+        // together — because the wire is pulled over at every one of them and
+        // does not care which is holding it
+        const HOLDZ = SPAN_Z.concat(ROS_Z).sort((a, b) => b - a);
+        const HOLDXF = SPAN_XF.concat(ROS_X).sort((a, b) => a - b);
+
+        /* The running wire, staggered and sagged between the points that hold
+           it. `ax` says which way the street runs; `c` is the track centre. */
+        const contact = (ax, c, holds) => {
+            for (let i = 0; i + 1 < holds.length; i++) {
+                const u0 = holds[i], u1 = holds[i + 1];
+                const o0 = c + ((i & 1) ? STAG : -STAG), o1 = c + ((i & 1) ? -STAG : STAG);
+                const um = (u0 + u1) / 2, om = (o0 + o1) / 2;
+                // a long gap is an intersection, where the sag belongs to the
+                // whole crossing rather than to one span
+                const sag = Math.abs(u1 - u0) > 40 ? SAG * 0.5 : SAG;
+                const P = (u, o, y) => (ax === 'z' ? [o, y, u] : [u, y, o]);
+                strand(wires, P(u0, o0, WIRE_H), P(um, om, WIRE_H - sag), 0.035, WIRE);
+                strand(wires, P(um, om, WIRE_H - sag), P(u1, o1, WIRE_H), 0.035, WIRE);
+            }
+            // the two ends, run out straight to where the world stops
+            const a = holds[0], b = holds[holds.length - 1];
+            const P = (u, o, y) => (ax === 'z' ? [o, y, u] : [u, y, o]);
+            strand(wires, P(a, c - STAG, WIRE_H), P(a + Math.sign(a - b) * 60, c, WIRE_H), 0.035, WIRE);
+            strand(wires, P(b, c + STAG, WIRE_H), P(b + Math.sign(b - a) * 60, c, WIRE_H), 0.035, WIRE);
+        };
+        for (const o of [-TRS, TRS]) contact('z', o, HOLDZ);
+        for (const o of [-TRF, TRF]) contact('x', o, HOLDXF);
+        for (const o of [-230 - TRF, -230 + TRF]) contact('x', o, SPAN_XC);
+
+        /* The four curves through Flinders and Swanston, and the pull-offs
+           that hold them round. A wire will not turn: it is dragged out of
+           line by a wire back to a pole at the corner, and the corner poles
+           are where the four pull-offs below land. */
         for (const p of [[-TRS, -TRF], [-TRS, TRF], [TRS, -TRF], [TRS, TRF]]) {
-            g = boxG(Math.hypot(p[0] * 2, p[1] * 2) + 26, 0.03, 0.03);
-            put(g, 0, WIRE_H, 0, 0, Math.atan2(p[1] * 1.6, p[0] * 1.6), 0);
-            wires.push(g);
+            const ax = p[0], az = p[1];
+            strand(wires, [ax, WIRE_H, az * 5.6], [ax * 5.6, WIRE_H, az], 0.032, WIRE);
+            const mx = (ax + ax * 5.6) / 2 * 0.62 + ax * 0.38, mz = (az + az * 5.6) / 2 * 0.62 + az * 0.38;
+            strand(wires, [mx, WIRE_H, mz],
+                          [Math.sign(ax) * (SW + 1.4), HH - 0.30, Math.sign(az) * (FL + 1.4)], 0.026, SPANC);
         }
+
+        /* Span wires. Boxes rather than lines, because a span crossing the
+           street thirty metres over your head is the strand you actually see,
+           and a one-pixel line at that distance is a strand that comes and
+           goes with the anti-aliasing. The droppers and the bonds under them
+           stay as lines: they are short, there are hundreds, and nobody reads
+           them one at a time. */
+        const seg = [];
+        const line = (a, b) => seg.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+
+        const spanAcross = (ax, u, a0, a1, tracks, rosette) => {
+            const P = (o, y) => (ax === 'z' ? [o, y, u] : [u, y, o]);
+            // the span itself, with a little sag in the middle of it
+            const mid = (a0 + a1) / 2;
+            strand(wires, P(a0, HH), P(mid, HH - 0.16), 0.028, SPANC);
+            strand(wires, P(mid, HH - 0.16), P(a1, HH), 0.028, SPANC);
+            // the droppers, off the span onto the wire it is holding
+            for (let k = 0; k < tracks.length; k++) {
+                const o = tracks[k];
+                const t = Math.abs(o - a0) / Math.abs(a1 - a0);
+                const y = HH - 0.16 * (1 - Math.abs(2 * t - 1));
+                line(P(o, y), P(o, WIRE_H));
+                // and the ear it is clipped to, which is the one part of a
+                // dropper anybody ever notices
+                strand(wires, P(o - 0.09, WIRE_H + 0.055), P(o + 0.09, WIRE_H + 0.055), 0.05, SPANC);
+            }
+            if (!rosette) return;
+            // the rosette: the eyebolt's backing plate, bolted to the wall
+            for (const e of [a0, a1]) {
+                const b = boxG(ax === 'z' ? 0.30 : 0.42, 0.42, ax === 'z' ? 0.42 : 0.30);
+                put(b, ...P(e + Math.sign(mid - e) * 0.10, HH));
+                wires.push(tone(b, 0x35322c));
+            }
+        };
+
+        for (const z of SPAN_Z) spanAcross('z', z, -(SW + 1.4), SW + 1.4, [-TRS, TRS], false);
+        for (const z of ROS_Z) spanAcross('z', z, -BX + 0.12, BX - 0.12, [-TRS, TRS], true);
+        for (const x of SPAN_XF) spanAcross('x', x, -(FL + 1.4), FL + 1.4, [-TRF, TRF], false);
+        for (const x of ROS_X) spanAcross('x', x, -BZ + 0.12, BZ - 0.12, [-TRF, TRF], true);
+        for (const x of SPAN_XC) {
+            spanAcross('x', x, -230 - (13.5 + 1.4), -230 + (13.5 + 1.4), [-230 - TRF, -230 + TRF], false);
+        }
+
+        /* The feeder cable, pole top to pole top up both kerbs. It is the
+           thickest thing overhead, it is the highest, and it is the strand
+           that tells you at a glance that a street is a tram street rather
+           than a street with a wire over it. */
+        const feeder = (ax, o, holds) => {
+            for (let i = 0; i + 1 < holds.length; i++) {
+                const a = holds[i], b = holds[i + 1];
+                const m = (a + b) / 2, drop = Math.min(0.42, Math.abs(b - a) * 0.012);
+                const P = (u, y) => (ax === 'z' ? [o, y, u] : [u, y, o]);
+                strand(wires, P(a, HH + 0.62), P(m, HH + 0.62 - drop), 0.05, FEED);
+                strand(wires, P(m, HH + 0.62 - drop), P(b, HH + 0.62), 0.05, FEED);
+            }
+        };
+        feeder('z', -(SW + 1.4), SPAN_Z);
+        feeder('z', SW + 1.4, SPAN_Z);
+        feeder('x', -(FL + 1.4), SPAN_XF);
+        feeder('x', FL + 1.4, SPAN_XF);
+
+        /* Section insulators. Every few hundred metres the wire is cut and
+           the two ends bridged by a runner of insulating board with the
+           conducting horns either side of it, so that one length of the
+           street can be switched off without the next one going dark. Pale
+           against everything else up there, and a metre long, which is why
+           you notice one from underneath. */
+        for (const s of [[-TRS, -96], [TRS, -96], [-TRS, -268], [TRS, 106]]) {
+            const b = boxG(0.10, 0.13, 1.15); put(b, s[0], WIRE_H + 0.02, s[1]);
+            wires.push(tone(b, INSUL));
+            for (const e of [-1, 1]) {
+                const h = boxG(0.05, 0.05, 0.34); put(h, s[0], WIRE_H - 0.03, s[1] + e * 0.70);
+                wires.push(tone(h, INSUL));
+            }
+        }
+
         const wireMesh = merged(wires, wireMat);
         scene.add(wireMesh); world.ghost(wireMesh);
 
-        const seg = [];
-        const line = (a, b) => seg.push(a[0], a[1], a[2], b[0], b[1], b[2]);
-        const HH = 8.3 + KERB_H;
-        for (const p of poles) {
-            if (Math.abs(p[0]) > SW + 3) {                  // a Flinders Street pole
-                line([p[0], HH, p[1]], [p[0], HH, -p[1]]);
-            } else {
-                line([-(SW + 1.4), HH, p[1]], [SW + 1.4, HH, p[1]]);
-                for (const o of [-TRS, TRS]) line([o, HH - Math.abs(o) * 0.012, p[1]], [o, WIRE_H, p[1]]);
+        /* And the grid over the two intersections a tram can turn in. A
+           square of span wire on the four corner poles with both diagonals
+           across it is how a junction is held up, and it is the densest piece
+           of sky in the whole world — which is right, because standing under
+           it is the thing everybody remembers. */
+        const grid = (cx, cz, hx, hz) => {
+            const c = [[cx - hx, cz - hz], [cx + hx, cz - hz], [cx + hx, cz + hz], [cx - hx, cz + hz]];
+            line([c[0][0], HH, c[0][1]], [c[2][0], HH, c[2][1]]);
+            line([c[1][0], HH, c[1][1]], [c[3][0], HH, c[3][1]]);
+            for (let i = 0; i < 4; i++) {
+                const a = c[i], b = c[(i + 1) % 4];
+                line([a[0], HH, a[1]], [b[0], HH, b[1]]);
             }
-        }
-        const corners = [[-(SW + 1.4), -(FL + 1.4)], [SW + 1.4, -(FL + 1.4)],
-                         [SW + 1.4, FL + 1.4], [-(SW + 1.4), FL + 1.4]];
-        line([corners[0][0], HH, corners[0][1]], [corners[2][0], HH, corners[2][1]]);
-        line([corners[1][0], HH, corners[1][1]], [corners[3][0], HH, corners[3][1]]);
-        for (let i = 0; i < 4; i++) {
-            const a = corners[i], b = corners[(i + 1) % 4];
-            line([a[0], HH, a[1]], [b[0], HH, b[1]]);
-        }
+        };
+        grid(0, 0, SW + 1.4, FL + 1.4);
+        grid(0, -230, SW + 1.4, 13.5 + 1.4);
         for (const o of [-TRS, TRS]) {
-            line([o, HH - 0.4, -(FL + 1.4)], [o, WIRE_H, -(FL + 1.4)]);
-            line([o, HH - 0.4, FL + 1.4], [o, WIRE_H, FL + 1.4]);
-            line([o, HH - 0.6, 0], [o, WIRE_H, 0]);
+            for (const z of [-(FL + 1.4), 0, FL + 1.4]) line([o, HH - 0.5, z], [o, WIRE_H, z]);
+            for (const z of [-230 - 14.9, -230, -230 + 14.9]) line([o, HH - 0.5, z], [o, WIRE_H, z]);
         }
+        for (const o of [-TRF, TRF]) {
+            for (const x of [-(SW + 1.4), 0, SW + 1.4]) line([x, HH - 0.5, o], [x, WIRE_H, o]);
+        }
+        for (const o of [-230 - TRF, -230 + TRF]) {
+            for (const x of [-(SW + 1.4), 0, SW + 1.4]) line([x, HH - 0.5, o], [x, WIRE_H, o]);
+        }
+
         const lg = new THREE.BufferGeometry();
         lg.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
         scene.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({
-            color: srgb(0x1c1f22), transparent: true, opacity: 0.8,
+            color: srgb(0x1c1f22), transparent: true, opacity: 0.85,
         })));
     }
 
@@ -11029,10 +11653,60 @@ export default function build(world) {
         im.setMatrixAt(i, _m4);
     };
 
+    /* ---- the traffic itself.
+
+       Two things were wrong with it and the first one is not a modelling
+       problem at all: every vehicle in this world rendered black. The body
+       material was metalness 0.40 with no environment map anywhere in the
+       scene, so a car's diffuse was scaled almost away and its specular found
+       nothing to reflect — a red car, a white car and a taxi all came out the
+       same tarry lump, at four in the afternoon, in full sun. Metalness five
+       hundredths from here on, which is the same lesson the canopy steel in
+       section 21 had to learn and the same lesson `wet()` is kept away from.
+
+       The second is that there was one shape. A saloon, stretched taller and
+       longer when the dice said van, and that was the whole of the fleet — no
+       ute, no delivery van with a box on the back, no truck, no bus, on a
+       street where half of what stands at a kerb is a work vehicle.
+
+       So: four shapes rather than one, and still four meshes rather than
+       sixteen, because each shape is now a whole vehicle in one geometry
+       instead of four meshes cooperating. Body, glass, tyres and lamps all
+       ride in the same buffer and are told apart two ways —
+
+         · the paint is white in the vertices, so the instance's own colour
+           lands on it, and the glass and the tyres are nearly black in the
+           vertices, so no instance colour can turn a windscreen pink;
+         · and the lamps take both their colour and their glow through the uv,
+           off a four-cell strip: paint, headlamp, tail, marker. The albedo
+           strip is white in the paint cell and the emissive strip is black
+           there, so every surface that is not a lamp glows not at all and
+           every lamp clears the bloom threshold on its own.
+
+       Which leaves the fleet at four draws for a saloon, a van, a ute and a
+       bus, where it used to spend four on one saloon. ---- */
     const CAR_COLS = [0xd8d9db, 0x2b2f33, 0x8f959b, 0x9c2b26, 0x1f3a63, 0xe4e2dc,
                       0x394048, 0xb9bcc0, 0x5c6b52, 0xcfa63a];
+    // A van is somebody's business, so it is white, or it is a livery colour
+    // and nothing in between; a ute is white, silver or a tradie's dark blue.
+    const VAN_COLS = [0xeeece4, 0xf4f2ea, 0xe6e4dc, 0x2f5f9e, 0xb03a2c, 0x2f6b4f, 0xd6a12c];
+    const UTE_COLS = [0xdedfe1, 0xf0eee6, 0x33383d, 0x8d3a2a, 0x2f4c6b, 0xb9bcc0];
+    const BUS_COLS = [0xd8dad6, 0xe6e4dc, 0x2f6b4f];
     const CARS = [], LANES = new Map();
-    let carBodyIM, carGlassIM, carWheelIM, carLampIM;
+    // one instanced mesh per shape, and the index list that says which cars
+    // are drawn out of each
+    const VEH = {}, FLEET = { car: [], van: [], ute: [], bus: [] };
+    // which shape draws which kind, and how big it is drawn — a small truck
+    // is a delivery van at five and twenty per cent, which keeps its wheels
+    // round; a bus is nobody else's shape and has its own
+    const KIND = {
+        car:   { im: 'car', sc: 1.00, len: 4.70, cols: CAR_COLS },
+        taxi:  { im: 'car', sc: 1.00, len: 4.70, cols: null },
+        van:   { im: 'van', sc: 1.00, len: 5.60, cols: VAN_COLS },
+        truck: { im: 'van', sc: 1.25, len: 7.00, cols: VAN_COLS },
+        ute:   { im: 'ute', sc: 1.00, len: 5.30, cols: UTE_COLS },
+        bus:   { im: 'bus', sc: 1.00, len: 12.2, cols: BUS_COLS },
+    };
     {
         /* Little Collins gets its two lanes as well, because an intersection
            with a lantern over it and nothing ever arriving at it is a lantern
@@ -11053,8 +11727,11 @@ export default function build(world) {
                passed the Stop 13 platforms with 240 mm to spare. */
             { ax: 'z', dir: 1, off: 10.1, n: 12, taxi: true },
             { ax: 'z', dir: -1, off: -10.1, n: 12, taxi: true },
-            { ax: 'x', dir: 1, off: -10.2, n: 5 },
-            { ax: 'x', dir: -1, off: 10.2, n: 5 },
+            // Flinders Street is the one street in this world a bus route
+            // would actually use, so it and St Kilda Road get them and
+            // Swanston — which is a tram street and knows it — does not.
+            { ax: 'x', dir: 1, off: -10.2, n: 5, bus: true },
+            { ax: 'x', dir: -1, off: 10.2, n: 5, bus: true },
             { ax: 'x', dir: -1, off: -115 - 2.6, n: 2 },
             { ax: 'x', dir: -1, off: -115 + 2.6, n: 2 },
             { ax: 'x', dir: 1, off: -230 - 10.2, n: 2 },
@@ -11064,8 +11741,8 @@ export default function build(world) {
             // Alexandra Avenue, along the south bank. It has a lantern over it
             // now, and a lantern with nothing ever arriving at it is a lantern
             // talking to itself — the same argument Little Collins won.
-            { ax: 'x', dir: 1, off: SKR.z - 4.6, n: 3, rx1: 118 },
-            { ax: 'x', dir: -1, off: SKR.z + 4.6, n: 3, rx1: 118 },
+            { ax: 'x', dir: 1, off: SKR.z - 4.6, n: 3, rx1: 118, bus: true },
+            { ax: 'x', dir: -1, off: SKR.z + 4.6, n: 3, rx1: 118, bus: true },
         ];
         lanes.forEach((ln, li) => {
             /* Dealt out behind the leader, because the lane is sorted once at
@@ -11076,13 +11753,24 @@ export default function build(world) {
                metres either side of Swanston. */
             const head = ln.ax === 'z' ? (ln.dir > 0 ? RUN_Z1 - 10 : RUN_Z0 + 10) : -ln.dir * 22;
             for (let i = 0; i < ln.n; i++) {
-                const van = rnd() < 0.16;
-                const taxi = !van && (ln.taxi ? rnd() < 0.62 : rnd() < 0.15);
+                const r = rnd();
+                /* The second vehicle in a bus lane is always a bus. Left to
+                   the dice at one chance in twenty over four short lanes, the
+                   world came out with exactly one bus in it, standing on
+                   St Kilda Road where nobody was — which is a shape built and
+                   then never seen. */
+                const kind = (ln.bus && i === 1) ? 'bus'
+                           : (ln.taxi && r < 0.58) ? 'taxi'
+                           : r < 0.70 ? 'car'
+                           : r < 0.80 ? 'van'
+                           : r < 0.89 ? 'ute'
+                           : (r < 0.95 || !ln.bus) ? 'truck' : 'bus';
+                const heavy = kind === 'truck' || kind === 'bus';
                 CARS.push({
-                    ax: ln.ax, dir: ln.dir, off: ln.off, lane: li, van, taxi,
+                    ax: ln.ax, dir: ln.dir, off: ln.off, lane: li, kind,
                     s: head - ln.dir * i * (ln.ax === 'z' ? rr(38, 62) : rr(18, 34)),
-                    v: 8, vmax: rr(10.5, 14.5),
-                    len: van ? 5.6 : 4.7, rx1: ln.rx1,
+                    v: 8, vmax: heavy ? rr(8.5, 11.0) : rr(10.5, 14.5),
+                    len: KIND[kind].len, rx1: ln.rx1,
                 });
             }
         });
@@ -11091,32 +11779,244 @@ export default function build(world) {
         // told, because being told is only true until the first car wraps.
         for (const c of CARS) { if (!LANES.has(c.lane)) LANES.set(c.lane, []); LANES.get(c.lane).push(c); }
 
-        // one saloon shape, stretched into a van and repainted into a taxi
-        const bodyG = [];
-        let g = boxG(1.84, 0.70, 4.6); put(g, 0, 0.68, 0); bodyG.push(g);
-        g = boxG(1.54, 0.10, 2.3); put(g, 0, 1.60, -0.18); bodyG.push(g);
-        g = boxG(1.88, 0.26, 4.0); put(g, 0, 0.38, 0); bodyG.push(g);
-        carBodyIM = new THREE.InstancedMesh(merge(bodyG), stdMat(0xffffff, { roughness: 0.24, metalness: 0.40 }), CARS.length);
-        carGlassIM = new THREE.InstancedMesh(boxG(1.62, 0.60, 2.4), stdMat(0x1a222a, { roughness: 0.08, metalness: 0.50 }), CARS.length);
-        const wheels = [];
-        for (const s of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
-            g = cylG(0.33, 0.33, 0.22, 10); put(g, s[0] * 0.86, 0.33, s[1] * 1.45, 0, 0, Math.PI / 2); wheels.push(g);
-        }
-        carWheelIM = new THREE.InstancedMesh(merge(wheels), stdMat(0x202326, { roughness: 0.60 }), CARS.length);
-        const lampG2 = [];
-        for (const s of [-0.6, 0.6]) { g = uvCell(new THREE.PlaneGeometry(0.24, 0.16), 3, 0); put(g, s, 0.72, 2.31); lampG2.push(g); }
-        for (const s of [-0.62, 0.62]) { g = uvCell(new THREE.PlaneGeometry(0.22, 0.14), 3, 2); put(g, s, 0.75, -2.31, 0, Math.PI, 0); lampG2.push(g); }
-        carLampIM = new THREE.InstancedMesh(merge(lampG2),
-            emissive(0xffffff, 0xffffff, 2.2, { map: lampCellTex, emissiveMap: lampCellTex, roughness: 0.3 }), CARS.length);
+        /* ---- and the ones that are not going anywhere.
 
-        const tint = new THREE.Color();
-        CARS.forEach((c, i) => {
-            tint.copy(srgb(c.taxi ? 0xf2c518 : pickOf(CAR_COLS)));
-            carBodyIM.setColorAt(i, tint);
+           Every vehicle in this world moved, and a street where nothing is
+           ever stopped is a street nobody lives on: a real kerb is half full
+           of things standing in it — a van at the back of a shop with its
+           markers lit, a ute outside a job, a truck on a delivery, a rank of
+           taxis outside the station.
+
+           Where they can stand is settled by the running lanes and not by the
+           picture. A stopped vehicle is in no lane's list, so nothing follows
+           it and nothing stops for it — which means it must not be anywhere a
+           moving one will drive through it. Swanston's traffic lane sits at
+           ±10.1 since the Stop 11 platforms took the lane inside it, and the
+           kerb is at 11.5: four hundred and sixty millimetres between them,
+           which is not a parked van by two metres. So nothing parks on
+           Swanston, and that is honest — the real Swanston Street is closed to
+           through traffic and the kerb is loading bays. Flinders Street,
+           Collins and Little Collins all keep the two and a bit metres between
+           the traffic and the kerb that a stopped vehicle needs, and they are
+           where these stand. */
+        const PARKED = [
+            // the rank on the station frontage, which is where a Melbourne
+            // taxi has waited since there were taxis
+            { kind: 'taxi',  ax: 'x', s: -24.8, off: 12.42, dir: -1 },
+            { kind: 'taxi',  ax: 'x', s: -30.6, off: 12.45, dir: -1 },
+            { kind: 'taxi',  ax: 'x', s: -36.5, off: 12.40, dir: -1, sk: -0.03 },
+            // a truck on a delivery outside the cathedral end, and a van
+            // further out with its markers on
+            { kind: 'truck', ax: 'x', s: 33.5, off: -12.55, dir: 1 },
+            { kind: 'van',   ax: 'x', s: 63.0, off: -12.45, dir: 1, sk: 0.035 },
+            { kind: 'ute',   ax: 'x', s: -67.5, off: 12.44, dir: -1 },
+            { kind: 'van',   ax: 'x', s: -101.0, off: -12.48, dir: 1 },
+            // Collins Street, both kerbs
+            { kind: 'van',   ax: 'x', s: 31.0, off: -230 + 12.35, dir: -1 },
+            { kind: 'ute',   ax: 'x', s: -33.5, off: -230 - 12.40, dir: 1, sk: 0.03 },
+            { kind: 'car',   ax: 'x', s: 58.0, off: -230 + 12.40, dir: -1 },
+            // and the narrow one, where a truck standing in it is most of
+            // what Little Collins Street is for
+            { kind: 'truck', ax: 'x', s: 25.0, off: -349.4, dir: 1 },
+            { kind: 'van',   ax: 'x', s: -28.0, off: -340.9, dir: 1 },
+        ];
+        for (const p of PARKED) {
+            /* `dir` is written out rather than worked out from which side of
+               the road it is: it says which way the traffic beside it runs,
+               and therefore which way it is pointing, and on Little Collins —
+               where both lanes run the same way — no rule about kerbs would
+               have got it right. `sk` is the couple of degrees of skew that
+               says somebody parked it rather than a machine placing it. */
+            CARS.push({
+                ax: p.ax, dir: p.dir, off: p.off, lane: -1, kind: p.kind, stop: true,
+                s: p.s, v: 0, vmax: 0, len: KIND[p.kind].len,
+                ry: (p.dir > 0 ? Math.PI / 2 : -Math.PI / 2) + (p.sk || 0),
+            });
+        }
+
+        /* ---- the shapes.
+
+           Four geometries, each one a whole vehicle. `V` files a painted box,
+           `L` files a lamp — a small box whose uv points at one cell of the
+           four-cell strip, so it takes its albedo and its glow from there
+           rather than from a material of its own. */
+        const VC = { paint: 0xffffff, glass: 0x141b22, tyre: 0x17191b, trim: 0x4c5155, dark: 0x24262a };
+        const vehCell = tex(128, 32, (g, W, H) => {
+            const cols = ['#ffffff', '#fff2d6', '#ff2e18', '#ff9a12'];
+            for (let i = 0; i < 4; i++) { g.fillStyle = cols[i]; g.fillRect(W * i / 4, 0, W / 4 + 1, H); }
         });
-        if (carBodyIM.instanceColor) carBodyIM.instanceColor.needsUpdate = true;
-        scene.add(carBodyIM, carGlassIM, carWheelIM, carLampIM);
-        for (const m of [carBodyIM, carGlassIM, carWheelIM, carLampIM]) world.ghost(m);
+        const vehGlow = tex(128, 32, (g, W, H) => {
+            const cols = ['#000000', '#fff2d6', '#c01000', '#ff8400'];
+            for (let i = 0; i < 4; i++) { g.fillStyle = cols[i]; g.fillRect(W * i / 4, 0, W / 4 + 1, H); }
+        });
+        const vehMat = stdMat(0xffffff, {
+            vertexColors: true, map: vehCell, emissiveMap: vehGlow,
+            emissive: 0xffffff, emissiveIntensity: 2.05,
+            roughness: 0.40, metalness: 0.05,
+        });
+        const vTone = (geo, hex) => {
+            const c = srgb(hex), n = geo.attributes.position.count, a = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+            geo.setAttribute('color', new THREE.BufferAttribute(a, 3));
+            return geo;
+        };
+        // uv into one cell of the strip, kept off the cell's own edges so a
+        // linear sample never picks up the colour next door
+        const vCellUV = (geo, i) => {
+            const uv = geo.attributes.uv;
+            for (let k = 0; k < uv.count; k++) uv.setXY(k, (i + 0.15 + uv.getX(k) * 0.70) / 4, 0.5);
+            return geo;
+        };
+        // a painted box from its centre and its three sizes
+        const V = (arr, hex, w, h, d, x, y, z, rx, ry, rz) => {
+            const geo = boxG(w, h, d); put(geo, x, y, z, rx, ry, rz);
+            arr.push(vCellUV(vTone(geo, hex), 0));
+            return geo;
+        };
+        // a wheel, which is the one round thing on any of them
+        const VW = (arr, r, w, x, y, z) => {
+            const geo = cylG(r, r, w, 10); put(geo, x, y, z, 0, 0, Math.PI / 2);
+            arr.push(vCellUV(vTone(geo, VC.tyre), 0));
+            const hub = cylG(r * 0.44, r * 0.44, w + 0.02, 8);
+            put(hub, x, y, z, 0, 0, Math.PI / 2);
+            arr.push(vCellUV(vTone(hub, VC.trim), 0));
+        };
+        // and a lamp: cell 1 is a headlamp, 2 a tail, 3 an amber marker
+        const L = (arr, cell, w, h, d, x, y, z) => {
+            const geo = boxG(w, h, d); put(geo, x, y, z);
+            arr.push(vCellUV(vTone(geo, 0xffffff), cell));
+            return geo;
+        };
+
+        /* the saloon, which is also the taxi. Three boxes for the body rather
+           than one, so the bonnet and the boot sit below the waist and the
+           thing has a shoulder line instead of being a brick. */
+        {
+            const A = [];
+            V(A, VC.paint, 1.84, 0.68, 4.58, 0, 0.72, 0);          // the body between the arches
+            V(A, VC.paint, 1.88, 0.26, 3.90, 0, 0.40, 0);          // the sill under it
+            V(A, VC.paint, 1.76, 0.16, 1.36, 0, 1.10, 1.50);       // the bonnet
+            V(A, VC.paint, 1.74, 0.14, 1.14, 0, 1.11, -1.72);      // the boot
+            V(A, VC.glass, 1.72, 0.52, 2.36, 0, 1.32, -0.12);      // the glasshouse
+            V(A, VC.paint, 1.50, 0.10, 2.16, 0, 1.61, -0.16);      // the roof
+            V(A, VC.dark, 1.90, 0.20, 0.16, 0, 0.62, 2.28);        // the bumpers
+            V(A, VC.dark, 1.90, 0.20, 0.16, 0, 0.64, -2.28);
+            for (const s of [-1, 1]) {
+                VW(A, 0.33, 0.22, s * 0.86, 0.33, 1.45);
+                VW(A, 0.33, 0.22, s * 0.86, 0.33, -1.45);
+                L(A, 1, 0.36, 0.17, 0.07, s * 0.62, 0.86, 2.30);   // headlamps
+                L(A, 2, 0.32, 0.15, 0.07, s * 0.64, 0.90, -2.30);  // tails
+                L(A, 3, 0.11, 0.13, 0.07, s * 0.88, 0.86, 2.26);   // and the corner indicators
+            }
+            VEH.car = merge(A);
+        }
+
+        /* the delivery van, which doubles as the small truck at a quarter
+           bigger. A cab with a raked screen, a box on the back a head taller
+           than the cab is, the rear doors showing as two shut lines, and the
+           amber markers along the top of the box that a van of this size
+           carries by law and has lit at this hour. */
+        {
+            const A = [];
+            V(A, VC.paint, 1.94, 0.34, 5.30, 0, 0.44, 0);               // the chassis and its skirt
+            V(A, VC.paint, 2.02, 1.66, 3.94, 0, 1.62, -0.78);           // the box
+            V(A, VC.paint, 1.98, 1.10, 1.72, 0, 1.34, 1.90);            // the cab
+            V(A, VC.glass, 1.80, 0.66, 0.34, 0, 1.68, 2.56, -0.30);     // the screen, raked
+            for (const s of [-1, 1]) {
+                V(A, VC.glass, 0.08, 0.52, 0.86, s * 0.98, 1.62, 1.86);  // the cab's side glass
+                VW(A, 0.38, 0.26, s * 0.94, 0.38, 1.72);
+                VW(A, 0.38, 0.26, s * 0.94, 0.38, -1.88);
+                V(A, VC.dark, 0.10, 1.44, 0.06, s * 0.30, 1.62, -2.78);  // the shut line of a rear door
+                L(A, 1, 0.34, 0.18, 0.07, s * 0.66, 0.88, 2.84);
+                L(A, 2, 0.26, 0.34, 0.07, s * 0.78, 1.05, -2.76);
+                L(A, 3, 0.13, 0.12, 0.07, s * 0.92, 2.34, 1.20);         // the markers, on the box
+                L(A, 3, 0.13, 0.12, 0.07, s * 0.92, 2.34, -2.70);
+            }
+            V(A, VC.dark, 2.06, 0.14, 4.00, 0, 2.46, -0.78);             // the cap on the box
+            V(A, VC.dark, 1.98, 0.20, 0.14, 0, 0.60, 2.88);              // the front bumper
+            VEH.van = merge(A);
+        }
+
+        /* the ute. A bonnet, a cab and an open tray with its sides up, and a
+           ladder rack over the tray, because a ute without a rack on it is a
+           ute nobody in this country has ever seen at four in the afternoon. */
+        {
+            const A = [];
+            V(A, VC.paint, 1.86, 0.40, 5.06, 0, 0.48, 0);            // the chassis
+            V(A, VC.paint, 1.78, 0.30, 1.36, 0, 0.90, 1.86);         // the bonnet
+            V(A, VC.paint, 1.82, 0.56, 1.72, 0, 1.00, 0.42);         // the cab below the glass
+            V(A, VC.glass, 1.70, 0.56, 1.52, 0, 1.52, 0.36);         // and its glass
+            V(A, VC.paint, 1.60, 0.10, 1.42, 0, 1.82, 0.34);         // the roof
+            V(A, VC.paint, 1.78, 0.10, 2.42, 0, 0.92, -1.40);        // the tray floor
+            V(A, VC.paint, 1.84, 0.46, 0.10, 0, 1.14, -2.58);        // the tailgate
+            for (const s of [-1, 1]) {
+                V(A, VC.paint, 0.10, 0.46, 2.42, s * 0.88, 1.14, -1.40);   // the tray sides
+                VW(A, 0.37, 0.25, s * 0.88, 0.37, 1.68);
+                VW(A, 0.37, 0.25, s * 0.88, 0.37, -1.56);
+                V(A, VC.trim, 0.07, 0.62, 0.07, s * 0.80, 1.68, -0.42);    // the rack's legs
+                V(A, VC.trim, 0.07, 0.62, 0.07, s * 0.80, 1.68, -2.40);
+                L(A, 1, 0.34, 0.16, 0.07, s * 0.62, 0.86, 2.52);
+                L(A, 2, 0.22, 0.30, 0.07, s * 0.74, 1.16, -2.60);
+                L(A, 3, 0.11, 0.11, 0.07, s * 0.86, 0.86, 2.48);
+            }
+            V(A, VC.trim, 1.74, 0.08, 0.08, 0, 1.99, -0.42);         // and the rack itself
+            V(A, VC.trim, 1.74, 0.08, 0.08, 0, 1.99, -2.40);
+            V(A, VC.trim, 0.08, 0.08, 2.06, 0.78, 1.99, -1.41);
+            V(A, VC.trim, 0.08, 0.08, 2.06, -0.78, 1.99, -1.41);
+            V(A, VC.dark, 1.88, 0.20, 0.14, 0, 0.62, 2.56);
+            VEH.ute = merge(A);
+        }
+
+        /* and the bus. Twelve metres, a window band the whole way down both
+           flanks, two door recesses, three axles' worth of wheels with the
+           back two together, and a destination box over the screen that takes
+           the headlamp cell so it is lit without being a lamp. */
+        {
+            const A = [];
+            V(A, VC.paint, 2.50, 1.94, 11.4, 0, 1.87, 0);            // the body
+            V(A, VC.paint, 2.42, 0.56, 11.5, 0, 0.62, 0);            // the skirt under it
+            V(A, VC.glass, 2.54, 0.86, 9.90, 0, 2.24, -0.55);        // the window band, both flanks
+            V(A, VC.glass, 2.32, 1.00, 0.30, 0, 2.16, 5.72);         // the screen
+            V(A, VC.glass, 2.28, 0.86, 0.24, 0, 2.24, -5.72);        // and the back window
+            V(A, VC.paint, 2.46, 0.16, 11.3, 0, 2.86, 0);            // the roof
+            V(A, VC.dark, 1.70, 0.34, 1.90, 0, 2.98, 2.10);          // the pods on top of it
+            V(A, VC.dark, 1.30, 0.28, 1.30, 0, 2.95, -3.40);
+            for (const s of [-1, 1]) {
+                V(A, VC.dark, 0.06, 1.60, 1.10, s * 1.27, 1.80, 4.10);   // the two door recesses
+                V(A, VC.dark, 0.06, 1.60, 1.10, s * 1.27, 1.80, -1.30);
+                VW(A, 0.50, 0.30, s * 1.14, 0.50, 4.10);
+                VW(A, 0.50, 0.30, s * 1.14, 0.50, -2.90);
+                VW(A, 0.50, 0.30, s * 1.14, 0.50, -4.28);
+                L(A, 1, 0.38, 0.22, 0.08, s * 0.86, 0.92, 5.76);
+                L(A, 2, 0.28, 0.40, 0.08, s * 0.96, 1.10, -5.76);
+                L(A, 3, 0.13, 0.12, 0.08, s * 1.18, 2.72, 4.90);
+                L(A, 3, 0.13, 0.12, 0.08, s * 1.18, 2.72, -5.10);
+            }
+            L(A, 1, 1.72, 0.30, 0.07, 0, 2.72, 5.74);                // the destination box
+            V(A, VC.dark, 2.46, 0.24, 0.16, 0, 0.62, 5.80);
+            VEH.bus = merge(A);
+        }
+
+        /* And the four meshes, made last, because an InstancedMesh takes its
+           count at construction and only now is it known how many of the
+           fleet came out as utes. */
+        CARS.forEach((c, i) => FLEET[KIND[c.kind].im].push(i));
+        const tint = new THREE.Color();
+        for (const k in FLEET) {
+            const im = new THREE.InstancedMesh(VEH[k], vehMat, Math.max(1, FLEET[k].length));
+            // Left culled, a fleet whose geometry sits at the origin blinks
+            // out the moment the camera turns away from Flinders Street,
+            // wherever the vehicles themselves happen to be.
+            im.frustumCulled = false;
+            FLEET[k].forEach((ci, j) => {
+                const c = CARS[ci];
+                tint.copy(srgb(c.kind === 'taxi' ? 0xf2c518 : pickOf(KIND[c.kind].cols)));
+                im.setColorAt(j, tint);
+            });
+            if (im.instanceColor) im.instanceColor.needsUpdate = true;
+            VEH[k] = im;
+            scene.add(im); world.ghost(im);
+        }
     }
 
     /* ---- the bikes, which went with the people.
@@ -11840,20 +12740,25 @@ export default function build(world) {
                 wrapS(o);
             }
         }
-        for (let i = 0; i < CARS.length; i++) {
-            const o = CARS[i];
-            const x = o.ax === 'z' ? o.off : o.s, z = o.ax === 'z' ? o.s : o.off;
-            const ry = (o.ax === 'z') ? (o.dir > 0 ? 0 : Math.PI) : (o.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
-            const sy = o.van ? 1.55 : 1, sz = o.van ? 1.2 : 1;
-            setM(carBodyIM, i, x, 0, z, ry, 1, sy, sz);
-            setM(carGlassIM, i, x, o.van ? 1.62 : 1.31, z, ry, 1, o.van ? 1.1 : 1, sz);
-            setM(carWheelIM, i, x, 0, z, ry, 1, 1, sz);
-            setM(carLampIM, i, x, 0, z, ry, 1, sy, sz);
+        /* Out into the four shapes. A vehicle knows which mesh draws it and at
+           what size, so a small truck is the van's geometry a quarter bigger
+           and every wheel in the world stays round — which the old
+           stretched-saloon van's never did. A parked one carries its own
+           heading, because a vehicle somebody left at a kerb is never quite
+           square to it. */
+        for (const k in FLEET) {
+            const im = VEH[k], list = FLEET[k];
+            for (let j = 0; j < list.length; j++) {
+                const o = CARS[list[j]];
+                const x = o.ax === 'z' ? o.off : o.s, z = o.ax === 'z' ? o.s : o.off;
+                const ry = o.ry !== undefined ? o.ry
+                         : (o.ax === 'z') ? (o.dir > 0 ? 0 : Math.PI)
+                         : (o.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+                const sc = KIND[o.kind].sc;
+                setM(im, j, x, 0, z, ry, sc, sc, sc);
+            }
+            im.instanceMatrix.needsUpdate = true;
         }
-        carBodyIM.instanceMatrix.needsUpdate = true;
-        carGlassIM.instanceMatrix.needsUpdate = true;
-        carWheelIM.instanceMatrix.needsUpdate = true;
-        carLampIM.instanceMatrix.needsUpdate = true;
 
         /* ---- and the billboards, which change every eight seconds or so -- */
         adT += dt;
