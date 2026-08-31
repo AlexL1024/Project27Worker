@@ -47,9 +47,12 @@
 //      headlights, the LED billboards and the concourse mouth are emissive
 //      materials, and world.bloom carries the shine.
 //    · City Square, behind St Paul's between Flinders Lane and Collins Street:
-//      the plaza, the steel canopy on its six tree columns, six separate
-//      buildings behind it with six shops and a theatre under them, and Town
-//      Hall Station under the lot of it. Nothing on that frontage is painted:
+//      the plaza, the steel canopy on its six tree columns, the one building
+//      that stands behind it with six shops under it, and Town Hall Station
+//      under the lot of it.
+//    · and the west side of Swanston opposite the Town Hall — the terracotta
+//      tower on the Collins corner, the cream one on Little Collins, and the
+//      three older frontages between them. Nothing on that frontage is painted:
 //      every window is an opening with a pane at the back of it, every
 //      cornice is courses and brackets, and the colour is on the vertices, so
 //      a whole building is one draw and still has relief you can walk up to. Which is the first place
@@ -3323,8 +3326,12 @@ export default function build(world) {
             bulbs:  [0.090, 0.205, 1.000, 0.250],
             poster: [0.090, 0.270, 0.290, 0.620],
             bill:   [0.310, 0.270, 1.000, 0.620],
-            warm:   [0.020, 0.660, 0.480, 0.980],
-            cool:   [0.520, 0.660, 0.980, 0.980],
+            boss:   [0.000, 0.635, 0.250, 0.720],
+            coco:   [0.250, 0.635, 0.500, 0.720],
+            sbux:   [0.500, 0.635, 0.750, 0.720],
+            noodle: [0.750, 0.635, 1.000, 0.720],
+            warm:   [0.020, 0.750, 0.480, 0.980],
+            cool:   [0.520, 0.750, 0.980, 0.980],
         };
         const shopSheet = (emis) => tex(2048, 2048, (g, W, H) => {
             const R = (k) => [SHOP[k][0] * W, SHOP[k][1] * H, (SHOP[k][2] - SHOP[k][0]) * W,
@@ -3357,6 +3364,10 @@ export default function build(world) {
             fascia('optic',  'NEU OPTICAL',      '#e8f2ff', '#1d3550', 62, 'eyes tested here');
             fascia('bergen', 'BERGEN & CO',      '#ffeec2', '#2a1f16', 58, 'jewellers since 1911');
             fascia('regent', 'REGENT',           '#fff3d2', '#7d1f1a', 84);
+            fascia('boss',   'BOSS',             '#f2f0ec', '#141416', 96);
+            fascia('coco',   'COCO BLACK',       '#f6e9d2', '#2b1a12', 62, 'chocolate · since 2008');
+            fascia('sbux',   'STARBUCKS',        '#e8f6ec', '#0d5c3f', 60, 'coffee');
+            fascia('noodle', 'HOT POT & NOODLE', '#fff0d0', '#9a1f1a', 50, 'open till late');
 
             // the theatre's blade, read from the bottom up
             {
@@ -3697,7 +3708,9 @@ export default function build(world) {
                vertices rather than in a map, so a wall, the reveal behind it,
                the spandrel under it and the pane in it are four numbers on the
                same merged geometry. */
-            b1: [], b2: [], b3: [], b4: [], b5: [], b6: [],
+            b2: [],
+            // and the west side of Swanston, opposite the Town Hall
+            m1: [], m2: [], m3: [],
             // the shops under them, and the light inside the shops
             shop: [], shopGlass: [], shopLit: [],
             // the square: the canopy, the entrance box, the paving furniture
@@ -3791,7 +3804,7 @@ export default function build(world) {
         const XW = SQ.BX0;
 
         /* ------------------------------------------------------------
-           the hotel — z −145 to −180, and the whole middle of the photograph
+           the one building on this block — Flinders Lane to Collins Street, and the whole middle of the photograph
 
            Bottom to top, which is the order you read it in from the square:
            a shopfront storey, a heavy string course, two floors of podium,
@@ -3802,11 +3815,11 @@ export default function build(world) {
            ------------------------------------------------------------ */
         {
             const A = P.b2;
-            const ZS = -145.0, ZN = -180.0, XE = 88.0;      // south, north, back
+            const ZS = SQ.BZ0, ZN = -179.7, XE = 88.0;       // Flinders Lane, north, back
             const D = 0.42;                                  // how deep the wall is modelled
             const XC = XW + D;                               // the core, behind the piers
-            const BAYS = 10, BW = (ZS - ZN) / BAYS, PIER = 1.24;
-            const BALC = [1, 4, 7];                          // the bays cut back for balconies
+            const BAYS = 15, BW = (ZS - ZN) / BAYS, PIER = 1.24;
+            const BALC = [1, 4, 7, 10, 13];                  // the bays cut back for balconies
             const zBay = (i) => ZS - i * BW;                 // the south edge of bay i
 
             const Y_SHOP = 5.60, Y_FAS = 6.55, Y_POD = 13.60, Y_STR = 14.85;
@@ -3950,7 +3963,7 @@ export default function build(world) {
                    balcony in it. This is the part of the building somebody
                    half a kilometre away on the bridge can still name. ---- */
             {
-                const zs = ZS + 5.6, zn = ZN - 5.6, NA = 7, AW = (zs - zn) / NA;
+                const zs = ZS + 5.6, zn = ZN - 5.6, NA = 9, AW = (zs - zn) / NA;
                 const XL = XARC + 1.55;                       // the back of the loggia
                 for (let i = 0; i < NA; i++) {
                     const zc = zs - (i + 0.5) * AW;
@@ -4022,114 +4035,17 @@ export default function build(world) {
         }
 
         /* ------------------------------------------------------------
-           the Flinders Lane end — z −127 to −145
+           the hotel's Collins Street end — z −179.7 to −209.5
 
-           The oldest thing on the block and the shortest: a Victorian
-           commercial building with a rusticated bluestone base, five bays of
-           paired windows, red string courses through the cream, round-headed
-           windows on the top floor and a bracketed cornice with a parapet and
-           a pediment over the middle bay. It is here because a street wall
-           made of one building is not a street wall, and because the right
-           hand end of the photograph steps down and changes colour.
-           ------------------------------------------------------------ */
-        {
-            const A = P.b1;
-            const ZS = SQ.BZ0, ZN = -145.0, XE = 78.0;
-            const D = 0.40, XC = XW + D;
-            const NB = 5, BW = (ZS - ZN) / NB;
-            const Y_BASE = 6.20, FH = 3.85, FLOORS = 6;
-            const Y_TOP = Y_BASE + FH * FLOORS;             // 29.3
-            const Y_CORN = Y_TOP + 1.70, Y_PAR = Y_CORN + 2.00;
-
-            F(A, CF.creamLo, XC, Y_BASE, ZS, XE, Y_TOP, ZN);        // the core, over the shops
-            F(A, CF.creamLo, XW + 9.0, 0, ZS, XE, Y_BASE, ZN);      // and behind them
-
-            /* ---- the rusticated base: eight deep courses with the joint cut
-                    between them, which is the whole character of a base. It
-                    runs the two and a half metres of corner that no shop
-                    stands in front of, and returns down Flinders Lane. */
-            for (let i = 0; i < 8; i++) {
-                const y = i * (Y_BASE / 8);
-                F(A, i % 2 ? CF.granite : CF.stoneLo, XW, y, ZS, XC, y + Y_BASE / 8 - 0.07, ZS - 2.6);
-                F(A, i % 2 ? CF.granite : CF.stoneLo, XW, y, ZS, XE - 6, y + Y_BASE / 8 - 0.07, ZS + 0.5);
-            }
-            F(A, CF.granite, XW - 0.14, Y_BASE, ZS, XC, Y_BASE + 0.40, ZN);
-
-            // ---- five bays, a pair of windows in each, and a pier between
-            for (let i = 0; i <= NB; i++) {
-                const z = ZS - i * BW;
-                F(A, CF.cream, XW, Y_BASE, z + 0.55, XC, Y_TOP, z - 0.55);
-            }
-            for (let i = 0; i < NB; i++) {
-                const zc = ZS - (i + 0.5) * BW;
-                for (let f = 0; f < FLOORS; f++) {
-                    const y = Y_BASE + 0.40 + f * FH;
-                    const s = y + 0.72, h = y + FH - 0.72;
-                    const top = f === FLOORS - 1;
-                    for (const side of [-1, 1]) {
-                        const z0 = zc + side * 0.28, z1 = zc + side * 1.44;
-                        W(A, XC - 0.07, s, z0, XC, top ? h - 0.58 : h, z1);
-                        if (top) {                                  // a round head on the top floor
-                            const g = new THREE.CircleGeometry(0.58, 12, 0, Math.PI);
-                            put(g, XC - 0.03, h - 0.58, (z0 + z1) / 2, 0, -Math.PI / 2, 0);
-                            A.push(pane(g, CF.glassLo, CF.glassHi, h - 1.16, h));
-                            const r = new THREE.TorusGeometry(0.70, 0.13, 5, 10, Math.PI);
-                            put(r, XW + 0.06, h - 0.58, (z0 + z1) / 2, 0, Math.PI / 2, 0);
-                            FG(A, CF.creamHi, r);
-                        }
-                        F(A, CF.mullion, XC - 0.10, s, (z0 + z1) / 2 - 0.04, XC - 0.02, h - (top ? 0.58 : 0), (z0 + z1) / 2 + 0.04);
-                        F(A, CF.stoneLo, XW - 0.17, s - 0.20, z0 + 0.16, XC, s, z1 - 0.16);       // sill
-                        if (!top) F(A, CF.creamHi, XW - 0.09, h, z0 + 0.10, XC, h + 0.22, z1 - 0.10);  // lintel
-                    }
-                    F(A, CF.cream, XW, Y_BASE, zc - 0.24, XC, Y_TOP, zc + 0.24);   // the mullion pier
-                    // the spandrel between floors, with a sunk panel in it
-                    F(A, CF.cream, XW, h + 0.22, zc + 1.60, XC, y + FH + 0.72, zc - 1.60);
-                    F(A, CF.creamLo, XW - 0.02, h + 0.44, zc + 1.30, XW + 0.10, y + FH + 0.50, zc - 1.30);
-                }
-            }
-            // ---- the red string courses through the cream, at two levels
-            for (const y of [Y_BASE + 0.40 + FH * 2 - 0.30, Y_BASE + 0.40 + FH * 4 - 0.30]) {
-                F(A, CF.brickRed, XW - 0.12, y, ZS, XC, y + 0.42, ZN);
-                F(A, CF.creamHi, XW - 0.16, y + 0.42, ZS, XC, y + 0.56, ZN);
-            }
-            // ---- the cornice: a bed mould, thirty brackets, a corona, a cap
-            F(A, CF.cream,   XW - 0.18, Y_TOP, ZS, XC, Y_TOP + 0.30, ZN);
-            for (let i = 0; i < 30; i++) {
-                const z = ZS - 0.30 - i * ((ZS - ZN - 0.60) / 29);
-                F(A, CF.creamHi, XW - 0.62, Y_TOP + 0.30, z + 0.13, XW - 0.04, Y_TOP + 1.10, z - 0.13);
-            }
-            F(A, CF.creamHi, XW - 0.80, Y_TOP + 1.10, ZS - 0.2, XC, Y_TOP + 1.52, ZN + 0.2);
-            F(A, CF.cream,   XW - 0.56, Y_TOP + 1.52, ZS - 0.1, XC, Y_CORN, ZN + 0.1);
-            // ---- the parapet, its balusters, and the pediment over the middle
-            F(A, CF.cream, XW - 0.20, Y_CORN, ZS, XW + 0.20, Y_PAR, ZN);
-            for (let i = 0; i < 34; i++) {
-                const z = ZS - 0.35 - i * ((ZS - ZN - 0.70) / 33);
-                const g = cylG(0.14, 0.19, Y_PAR - Y_CORN - 0.36, 8);
-                put(g, XW, Y_CORN + 0.18 + (Y_PAR - Y_CORN - 0.36) / 2, z);
-                FG(A, CF.creamHi, g);
-            }
-            F(A, CF.creamHi, XW - 0.28, Y_PAR - 0.18, ZS, XW + 0.28, Y_PAR, ZN);
-            {
-                const zc = (ZS + ZN) / 2;
-                F(A, CF.cream, XW - 0.24, Y_CORN, zc + 3.4, XW + 0.24, Y_PAR + 0.9, zc - 3.4);
-                const g = prismG(6.8, 1.5, 0.5);
-                put(g, XW, Y_PAR + 0.9, zc, 0, Math.PI / 2, 0);
-                FG(A, CF.creamHi, g);
-                F(A, CF.brickRed, XW - 0.26, Y_PAR - 1.1, zc + 2.4, XW - 0.20, Y_PAR + 0.2, zc - 2.4);
-            }
-        }
-
-        /* ------------------------------------------------------------
-           the terraced wing — z −180 to −194
-
-           Where the block steps down towards Collins Street: a glazed wall
+           Not a second building: the far end of the one building on this
+           block, where it steps down towards Collins Street. A glazed wall
            over the podium and then three roof terraces going back and up,
-           with balustrades and planting on every one of them. In the
-           photograph this is the part with trees growing out of the roof.
+           with balustrades and planting on all of them — the part of the
+           photograph with trees growing out of the roof.
            ------------------------------------------------------------ */
         {
-            const A = P.b3;
-            const ZS = -180.0, ZN = -194.0, XE = 88.0;
+            const A = P.b2;
+            const ZS = -179.7, ZN = SQ.BZ1, XE = 88.0;
             const D = 0.40, XC = XW + D;
             const Y_POD = 13.60, Y_W = 30.0;
 
@@ -4193,232 +4109,6 @@ export default function build(world) {
                     }
                 }
             }
-        }
-
-        /* ------------------------------------------------------------
-           the theatre — z −194 to −209.5, on the Collins Street corner
-
-           The one building on the block with a face rather than an
-           elevation: a stucco front with pilasters and round-headed windows,
-           a modillion cornice, a balustraded parapet with urns on it, a
-           marquee across the footpath with a band of lamps round its edge, a
-           blade sign up the corner, and a billboard the size of a house
-           bolted to the wall above it. Everything the photograph has at this
-           end of the block, which is most of the reason the block is worth
-           looking at at all.
-           ------------------------------------------------------------ */
-        {
-            const A = P.b4;
-            const ZS = -194.0, ZN = -209.5, XE = 64.0;
-            const D = 0.46, XC = XW + D;
-            const Y_MARQ = 5.60, Y_P1 = 12.20, Y_TOP = 20.40;
-            const Y_CORN = Y_TOP + 1.90, Y_PAR = Y_CORN + 2.60;
-
-            F(A, CF.creamLo, XC, 0, ZS, XE, Y_TOP, ZN);
-            F(A, CF.creamLo, XE - 8, Y_TOP, ZS + 1, XE, 30.5, ZN - 1);        // the fly tower behind
-
-            // ---- the foyer: three door bays in a rusticated ground floor,
-            //      with a poster case between each pair
-            for (let i = 0; i < 3; i++) {
-                const zc = ZS - 2.6 - i * 4.4;
-                F(A, CF.granite, XW - 0.06, 0, zc + 1.55, XC, 4.30, zc - 1.55);
-                W(A, XC - 0.07, 0.30, zc + 1.35, XC, 3.60, zc - 1.35, 0x1a2228, 0x4c6270);
-                for (const m of [-0.68, 0, 0.68]) {
-                    F(A, CF.bronze, XC - 0.12, 0.20, zc + m - 0.06, XC - 0.01, 3.70, zc + m + 0.06);
-                }
-                F(A, CF.bronze, XC - 0.12, 1.05, zc + 1.35, XC - 0.01, 1.16, zc - 1.35);   // push bars
-                F(A, CF.gold, XW - 0.10, 3.70, zc + 1.70, XC, 4.05, zc - 1.70);
-            }
-            for (let i = 0; i < 2; i++) {
-                const zc = ZS - 4.8 - i * 4.4;
-                F(A, CF.bronze, XW - 0.14, 1.30, zc + 0.80, XW + 0.06, 3.60, zc - 0.80);
-            }
-            F(A, CF.creamLo, XW, 0, ZS, XC, Y_MARQ, ZS - 2.6);
-            F(A, CF.creamLo, XW, 0, ZN, XC, Y_MARQ, ZN + 2.4);
-
-            /* ---- the marquee: a slab out over the footpath on two rods, a
-                    fascia round three sides of it, and lamps along the fascia.
-                    The sign boards on it are the only painted thing here. ---- */
-            {
-                const XM = XW - 3.30;
-                F(A, CF.creamHi, XM, Y_MARQ, ZS - 0.6, XC, Y_MARQ + 0.34, ZN + 0.6);
-                F(A, CF.theatre, XM - 0.16, Y_MARQ - 0.92, ZS - 0.6, XM, Y_MARQ + 0.46, ZN + 0.6);
-                F(A, CF.theatre, XM, Y_MARQ - 0.92, ZS - 0.6, XC, Y_MARQ + 0.46, ZS - 0.44);
-                F(A, CF.theatre, XM, Y_MARQ - 0.92, ZN + 0.6, XC, Y_MARQ + 0.46, ZN + 0.44);
-                F(A, CF.creamHi, XM - 0.2, Y_MARQ - 1.10, ZS - 0.6, XC, Y_MARQ - 0.92, ZN + 0.6);
-                for (const zz of [ZS - 1.4, ZN + 1.4]) {                     // the two tie rods
-                    const g = cylG(0.055, 0.055, 3.5, 6);
-                    put(g, XM + 1.6, Y_MARQ + 1.9, zz, 0, 0, 0.72);
-                    FG(A, CF.bronze, g);
-                }
-                for (let i = 0; i < 34; i++) {                                // and the lamps
-                    const z = ZS - 0.8 - i * ((ZS - ZN - 1.6) / 33);
-                    const g = sphG(0.10, 7, 5); put(g, XM - 0.22, Y_MARQ - 0.30, z);
-                    P.shopLit.push(shp(g, 'warm'));
-                }
-            }
-
-            // ---- the first floor: three round-headed windows behind a
-            //      balustrade, between coupled pilasters
-            for (let i = 0; i < 3; i++) {
-                const zc = ZS - 2.6 - i * 4.4;
-                W(A, XC - 0.07, Y_MARQ + 1.80, zc + 1.30, XC, Y_P1 - 1.35, zc - 1.30);
-                const g = new THREE.CircleGeometry(1.30, 14, 0, Math.PI);
-                put(g, XC - 0.03, Y_P1 - 1.35, zc, 0, -Math.PI / 2, 0);
-                A.push(pane(g, CF.glassLo, CF.glassHi, Y_P1 - 2.7, Y_P1));
-                const r = new THREE.TorusGeometry(1.44, 0.20, 6, 12, Math.PI);
-                put(r, XW + 0.10, Y_P1 - 1.35, zc, 0, Math.PI / 2, 0);
-                FG(A, CF.creamHi, r);
-                F(A, CF.mullion, XC - 0.11, Y_MARQ + 1.80, zc - 0.05, XC - 0.01, Y_P1 - 1.35, zc + 0.05);
-                F(A, CF.creamHi, XW - 0.22, Y_MARQ + 1.30, zc + 1.70, XC, Y_MARQ + 1.80, zc - 1.70);
-                for (let b = 0; b < 7; b++) {
-                    const g2 = cylG(0.11, 0.15, 0.86, 7);
-                    put(g2, XW - 0.10, Y_MARQ + 0.90, zc - 1.4 + b * 0.47);
-                    FG(A, CF.creamHi, g2);
-                }
-                F(A, CF.creamHi, XW - 0.26, Y_MARQ + 1.34, zc + 1.7, XW + 0.02, Y_MARQ + 1.46, zc - 1.7);
-            }
-            // the pilasters, running the two upper floors, with capitals
-            for (let i = 0; i <= 3; i++) {
-                const z = ZS - 0.4 - i * 4.4;
-                F(A, CF.cream,   XW - 0.30, Y_MARQ + 0.46, z + 0.55, XC, Y_TOP, z - 0.55);
-                F(A, CF.creamHi, XW - 0.44, Y_TOP - 0.90, z + 0.72, XC, Y_TOP - 0.34, z - 0.72);
-                F(A, CF.creamHi, XW - 0.40, Y_MARQ + 0.46, z + 0.68, XC, Y_MARQ + 0.96, z - 0.68);
-                for (let fl = 0; fl < 12; fl++) {                  // the flutes
-                    F(A, CF.creamLo, XW - 0.32, Y_MARQ + 1.0 + fl * 0.02, z + 0.42 - fl * 0.075,
-                                     XW - 0.28, Y_TOP - 1.0, z + 0.46 - fl * 0.075);
-                }
-            }
-            // ---- the two upper floors between them
-            for (let i = 0; i < 3; i++) {
-                const zc = ZS - 2.6 - i * 4.4;
-                for (let f = 0; f < 2; f++) {
-                    const y = Y_P1 + 0.6 + f * 3.7;
-                    W(A, XC - 0.07, y, zc + 1.20, XC, y + 2.35, zc - 1.20);
-                    F(A, CF.mullion, XC - 0.11, y, zc - 0.05, XC - 0.01, y + 2.35, zc + 0.05);
-                    F(A, CF.stoneLo, XW - 0.20, y - 0.24, zc + 1.55, XC, y, zc - 1.55);
-                    F(A, CF.creamHi, XW - 0.28, y + 2.35, zc + 1.60, XC, y + 2.70, zc - 1.60);
-                    for (const s of [-1, 1]) {
-                        const g = cylG(0.10, 0.10, 0.5, 6);
-                        put(g, XW - 0.16, y + 2.60, zc + s * 1.30, 0, 0, Math.PI / 2);
-                        FG(A, CF.creamHi, g);
-                    }
-                }
-            }
-            // ---- the cornice, its modillions, and the parapet over it
-            F(A, CF.cream, XW - 0.24, Y_TOP, ZS, XC, Y_TOP + 0.34, ZN);
-            for (let i = 0; i < 26; i++) {
-                const z = ZS - 0.3 - i * ((ZS - ZN - 0.6) / 25);
-                F(A, CF.creamHi, XW - 0.86, Y_TOP + 0.34, z + 0.15, XW - 0.06, Y_TOP + 1.24, z - 0.15);
-            }
-            F(A, CF.creamHi, XW - 1.06, Y_TOP + 1.24, ZS - 0.2, XC, Y_CORN, ZN + 0.2);
-            F(A, CF.cream, XW - 0.30, Y_CORN, ZS, XW + 0.26, Y_CORN + 0.36, ZN);
-            for (let i = 0; i < 30; i++) {
-                const z = ZS - 0.35 - i * ((ZS - ZN - 0.7) / 29);
-                const g = cylG(0.15, 0.20, Y_PAR - Y_CORN - 0.72, 8);
-                put(g, XW - 0.02, Y_CORN + 0.36 + (Y_PAR - Y_CORN - 0.72) / 2, z);
-                FG(A, CF.creamHi, g);
-            }
-            F(A, CF.creamHi, XW - 0.34, Y_PAR - 0.36, ZS, XW + 0.30, Y_PAR, ZN);
-            for (const zz of [ZS - 0.9, (ZS + ZN) / 2, ZN + 0.9]) {          // the urns
-                F(A, CF.cream, XW - 0.42, Y_CORN, zz + 0.62, XW + 0.38, Y_PAR + 0.30, zz - 0.62);
-                let g = cylG(0.34, 0.20, 0.95, 9); put(g, XW - 0.02, Y_PAR + 0.78, zz); FG(A, CF.creamHi, g);
-                g = sphG(0.24, 9, 7); put(g, XW - 0.02, Y_PAR + 1.36, zz); FG(A, CF.creamHi, g);
-            }
-
-            /* ---- the blade sign up the corner, and the billboard bolted to
-                    the wall above the marquee: the two things in the
-                    photograph you can read from the far side of the square. */
-            {
-                const zb = ZN + 1.7;
-                F(A, CF.granite, XW - 1.34, Y_MARQ + 0.5, zb + 0.78, XW - 0.30, 19.6, zb - 0.78);
-                const g = boxG(0.10, 12.6, 1.30);
-                put(g, XW - 1.40, 13.0, zb);
-                P.shopLit.push(shp(g, 'blade'));
-                const g2 = boxG(0.10, 12.6, 1.30);
-                put(g2, XW - 0.26, 13.0, zb);
-                P.shopLit.push(shp(g2, 'blade'));
-            }
-            {
-                const z0 = ZS - 3.2, z1 = ZS - 13.6, y0 = 13.4, y1 = 20.0;
-                F(A, CF.granite, XW - 0.62, y0 - 0.34, z0 + 0.34, XW - 0.30, y1 + 0.34, z1 - 0.34);
-                const g = boxG(0.10, y1 - y0, Math.abs(z1 - z0));
-                put(g, XW - 0.68, (y0 + y1) / 2, (z0 + z1) / 2);
-                P.shopLit.push(shp(g, 'bill'));
-                for (let i = 0; i < 4; i++) {                                  // the flood lamps
-                    const z = z0 - 1.4 - i * (Math.abs(z1 - z0) - 2.8) / 3;
-                    const a = cylG(0.09, 0.09, 1.5, 6);
-                    put(a, XW - 1.3, y1 + 0.9, z, 0, 0, Math.PI / 2.6);
-                    FG(A, CF.granite, a);
-                    const b = cylG(0.24, 0.20, 0.4, 8);
-                    put(b, XW - 1.9, y1 + 1.5, z, 0, 0, Math.PI / 2.6);
-                    FG(A, CF.granite, b);
-                }
-            }
-        }
-
-        /* ------------------------------------------------------------
-           the block behind the theatre — the cream wall that closes the
-           Collins Street corner, plain because the theatre in front of it is
-           not, and a storey taller so it reads over the parapet.
-           ------------------------------------------------------------ */
-        {
-            const A = P.b5;
-            const ZS = -194.0, ZN = -209.5, X0 = 64.0, X1 = 90.0;
-            const D = 0.36, XF = X1, XC = X1 - D;              // this one faces east and north
-            const Y_TOP = 33.0;
-            F(A, CF.creamLo, X0, 0, ZS, XC, Y_TOP, ZN + D);      // the core, one relief depth shy
-            F(A, CF.granite, X0, 0, ZS, X1, 4.4, ZN);            // and a bluestone base round it
-            for (let f = 0; f < 8; f++) {
-                const y = 5.0 + f * 3.5;
-                for (let i = 0; i < 6; i++) {                     // the Collins Street elevation
-                    const x = X0 + 2.0 + i * 4.2;
-                    W(A, x, y, ZN + D - 0.07, x + 2.3, y + 2.2, ZN + D);
-                    F(A, CF.stoneLo, x - 0.26, y - 0.26, ZN + D, x + 2.56, y, ZN - 0.16);   // the sill
-                    F(A, CF.creamHi, x - 0.30, y + 2.2, ZN + D, x + 2.60, y + 2.52, ZN - 0.10);
-                }
-                // the spandrel band under the row, running the whole face
-                F(A, CF.creamLo, X0, y - 1.3, ZN + D, XC, y, ZN);
-                F(A, CF.creamLo, X0, y + 2.52, ZN + D, XC, y + 3.5 - 1.3, ZN);
-            }
-            for (let i = 0; i <= 6; i++) {                        // and a pier between every bay
-                const x = X0 + 1.0 + i * 4.2;
-                F(A, CF.creamLo, x - 0.9, 4.4, ZN + D, x + 0.9, Y_TOP, ZN);
-            }
-            F(A, CF.creamLo, X0, 4.4, ZN + D, X0 + 1.9, Y_TOP, ZN);
-            F(A, CF.creamLo, XC - 1.9, 4.4, ZN + D, XC, Y_TOP, ZN);
-            F(A, CF.cream,   X0 - 0.2, Y_TOP, ZS, XC, Y_TOP + 0.44, ZN - 0.3);
-            F(A, CF.creamHi, X0 - 0.4, Y_TOP + 0.44, ZS, XC, Y_TOP + 1.10, ZN - 0.5);
-            F(A, CF.cream,   X0 - 0.2, Y_TOP + 1.10, ZS, XC, Y_TOP + 2.60, ZN - 0.3);
-        }
-
-        /* ------------------------------------------------------------
-           and the tower behind all of it — the pale slab with the mast on
-           top that stands over the block in the photograph. Far enough back
-           to be mostly silhouette, so it is built as silhouette: bands, a
-           notch, a plant room and a mast.
-           ------------------------------------------------------------ */
-        {
-            const A = P.b6;
-            const X0 = 118, X1 = 143, ZS = -250, ZN = -277, TOP = 104;
-            F(A, CF.towerLo, X0, 0, ZS, X1, TOP, ZN);
-            for (let f = 0; f < 30; f++) {
-                const y = 5.5 + f * 3.25;
-                W(A, X0 - 0.10, y, ZS, X0, y + 2.1, ZN, CF.towerBand, 0x6d7f8c);
-                W(A, X1, y, ZS, X1 + 0.10, y + 2.1, ZN, CF.towerBand, 0x6d7f8c);
-                W(A, X0, y, ZS, X1, y + 2.1, ZS + 0.10, CF.towerBand, 0x6d7f8c);
-                F(A, CF.towerHi, X0 - 0.16, y + 2.1, ZS - 0.16, X1 + 0.16, y + 3.25, ZN + 0.16);
-            }
-            F(A, CF.towerHi, X0 - 0.5, TOP, ZS - 0.5, X1 + 0.5, TOP + 1.6, ZN + 0.5);
-            F(A, CF.towerLo, X0 + 3, TOP + 1.6, ZS - 3, X1 - 3, TOP + 7.5, ZN + 3);
-            for (let i = 0; i < 4; i++) {
-                const g = cylG(0.9 - i * 0.18, 1.25 - i * 0.18, 6.0, 6);
-                put(g, (X0 + X1) / 2, TOP + 10.5 + i * 5.6, (ZS + ZN) / 2);
-                FG(A, CF.towerHi, g);
-            }
-            const m = cylG(0.10, 0.28, 9.0, 5);
-            put(m, (X0 + X1) / 2, TOP + 37.0, (ZS + ZN) / 2);
-            FG(A, CF.towerHi, m);
         }
 
         /* ------------------------------------------------------------
@@ -5326,6 +5016,454 @@ export default function build(world) {
             }
         }
 
+        /* A room behind a shopfront, said once for the whole west side.
+
+           A pane with nothing behind it is a black rectangle, and a street of
+           black rectangles is the thing that makes a model look like a model.
+           Six metres of floor, a back wall with the light on it and a strip in
+           the ceiling is all it takes, and merged it costs nothing. */
+        const shopRoom = (_unused, face, t0, t1, axis) => {
+            const D2 = 6.2, y0 = 0.14, y1 = 4.20;
+            if (axis === 'z') {
+                F(P.shop, 0x9b968c, face, y0 - 0.10, t0, face - D2, y0, t1);
+                F(P.shop, 0xd7d2c6, face, y0, t0, face - D2, y1, t0 + 0.14);
+                F(P.shop, 0xd7d2c6, face, y0, t1 - 0.14, face - D2, y1, t1);
+                F(P.shop, 0xe4dfd3, face, y1 - 0.12, t0, face - D2, y1, t1);
+                P.shopLit.push(shp(put(boxG(0.10, y1 - y0 - 0.4, Math.abs(t1 - t0) - 0.3),
+                                   face - D2 + 0.05, (y0 + y1) / 2, (t0 + t1) / 2), 'warm'));
+                P.shopLit.push(shp(put(boxG(D2 - 1.2, 0.09, 0.42),
+                                   face - D2 / 2, y1 - 0.16, (t0 + t1) / 2), 'cool'));
+            } else {
+                F(P.shop, 0x9b968c, t0, y0 - 0.10, face, t1, y0, face - D2);
+                F(P.shop, 0xd7d2c6, t0, y0, face, t0 - 0.14, y1, face - D2);
+                F(P.shop, 0xd7d2c6, t1 + 0.14, y0, face, t1, y1, face - D2);
+                F(P.shop, 0xe4dfd3, t0, y1 - 0.12, face, t1, y1, face - D2);
+                P.shopLit.push(shp(put(boxG(Math.abs(t1 - t0) - 0.3, y1 - y0 - 0.4, 0.10),
+                                   (t0 + t1) / 2, (y0 + y1) / 2, face - D2 + 0.05), 'warm'));
+                P.shopLit.push(shp(put(boxG(0.42, 0.09, D2 - 1.2),
+                                   (t0 + t1) / 2, y1 - 0.16, face - D2 / 2), 'cool'));
+            }
+        };
+
+        /* ============================================================
+           22 · the west side of Swanston Street, opposite the Town Hall
+
+           Everything here is off the two photographs taken up the street from
+           the crossing, and it is built the way the block behind St Paul's is
+           built: no facade texture, colour on the vertices, every opening an
+           opening. Three things stand here — the terracotta tower on the
+           Collins Street corner, the cream one on the Little Collins corner,
+           and the run of older frontages between them that faces the Town
+           Hall across the road.
+           ============================================================ */
+
+        /* ------------------------------------------------------------
+           the terracotta tower on the Collins Street corner
+
+           Diagonally opposite the Town Hall's clock, which is how it stands
+           in the first photograph, and the reason its silhouette matters more
+           than anything on it: an unbroken run of vertical piers from the
+           second floor to the parapet, the windows and spandrels sunk between
+           them, and then the whole thing gathering itself over the corner in
+           five setbacks into a tower with a crenellated crown and a flagpole.
+           Faience the colour of weak tea, which is the other thing you
+           remember about it.
+           ------------------------------------------------------------ */
+        {
+            const A = P.m1;
+            const XF = -BX, ZF = -209.5;          // the Swanston face, the Collins face
+            const X0 = -48.0, ZS = -190.0;        // the back, and the south party wall
+            const D = 0.62, XC = XF - D, ZC = ZF + D;
+            const Y_SHOP = 6.40, Y_ENT = 8.60;
+            const FH = 3.50, FLOORS = 9, Y_TOP = Y_ENT + FH * FLOORS;   // 40.1
+            const PITCH = 1.62, PW = 0.66;                              // pier pitch and width
+            const T = { face: 0xb98d63, hi: 0xd0a87c, lo: 0x8b6746, deep: 0x5c452f };
+
+            F(A, T.lo, X0, 0, ZS, XC, Y_TOP, ZC);                       // the core
+
+            /* ---- the two street elevations. A pier every metre and a half,
+                    running unbroken from the entablature to the parapet, with
+                    the glass and the spandrel sunk between them. This is the
+                    whole building; everything else on it is a variation. ---- */
+            const elevation = (n, at, along) => {
+                for (let i = 0; i <= n; i++) {
+                    const t = i * PITCH;
+                    at(T.face, t - PW / 2, t + PW / 2, Y_ENT, Y_TOP, 0);          // the pier
+                    at(T.hi, t - PW / 2 - 0.06, t + PW / 2 + 0.06, Y_TOP - 0.9, Y_TOP - 0.3, -0.10);
+                    if (i === n) break;
+                    for (let f = 0; f < FLOORS; f++) {
+                        const y = Y_ENT + f * FH;
+                        along(t + PW / 2, t + PITCH - PW / 2, y + 0.52, y + FH - 0.28);   // the pane
+                        at(T.lo, t + PW / 2, t + PITCH - PW / 2, y, y + 0.52, 0.30);      // the spandrel
+                        at(T.deep, t + PW / 2 + 0.10, t + PITCH - PW / 2 - 0.10,
+                           y + 0.14, y + 0.42, 0.24);
+                    }
+                }
+            };
+            // Swanston: the piers run in z, the face is at XF
+            elevation(12,
+                (c, a, b, y0, y1, back) => F(A, c, XF - back, y0, ZF + a, XC, y1, ZF + b),
+                (a, b, y0, y1) => W(A, XC, y0, ZF + a, XC + 0.07, y1, ZF + b));
+            // Collins: the piers run in x, the face is at ZF
+            elevation(18,
+                (c, a, b, y0, y1, back) => F(A, c, XF - a, y0, ZF + back, XF - b, y1, ZC),
+                (a, b, y0, y1) => W(A, XF - a, y0, ZC, XF - b, y1, ZC - 0.07));
+
+            /* ---- the shopfronts, and the entablature over them. In the
+                    photograph the ground floor is all glass and awning and the
+                    band above it is where the building starts. ---- */
+            for (const s of [{ n: 6, ax: 'z' }, { n: 9, ax: 'x' }]) {
+                for (let i = 0; i < s.n; i++) {
+                    const t0 = 0.35 + i * 3.2, t1 = t0 + 2.7;
+                    if (s.ax === 'z') {
+                        F(A, T.deep, XF, 0, ZF + t0 - 0.25, XC, Y_SHOP, ZF + t0);
+                        P.shopGlass.push(put(boxG(0.08, 4.35, t1 - t0), XC + 0.04, 2.60, ZF + (t0 + t1) / 2));
+                        F(A, 0x2a2724, XF + 0.02, 0, ZF + t0, XC, 0.55, ZF + t1);
+                        F(A, T.deep, XF + 0.06, 4.78, ZF + t0 - 0.3, XC, Y_SHOP, ZF + t1 + 0.3);
+                        P.shopLit.push(shp(put(boxG(0.06, 0.62, t1 - t0 - 0.2),
+                                           XF + 0.12, 5.12, ZF + (t0 + t1) / 2), i % 2 ? 'boss' : 'coco'));
+                        F(A, 0x2b3a34, XF + 1.55, 4.20, ZF + t0 - 0.2, XF + 0.05, 4.40, ZF + t1 + 0.2);
+                        F(A, 0x2b3a34, XF + 1.62, 3.70, ZF + t0 - 0.2, XF + 1.50, 4.40, ZF + t1 + 0.2);
+                        shopRoom(null, XC, ZF + t0, ZF + t1, 'z');
+                    } else {
+                        F(A, T.deep, XF - t0 + 0.25, 0, ZF, XF - t0, Y_SHOP, ZC);
+                        P.shopGlass.push(put(boxG(t1 - t0, 4.35, 0.08), XF - (t0 + t1) / 2, 2.60, ZC - 0.04));
+                        F(A, 0x2a2724, XF - t0, 0, ZF + 0.02, XF - t1, 0.55, ZC);
+                        F(A, T.deep, XF - t0 + 0.3, 4.78, ZF + 0.06, XF - t1 - 0.3, Y_SHOP, ZC);
+                        P.shopLit.push(shp(put(boxG(t1 - t0 - 0.2, 0.62, 0.06),
+                                           XF - (t0 + t1) / 2, 5.12, ZF + 0.12), i % 3 ? 'sbux' : 'noodle'));
+                        F(A, 0x2b3a34, XF - t0 + 0.2, 4.20, ZF - 1.55, XF - t1 - 0.2, 4.40, ZF - 0.05);
+                        F(A, 0x2b3a34, XF - t0 + 0.2, 3.70, ZF - 1.62, XF - t1 - 0.2, 4.40, ZF - 1.50);
+                        shopRoom(null, ZC, XF - t0, XF - t1, 'x');
+                    }
+                }
+            }
+            // the entablature: three courses and a run of sunk panels in it
+            F(A, T.face, XF + 0.20, Y_SHOP, ZF - 0.20, XC, Y_ENT - 0.70, ZS);
+            F(A, T.face, XF + 0.20, Y_SHOP, ZF - 0.20, X0, Y_ENT - 0.70, ZC);
+            F(A, T.hi, XF + 0.34, Y_ENT - 0.70, ZF - 0.34, XC, Y_ENT, ZS);
+            F(A, T.hi, XF + 0.34, Y_ENT - 0.70, ZF - 0.34, X0, Y_ENT, ZC);
+            for (let i = 0; i < 12; i++) {
+                F(A, T.deep, XF + 0.22, Y_SHOP + 0.30, ZF + 0.6 + i * 1.62, XF + 0.16, Y_ENT - 0.95, ZF + 1.6 + i * 1.62);
+            }
+            for (let i = 0; i < 18; i++) {
+                F(A, T.deep, XF - 0.6 - i * 1.62, Y_SHOP + 0.30, ZF - 0.22, XF - 1.6 - i * 1.62, Y_ENT - 0.95, ZF - 0.16);
+            }
+
+            /* ---- and the top: five setbacks gathering over the corner, a
+                    tower on them, a crenellated crown and a pole. Each step
+                    keeps its own little piers, which is what stops the thing
+                    reading as a wedding cake. ---- */
+            for (let k = 0; k < 5; k++) {
+                const y0 = Y_TOP + k * 3.30, y1 = y0 + 3.30;
+                const r = 13.0 - k * 2.15;
+                F(A, T.lo, XF - r, y0, ZF, XC, y1, ZF + r);
+                const np = Math.max(2, Math.round(r / PITCH));
+                for (let i = 0; i <= np; i++) {
+                    const t = i * (r / np);
+                    F(A, T.face, XF, y0, ZF + t - 0.28, XC, y1, ZF + t + 0.28);
+                    F(A, T.face, XF - t - 0.28, y0, ZF, XF - t + 0.28, y1, ZC);
+                    if (i < np) {
+                        W(A, XC, y0 + 0.4, ZF + t + 0.28, XC + 0.07, y1 - 0.5, ZF + t + (r / np) - 0.28);
+                        W(A, XF - t - 0.28, y0 + 0.4, ZC, XF - t - (r / np) + 0.28, y1 - 0.5, ZC - 0.07);
+                    }
+                }
+                F(A, T.hi, XF + 0.22, y1 - 0.55, ZF - 0.22, XF - r - 0.3, y1, ZF + r + 0.3);
+            }
+            {
+                const y0 = Y_TOP + 16.5, r = 5.4;
+                F(A, T.lo, XF - r, y0, ZF, XC, y0 + 7.0, ZF + r);
+                for (let i = 0; i <= 3; i++) {
+                    const t = i * (r / 3);
+                    F(A, T.face, XF, y0, ZF + t - 0.30, XC, y0 + 7.0, ZF + t + 0.30);
+                    F(A, T.face, XF - t - 0.30, y0, ZF, XF - t + 0.30, y0 + 7.0, ZC);
+                    if (i < 3) {
+                        W(A, XC, y0 + 0.5, ZF + t + 0.30, XC + 0.07, y0 + 6.2, ZF + t + r / 3 - 0.30);
+                        W(A, XF - t - 0.30, y0 + 0.5, ZC, XF - t - r / 3 + 0.30, y0 + 6.2, ZC - 0.07);
+                    }
+                }
+                // the crown: merlons round the top, a pinnacle at each corner
+                for (let i = 0; i < 5; i++) {
+                    const t = i * (r / 4);
+                    F(A, T.hi, XF, y0 + 7.0, ZF + t - 0.34, XF - 0.55, y0 + 8.6, ZF + t + 0.34);
+                    F(A, T.hi, XF - t - 0.34, y0 + 7.0, ZF, XF - t + 0.34, y0 + 8.6, ZF + 0.55);
+                }
+                for (const c of [[XF - 0.5, ZF + 0.5], [XF - r + 0.5, ZF + 0.5], [XF - 0.5, ZF + r - 0.5]]) {
+                    F(A, T.hi, c[0] - 0.55, y0 + 7.0, c[1] - 0.55, c[0] + 0.55, y0 + 10.2, c[1] + 0.55);
+                    const g = coneG(0.48, 1.7, 4);
+                    put(g, c[0], y0 + 11.05, c[1], 0, Math.PI / 4, 0);
+                    FG(A, T.hi, g);
+                }
+                const pole = cylG(0.06, 0.09, 5.2, 5);
+                put(pole, XF - r / 2, y0 + 11.4, ZF + r / 2);
+                FG(A, T.deep, pole);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           the cream tower on the Little Collins corner
+
+           The other half of the second photograph: the same idea as the
+           terracotta one down the street and twenty years later, so the piers
+           are thinner, the stone is nearly white, the glass between them is
+           green, and instead of gathering into a Gothic crown it steps back
+           twice and finishes in a little stepped cap. The thing you actually
+           notice first is at the bottom — the corner is rounded, and a
+           stainless canopy sweeps all the way round it over the shops.
+           ------------------------------------------------------------ */
+        {
+            const A = P.m2;
+            const XF = -BX, ZF = -332.4;                  // Swanston face, Little Collins face
+            const X0 = -44.0, ZS = -312.0;
+            const D = 0.46, XC = XF - D, ZC = ZF + D;
+            const Y_SHOP = 4.90, Y_ENT = 6.30;
+            const FH = 3.28, FLOORS = 13, Y_TOP = Y_ENT + FH * FLOORS;    // 48.9
+            const PITCH = 1.48, PW = 0.52, R = 5.6;       // pier pitch, width, corner radius
+            const C = { face: 0xd7d1c2, hi: 0xefe9d8, lo: 0xa9a396, deep: 0x5f5c54 };
+            const GL_LO = 0x24403f, GL_HI = 0x86ada6;     // the green glass, sill to head
+
+            F(A, C.lo, X0, 0, ZS, XC, Y_TOP, ZC);
+
+            // ---- the piers, both elevations, the glass sunk between them
+            const runZ = Math.floor((ZS - ZF - R) / PITCH);
+            for (let i = 0; i <= runZ; i++) {
+                const z = ZF + R + i * PITCH;
+                F(A, C.face, XF, Y_ENT, z - PW / 2, XC, Y_TOP, z + PW / 2);
+                if (i === runZ) break;
+                for (let f = 0; f < FLOORS; f++) {
+                    const y = Y_ENT + f * FH;
+                    W(A, XC, y + 0.46, z + PW / 2, XC + 0.07, y + FH - 0.30, z + PITCH - PW / 2, GL_LO, GL_HI);
+                    F(A, C.lo, XF - 0.16, y, z + PW / 2, XC, y + 0.46, z + PITCH - PW / 2);
+                }
+            }
+            const runX = Math.floor((XF - R - X0) / PITCH);
+            for (let i = 0; i <= runX; i++) {
+                const x = XF - R - i * PITCH;
+                F(A, C.face, x - PW / 2, Y_ENT, ZF, x + PW / 2, Y_TOP, ZC);
+                if (i === runX) break;
+                for (let f = 0; f < FLOORS; f++) {
+                    const y = Y_ENT + f * FH;
+                    W(A, x - PW / 2, y + 0.46, ZC, x - PITCH + PW / 2, y + FH - 0.30, ZC - 0.07, GL_LO, GL_HI);
+                    F(A, C.lo, x - PW / 2, y, ZF + 0.16, x - PITCH + PW / 2, y + 0.46, ZC);
+                }
+            }
+            // ---- and the corner, which is a quadrant of the same piers
+            for (let i = 0; i <= 5; i++) {
+                const a = (Math.PI / 2) * (i / 5);
+                const px = XF - R + Math.sin(a) * R, pz = ZF + R - Math.cos(a) * R;
+                const g = boxG(PW, Y_TOP - Y_ENT, PW * 1.5);
+                put(g, px, (Y_ENT + Y_TOP) / 2, pz, 0, -a, 0);
+                FG(A, C.face, g);
+                if (i === 5) break;
+                const a2 = (Math.PI / 2) * ((i + 0.5) / 5);
+                const qx = XF - R + Math.sin(a2) * (R - 0.30), qz = ZF + R - Math.cos(a2) * (R - 0.30);
+                for (let f = 0; f < FLOORS; f++) {
+                    const y = Y_ENT + f * FH;
+                    const w = boxG(1.05, FH - 0.76, 0.07);
+                    put(w, qx, y + (FH + 0.16) / 2, qz, 0, -a2 + Math.PI / 2, 0);
+                    A.push(pane(w, GL_LO, GL_HI, y + 0.46, y + FH - 0.30));
+                }
+            }
+            F(A, C.lo, XF - R, Y_ENT, ZF, XC, Y_TOP, ZF + R);      // the corner's own core
+
+            /* ---- the shopfronts, and the stainless canopy that runs round
+                    the corner over them — the one detail of this building
+                    everybody has stood under ---- */
+            for (let i = 0; i < 5; i++) {
+                const z0 = ZF + R + 0.4 + i * 2.9, z1 = z0 + 2.4;
+                P.shopGlass.push(put(boxG(0.08, 3.55, z1 - z0), XC + 0.04, 2.10, (z0 + z1) / 2));
+                F(A, C.deep, XF + 0.02, 0, z0 - 0.25, XC, Y_SHOP, z0);
+                F(A, 0x26262a, XF + 0.02, 0, z0, XC, 0.42, z1);
+                P.shopLit.push(shp(put(boxG(0.06, 0.52, z1 - z0 - 0.3), XF + 0.10, 4.24, (z0 + z1) / 2),
+                                   ['sbux', 'noodle', 'cool'][i % 3]));
+                shopRoom(null, XC, z0, z1, 'z');
+            }
+            for (let i = 0; i < 6; i++) {
+                const x0 = XF - R - 0.4 - i * 2.9, x1 = x0 - 2.4;
+                P.shopGlass.push(put(boxG(Math.abs(x1 - x0), 3.55, 0.08), (x0 + x1) / 2, 2.10, ZC - 0.04));
+                F(A, C.deep, x0 + 0.25, 0, ZF + 0.02, x0, Y_SHOP, ZC);
+                F(A, 0x26262a, x0, 0, ZF + 0.02, x1, 0.42, ZC);
+                P.shopLit.push(shp(put(boxG(Math.abs(x1 - x0) - 0.3, 0.52, 0.06),
+                                   (x0 + x1) / 2, 4.24, ZF + 0.10), ['noodle', 'warm', 'sbux'][i % 3]));
+                shopRoom(null, ZC, x0, x1, 'x');
+            }
+            // the canopy: straight along both streets, and eight facets round
+            F(A, 0xb9bec0, XF + 1.65, Y_SHOP, ZF + R, XC, Y_SHOP + 0.34, ZS);
+            F(A, 0xb9bec0, XF - R, Y_SHOP, ZF + 1.65, X0, Y_SHOP + 0.34, ZC);
+            F(A, 0x8e9397, XF + 1.70, Y_SHOP - 0.26, ZF + R, XF + 1.58, Y_SHOP + 0.34, ZS);
+            F(A, 0x8e9397, XF - R, Y_SHOP - 0.26, ZF + 1.70, X0, Y_SHOP + 0.34, ZF + 1.58);
+            for (let i = 0; i < 8; i++) {
+                const a0 = (Math.PI / 2) * (i / 8), a1 = (Math.PI / 2) * ((i + 1) / 8);
+                const am = (a0 + a1) / 2, rr2 = R + 1.65;
+                const g = boxG(rr2 * 0.42, 0.34, 1.9);
+                put(g, XF - R + Math.sin(am) * (rr2 - 0.95), Y_SHOP + 0.17,
+                       ZF + R - Math.cos(am) * (rr2 - 0.95), 0, -am, 0);
+                FG(A, 0xb9bec0, g);
+                const f2 = boxG(rr2 * 0.42, 0.60, 0.12);
+                put(f2, XF - R + Math.sin(am) * rr2, Y_SHOP + 0.04,
+                        ZF + R - Math.cos(am) * rr2, 0, -am, 0);
+                FG(A, 0x8e9397, f2);
+            }
+            // ---- the entablature, and the two setbacks and the cap on top
+            F(A, C.hi, XF + 0.26, Y_ENT - 0.55, ZF - 0.26, X0, Y_ENT, ZS);
+            F(A, C.hi, XF + 0.26, Y_TOP, ZF - 0.26, X0 + 1, Y_TOP + 0.50, ZS + 1);
+            for (let k = 0; k < 2; k++) {
+                const y0 = Y_TOP + 0.5 + k * 3.9, ins = 2.6 + k * 3.4;
+                F(A, C.lo, XF - ins - 9, y0, ZF + ins, XC - ins, y0 + 3.9, ZF + ins + 9);
+                for (let i = 0; i < 7; i++) {
+                    F(A, C.face, XF - ins, y0, ZF + ins + i * 1.3, XC - ins, y0 + 3.9, ZF + ins + i * 1.3 + 0.44);
+                    F(A, C.face, XF - ins - i * 1.3, y0, ZF + ins, XF - ins - i * 1.3 - 0.44, y0 + 3.9, ZC - ins);
+                }
+                F(A, C.hi, XF - ins + 0.24, y0 + 3.9, ZF + ins - 0.24, XC - ins - 9, y0 + 4.3, ZF + ins + 9);
+            }
+            {
+                const y0 = Y_TOP + 8.8;
+                F(A, C.face, XF - 9.4, y0, ZF + 9.4, XF - 5.6, y0 + 4.4, ZF + 13.2);
+                F(A, C.hi,   XF - 9.8, y0 + 4.4, ZF + 9.0, XF - 5.2, y0 + 5.0, ZF + 13.6);
+                F(A, C.face, XF - 8.9, y0 + 5.0, ZF + 9.9, XF - 6.1, y0 + 7.4, ZF + 12.7);
+                F(A, C.hi,   XF - 8.3, y0 + 7.4, ZF + 10.5, XF - 6.7, y0 + 8.6, ZF + 12.1);
+            }
+        }
+
+        /* ------------------------------------------------------------
+           and the frontage between them — the side of the street the Town
+           Hall looks at
+
+           Three buildings of three different centuries standing shoulder to
+           shoulder, which is what the second photograph shows and what
+           Swanston Street actually is: an Edwardian block with a heavy
+           cornice, a brown Victorian with arched windows and cast-iron
+           balconettes, and a white sixties slab with its floors in bands.
+           Shops and awnings under all three.
+           ------------------------------------------------------------ */
+        {
+            const A = P.m3;
+            const XF = -BX, X0 = -44.0, D = 0.42, XC = XF - D;
+            const shopRun = (z0, z1, n, faces) => {
+                for (let i = 0; i < n; i++) {
+                    const a = z0 - (z0 - z1) * (i / n) - 0.35, b = z0 - (z0 - z1) * ((i + 1) / n) + 0.35;
+                    P.shopGlass.push(put(boxG(0.08, 3.30, Math.abs(b - a)), XC + 0.04, 1.95, (a + b) / 2));
+                    F(A, 0x232326, XF + 0.02, 0, a, XC, 0.40, b);
+                    F(A, 0x2c2a26, XF + 0.04, 0, a + 0.35, XC, 4.10, a + 0.50);
+                    P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4), XF + 0.10, 4.42, (a + b) / 2),
+                                       faces[i % faces.length]));
+                    shopRoom(null, XC, a, b, 'z');
+                    // the awning, on two rods, which is most of what a
+                    // Melbourne footpath is made of
+                    F(A, 0x33322e, XF + 2.30, 3.55, a - 0.1, XF + 0.06, 3.72, b + 0.1);
+                    F(A, 0x8a2f26, XF + 2.38, 3.10, a - 0.1, XF + 2.24, 3.72, b + 0.1);
+                    for (const zz of [a - 0.05, b + 0.05]) {
+                        const g = cylG(0.04, 0.04, 1.9, 5);
+                        put(g, XF + 1.25, 4.30, zz, 0, 0, Math.PI / 2.9);
+                        FG(A, 0x33322e, g);
+                    }
+                }
+            };
+
+            // ---- the Edwardian, next to the cream tower
+            {
+                const ZS = -296.0, ZN = -312.0, Y0 = 5.20, FH = 3.75, FLOORS = 6;
+                const Y_TOP = Y0 + FH * FLOORS, E = { f: 0xd2c6a9, h: 0xeadfc4, l: 0xa79b82 };
+                F(A, E.l, X0, Y0, ZS, XC, Y_TOP, ZN);
+                F(A, E.l, XF - 9, 0, ZS, X0, Y0, ZN);
+                for (let i = 0; i <= 4; i++) {
+                    const z = ZS - i * ((ZS - ZN) / 4);
+                    F(A, E.f, XF, Y0, z + 0.62, XC, Y_TOP, z - 0.62);
+                }
+                for (let i = 0; i < 4; i++) {
+                    const zc = ZS - (i + 0.5) * ((ZS - ZN) / 4);
+                    for (let f = 0; f < FLOORS; f++) {
+                        const y = Y0 + 0.35 + f * FH;
+                        for (const s2 of [-1, 1]) {
+                            W(A, XC, y + 0.75, zc + s2 * 0.30, XC + 0.07, y + FH - 0.55, zc + s2 * 1.35);
+                            F(A, E.l, XF - 0.18, y + 0.52, zc + s2 * 0.30, XC, y + 0.75, zc + s2 * 1.48);
+                            F(A, E.h, XF - 0.10, y + FH - 0.55, zc + s2 * 0.24, XC, y + FH - 0.30, zc + s2 * 1.48);
+                        }
+                        F(A, E.f, XF, y, zc + 0.30, XC, y + FH, zc - 0.30);
+                    }
+                }
+                F(A, E.f, XF - 0.20, Y_TOP, ZS, XC, Y_TOP + 0.32, ZN);
+                for (let i = 0; i < 22; i++) {
+                    const z = ZS - 0.4 - i * ((ZS - ZN - 0.8) / 21);
+                    F(A, E.h, XF - 0.78, Y_TOP + 0.32, z + 0.14, XF - 0.06, Y_TOP + 1.05, z - 0.14);
+                }
+                F(A, E.h, XF - 0.96, Y_TOP + 1.05, ZS - 0.2, XC, Y_TOP + 1.48, ZN + 0.2);
+                F(A, E.f, XF - 0.24, Y_TOP + 1.48, ZS, XF + 0.20, Y_TOP + 3.10, ZN);
+                shopRun(ZS, ZN, 4, ['sbux', 'cool', 'noodle', 'warm']);
+            }
+
+            // ---- the brown Victorian in the middle
+            {
+                const ZS = -276.0, ZN = -296.0, Y0 = 5.20, FH = 3.95, FLOORS = 4;
+                const Y_TOP = Y0 + FH * FLOORS, V = { f: 0x8f7357, h: 0xc0a888, l: 0x6b5643 };
+                F(A, V.l, X0, Y0, ZS, XC, Y_TOP, ZN);
+                F(A, V.l, XF - 9, 0, ZS, X0, Y0, ZN);
+                for (let i = 0; i <= 5; i++) {
+                    const z = ZS - i * ((ZS - ZN) / 5);
+                    F(A, V.f, XF, Y0, z + 0.55, XC, Y_TOP, z - 0.55);
+                    F(A, V.h, XF - 0.24, Y0, z + 0.70, XC, Y0 + 0.44, z - 0.70);
+                    F(A, V.h, XF - 0.24, Y_TOP - 0.60, z + 0.70, XC, Y_TOP - 0.16, z - 0.70);
+                }
+                for (let i = 0; i < 5; i++) {
+                    const zc = ZS - (i + 0.5) * ((ZS - ZN) / 5);
+                    for (let f = 0; f < FLOORS; f++) {
+                        const y = Y0 + 0.5 + f * FH;
+                        const h = y + FH - 1.35;
+                        W(A, XC, y + 0.6, zc + 1.05, XC + 0.07, h, zc - 1.05);
+                        const arc = new THREE.CircleGeometry(1.05, 12, 0, Math.PI);
+                        put(arc, XC + 0.03, h, zc, 0, Math.PI / 2, 0);
+                        A.push(pane(arc, CF.glassLo, CF.glassHi, h - 2.1, h));
+                        const ring = new THREE.TorusGeometry(1.20, 0.16, 5, 12, Math.PI);
+                        put(ring, XF - 0.08, h, zc, 0, Math.PI / 2, 0);
+                        FG(A, V.h, ring);
+                        F(A, V.h, XF - 0.26, y + 0.34, zc + 1.34, XC, y + 0.60, zc - 1.34);
+                        if (f === 1) {                     // a cast-iron balconette
+                            for (let b = 0; b < 9; b++) {
+                                const g = cylG(0.035, 0.035, 0.68, 5);
+                                put(g, XF - 0.34, y + 0.68, zc - 1.0 + b * 0.25);
+                                FG(A, 0x2a2724, g);
+                            }
+                            F(A, 0x2a2724, XF - 0.44, y + 1.00, zc + 1.15, XF - 0.24, y + 1.10, zc - 1.15);
+                            F(A, 0x2a2724, XF - 0.44, y + 0.30, zc + 1.15, XF - 0.24, y + 0.40, zc - 1.15);
+                        }
+                    }
+                }
+                F(A, V.h, XF - 0.34, Y_TOP, ZS, XC, Y_TOP + 0.40, ZN);
+                F(A, V.h, XF - 0.72, Y_TOP + 0.40, ZS - 0.2, XC, Y_TOP + 0.96, ZN + 0.2);
+                F(A, V.f, XF - 0.20, Y_TOP + 0.96, ZS, XF + 0.18, Y_TOP + 2.60, ZN);
+                for (let i = 0; i < 6; i++) {
+                    const z = ZS - 1.2 - i * ((ZS - ZN - 2.4) / 5);
+                    const g = cylG(0.20, 0.26, 1.0, 8);
+                    put(g, XF - 0.02, Y_TOP + 3.10, z);
+                    FG(A, V.h, g);
+                }
+                shopRun(ZS, ZN, 5, ['noodle', 'sbux', 'warm', 'cool', 'noodle']);
+            }
+
+            // ---- and the sixties slab at the Collins end
+            {
+                const ZS = -250.5, ZN = -276.0, Y0 = 5.60, FH = 3.15, FLOORS = 11;
+                const Y_TOP = Y0 + FH * FLOORS, S6 = { f: 0xd6d6d0, h: 0xeceae2, l: 0x9d9d97 };
+                F(A, S6.l, X0, Y0, ZS, XC, Y_TOP, ZN);
+                F(A, S6.l, XF - 9, 0, ZS, X0, Y0, ZN);
+                for (let f = 0; f < FLOORS; f++) {
+                    const y = Y0 + f * FH;
+                    W(A, XC, y + 0.90, ZS - 0.5, XC + 0.07, y + FH - 0.35, ZN + 0.5);
+                    F(A, S6.f, XF, y, ZS - 0.5, XC, y + 0.90, ZN + 0.5);           // the spandrel band
+                    F(A, S6.h, XF - 0.22, y + 0.62, ZS - 0.6, XC, y + 0.90, ZN + 0.6);
+                    for (let i = 0; i <= 8; i++) {                                  // the mullions
+                        const z = ZS - 0.5 - i * ((ZS - ZN - 1.0) / 8);
+                        F(A, S6.f, XF - 0.08, y + 0.90, z - 0.09, XC, y + FH - 0.35, z + 0.09);
+                    }
+                }
+                F(A, S6.f, XF, Y0, ZS, XC, Y_TOP, ZS - 0.5);
+                F(A, S6.f, XF, Y0, ZN, XC, Y_TOP, ZN + 0.5);
+                F(A, S6.h, XF - 0.30, Y_TOP, ZS, XC, Y_TOP + 0.44, ZN);
+                F(A, S6.l, XF - 0.10, Y_TOP + 0.44, ZS, XF + 0.16, Y_TOP + 1.60, ZN);
+                shopRun(ZS, ZN, 6, ['boss', 'coco', 'sbux', 'warm', 'noodle', 'cool']);
+            }
+        }
+
         /* ------------------------------------------------------------
            21j · everything merged, and the one thing that moves
            ------------------------------------------------------------ */
@@ -5335,12 +5473,10 @@ export default function build(world) {
                reason somebody in edit mode picks up the hotel rather than
                picking up every pale surface in the precinct. */
             const OBJECTS = [
-                ['flinderslanewing_00', [[P.b1, M21.body]], []],
                 ['westin_00', [[P.b2, M21.body]], []],
-                ['collinsterrace_00', [[P.b3, M21.body]], []],
-                ['regenttheatre_00', [[P.b4, M21.body]], []],
-                ['collinschambers_00', [[P.b5, M21.body]], []],
-                ['towerbeyond_00', [[P.b6, M21.body]], []],
+                ['manchesterunity_00', [[P.m1, M21.body]], []],
+                ['centurybuilding_00', [[P.m2, M21.body]], []],
+                ['swanstonwest_00', [[P.m3, M21.body]], []],
                 ['swanstonshops_00', [[P.shop, M21.body], [P.shopGlass, M21.glass],
                                       [P.shopLit, M21.lit]], []],
                 ['citysquare_00', [
