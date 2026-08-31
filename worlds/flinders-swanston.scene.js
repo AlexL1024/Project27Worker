@@ -3204,12 +3204,14 @@ export default function build(world) {
 
        And then down. This section is the only place in this world where the
        ground is not the bottom of the world: the escalators go through a hole
-       in the plaza and a hole in the roadway sheet, land in a ticket hall
-       twelve and a half metres down, and a second flight goes from there into
-       the station cavern at twenty-six. You walk it — the walk's grid keeps
-       four vertical spans per cell and this precinct is built to spend three
-       of them, so the plaza, the hall and the platform are three floors you
-       can be on and the canopy roof is ghosted rather than being a fourth.
+       in the plaza and a hole in the roadway sheet and land fifteen metres
+       under it, on a bare concrete floor with four walls round it and nothing
+       else. The station itself is not built: the entrance is signed for it and
+       goes down towards it, and what is at the bottom of the dark is somebody
+       else's question. You still walk it, which is why the floor and the four
+       walls are there: the walk's grid keeps four vertical spans per cell, the
+       paving and the landing spend two of them, and the canopy roof is
+       ghosted rather than being a third.
        ============================================================ */
     {
         /* ---- the sub-rectangle trick, again: four facades on one sheet, and
@@ -3581,18 +3583,19 @@ export default function build(world) {
                         transparent: true, opacity: 0.19,
                     }),
             /* Emissive concrete, which sounds wrong and is the only honest
-               way to light a cavern in this world. The four real-time lights
-               are all spent above ground and a forward renderer gives a room
-               no bounce: under a hemisphere light the inside of a vault faces
-               away from every source there is, so the ceiling of the station
-               went black while its floor read fine. A third of a stop of
-               emissive across the concrete is the uplighting that is actually
-               up there, at the price of no light at all. */
+               way to have anything under the paving read at all. The four
+               real-time lights are all spent above ground and a forward
+               renderer gives a room no bounce: under a hemisphere light the
+               walls of a shaft face away from every source there is, so the
+               bottom of it went to pure black while the plaza over it read
+               fine. A third of a stop of emissive across the concrete is the
+               little that reaches down there, at the price of no light at
+               all — and it stays dim on purpose, because the whole of what
+               the opening in the paving is for is that it is dark. */
             crete:  wet(stdMat(0xa9a6a0, {
                         emissive: 0x8d949b, emissiveIntensity: 0.46,
                         roughness: 0.70, metalness: 0.04,
                     })),
-            tact:   wet(stdMat(0xe8c033, { roughness: 0.78, metalness: 0.02 })),
             /* The frontage's lit things — a fascia, a blade, a marquee lamp,
                the light on a shop's back wall. Emissive on its own map, so a
                shop is bright in the rain without costing a light. */
@@ -3721,8 +3724,9 @@ export default function build(world) {
             shop: [], shopGlass: [], shopLit: [],
             // the square: the canopy, the entrance box, the paving furniture
             qSteel: [], qRoof: [], qClad: [], qGlass: [], qTrim: [], qSign: [],
-            // the station, from the top of the escalators down
-            sCrete: [], sSteel: [], sClad: [], sGlass: [], sTrim: [], sSign: [], sTact: [],
+            // the way down: the escalator bank, the stair, and the concrete
+            // box at the bottom of the shaft
+            sCrete: [], sSteel: [], sTrim: [],
             // and the inclined balustrades, which are ghosted — see 21f
             gGlass: [], gTrim: [],
         };
@@ -3740,7 +3744,7 @@ export default function build(world) {
             // its repeat has to be baked per piece the way the band course on
             // the cathedral is: 2.6 m of wall is one sheet, which makes a
             // batten a hundred millimetres wide on a jamb and on a screen.
-            if (arr === P.qClad || arr === P.sClad) {
+            if (arr === P.qClad) {
                 uvScale(g, Math.max(0.5, Math.abs(x1 - x0), Math.abs(z1 - z0)) / 2.6,
                            Math.max(0.5, Math.abs(y1 - y0)) / 2.6);
             }
@@ -3896,18 +3900,30 @@ export default function build(world) {
         /* ------------------------------------------------------------
            21f · the way down
 
-           Three escalators and a stair, side by side, dropping twelve and a
-           half metres through the hole in the plaza into the ticket hall. The
-           angle is not typed: it is read off the two ends, because the two
-           ends are the plaza and the hall floor and an escalator that arrives
-           half a metre under its landing is a hole somebody falls down.
+           Three escalators and a stair, side by side, dropping fifteen metres
+           through the hole in the plaza. You come at it from the Collins
+           Street end and ride south, which is the one thing about this flight
+           that is worth saying twice: the top of it is the north edge of the
+           hole and the bottom is the south edge, and nothing below types
+           either number. It asks the void which end it starts at, so turning
+           the whole entrance round is swapping two names.
+
+           The angle is not typed either. It is read off the two ends, because
+           the two ends are the plaza and the landing at the bottom of the
+           shaft, and an escalator that arrives half a metre under its landing
+           is a hole somebody falls down.
            ------------------------------------------------------------ */
-        const ESC = { ZT: SQ.VZ1, ZB: SQ.VZ0, YT: SQ.DECK, YB: SQ.HALL };
+        const ESC = { ZT: SQ.VZ0, ZB: SQ.VZ1, YT: SQ.DECK, YB: SQ.HALL };
         {
-            const slope = (ESC.YB - ESC.YT) / (ESC.ZB - ESC.ZT);      // −12.67 over −26.5
+            const slope = (ESC.YB - ESC.YT) / (ESC.ZB - ESC.ZT);      // −15.17 over 26.5
             const yAt = (z) => ESC.YT + (z - ESC.ZT) * slope;
+            // Which way down is, in z. Everything that has to sit a little
+            // inside one end or a little past the other reads it off here
+            // rather than off a sign somebody typed once and would have to
+            // remember to turn over.
+            const DOWN = Math.sign(ESC.ZB - ESC.ZT);
             const OVER = 1.4;                                          // run past the bottom landing
-            const ZB2 = ESC.ZB - OVER;
+            const ZB2 = ESC.ZB + DOWN * OVER;
 
             /* one escalator: the step band you walk on, the truss under it,
                two glass balustrades and the bronze handrail along each */
@@ -3918,7 +3934,7 @@ export default function build(world) {
                 // three escalators and a stair are two hundred millimetres, so
                 // the trusses are what has to overlap: a cell centre that lands
                 // in a gap must still find solid, or the bank has a slot down
-                // it that a person falls through on the way to the platform.
+                // it that a person falls through on the way to the bottom.
                 rampZ(w + 0.90, 1.30, ESC.ZT, ESC.YT - 0.95, ZB2, yAt(ZB2) - 0.95, cx, P.sCrete);
                 for (const s of [-1, 1]) {
                     const bxx = cx + s * (w / 2 + 0.14);
@@ -3926,19 +3942,19 @@ export default function build(world) {
                     rampZ(0.16, 0.11, ESC.ZT, ESC.YT + 1.07, ZB2, yAt(ZB2) + 1.07, bxx, P.gTrim);
                 }
                 // the comb plates, top and bottom, in the same bronze
-                for (const zz of [ESC.ZT - 0.4, ESC.ZB + 0.4]) {
+                for (const zz of [ESC.ZT + DOWN * 0.4, ESC.ZB - DOWN * 0.4]) {
                     bx3(P.sTrim, null, cx - w / 2, yAt(zz) - 0.02, zz - 0.55, cx + w / 2, yAt(zz) + 0.05, zz + 0.55);
                 }
             };
-            escalator(30.40, 1.62);
-            escalator(32.20, 1.62);
-            escalator(34.00, 1.62);
+            escalator(26.90, 1.62);
+            escalator(28.70, 1.62);
+            escalator(30.50, 1.62);
 
             /* the stair beside them, with every tread in it. Eighty-three
                boxes is nothing merged, and a public stair drawn as a smooth
                ramp is the one thing in a station that always looks wrong. */
             {
-                const cx = 27.40, w = 3.00, n = 83;
+                const cx = 33.50, w = 3.00, n = 83;
                 rampZ(w + 1.10, 1.10, ESC.ZT, ESC.YT - 0.80, ZB2, yAt(ZB2) - 0.80, cx, P.sCrete);
                 for (let i = 0; i < n; i++) {
                     const z0 = ESC.ZT - (ESC.ZT - ESC.ZB) * (i / n);
@@ -3952,8 +3968,8 @@ export default function build(world) {
                 }
             }
 
-            /* The balustrade round the rest of the hole. Open on the south
-               side, because the south side is where you walk in — and solid
+            /* The balustrade round the rest of the hole. Open on the north
+               side, because the north side is where you walk in — and solid
                everywhere else, because the walk reads glass with depth as
                something to be stopped by, which is exactly what it is. */
             {
@@ -3964,7 +3980,37 @@ export default function build(world) {
                 };
                 rail(SQ.VX0 - 0.11, SQ.VZ1, SQ.VX0, SQ.VZ0);
                 rail(SQ.VX1, SQ.VZ1, SQ.VX1 + 0.11, SQ.VZ0);
-                rail(SQ.VX0 - 0.11, SQ.VZ0, SQ.VX1 + 0.11, SQ.VZ0 + 0.11);
+                rail(SQ.VX0 - 0.11, SQ.VZ1, SQ.VX1 + 0.11, SQ.VZ1 - 0.11);
+            }
+
+            /* ---- the bottom of the shaft.
+
+                   There is no station down here. The flight arrives at a bare
+                   concrete landing fifteen metres under the paving and stops,
+                   and the only thing this box is for is that it is a floor and
+                   four walls: somebody who rides all the way down and keeps
+                   walking has to be stopped by something, and the alternative
+                   to a wall is falling out of the world. Lined right up to the
+                   underside of the plaza slab, so the sides of the shaft are
+                   concrete the whole way rather than a hole in the air with
+                   escalators hanging in it — and lit by nothing, because the
+                   world's four lights are all spent above ground and the point
+                   of the opening in the paving is that it is dark.
+
+                   Held clear of the flight at every side: the trusses reach a
+                   little past the void in x and the escalators overrun it in
+                   z, so the room is the void plus a margin rather than the
+                   void itself. ---- */
+            {
+                const IX0 = SQ.VX0 - 0.3, IX1 = SQ.VX1 + 0.3;          // the clear inside
+                const IZN = SQ.VZ0 - 0.4, IZS = SQ.VZ1 + 2.4;
+                const T = 0.5, TOP = SQ.DECK - 0.34;                   // the plaza soffit
+                const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
+                C_(IX0 - T, SQ.HALL - T, IZN - T, IX1 + T, SQ.HALL, IZS + T);   // the landing
+                C_(IX0 - T, SQ.HALL, IZN - T, IX0, TOP, IZS + T);              // west
+                C_(IX1, SQ.HALL, IZN - T, IX1 + T, TOP, IZS + T);              // east
+                C_(IX0 - T, SQ.HALL, IZN - T, IX1 + T, TOP, IZN);              // the head end
+                C_(IX0 - T, SQ.HALL, IZS, IX1 + T, TOP, IZS + T);              // and the far one
             }
         }
 
@@ -3978,6 +4024,17 @@ export default function build(world) {
         {
             const B = (x0, y0, z0, x1, y1, z1) => bx3(P.qClad, null, x0, y0, z0, x1, y1, z1);
             const G = (x0, y0, z0, x1, y1, z1) => bx3(P.qGlass, null, x0, y0, z0, x1, y1, z1);
+            /* A sign, as a thin box with a rect of the atlas on it.
+
+               The whole of this assembly stands the other way round from the
+               way it was first drawn — you come at the shaft from the Collins
+               Street end now and walk south into it — and the thing to check
+               when a sign is turned round is that it has not become mirror
+               writing. It has not, and no face here needs turning over to make
+               that true: a box's six sides are each built with their own u
+               running the way a reader standing outside that side reads, so a
+               blade two centimetres thick is the right way round from both of
+               them and moving it only moves it. */
             const S = (k, x0, y0, z0, x1, y1, z1) => {
                 const g = boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0));
                 put(g, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -3985,46 +4042,47 @@ export default function build(world) {
             };
 
             // ---- the two batten walls down the sides of the escalator hole,
-            //      and the head canopy across the top of them
-            B(24.55, SQ.DECK, -152.0, 25.45, SQ.DECK + 3.70, -163.0);
-            B(35.45, SQ.DECK, -152.0, 36.35, SQ.DECK + 3.70, -163.0);
-            B(24.55, SQ.DECK + 3.70, -151.4, 36.35, SQ.DECK + 4.25, -161.0);
-            B(24.55, SQ.DECK + 2.42, -151.4, 36.35, SQ.DECK + 3.70, -152.0);  // the header you walk under
+            //      and the head canopy across the north end of them, which is
+            //      the end you walk in at
+            B(24.55, SQ.DECK, -184.5, 25.45, SQ.DECK + 3.70, -173.5);
+            B(35.45, SQ.DECK, -184.5, 36.35, SQ.DECK + 3.70, -173.5);
+            B(24.55, SQ.DECK + 3.70, -185.1, 36.35, SQ.DECK + 4.25, -175.5);
+            B(24.55, SQ.DECK + 2.42, -185.1, 36.35, SQ.DECK + 3.70, -184.5);  // the header you walk under
 
             // and the lights in the soffit of it, which are the only thing
             // that makes the top of the shaft read as a way down rather than
             // as a hole in the paving
             for (let i = 0; i < 4; i++) {
                 const g = boxG(2.20, 0.08, 0.42);
-                put(g, 27.6 + (i % 2) * 5.4, SQ.DECK + 3.66, -153.4 - Math.floor(i / 2) * 4.6);
+                put(g, 33.30 - (i % 2) * 5.4, SQ.DECK + 3.66, -183.10 + Math.floor(i / 2) * 4.6);
                 P.qSign.push(sgn(g, 'warm'));
             }
 
             // the station's name across the front of it, and the wayfinding
             // hanging under the head canopy where you read it walking in
-            S('townhall', 26.30, SQ.DECK + 2.52, -151.30, 34.60, SQ.DECK + 3.62, -151.28);
-            S('collins', 27.20, SQ.DECK + 2.30, -157.60, 33.70, SQ.DECK + 3.20, -157.58);
-            S('metro', 24.52, SQ.DECK + 2.10, -164.00, 24.50, SQ.DECK + 3.10, -169.80);
+            S('townhall', 26.30, SQ.DECK + 2.52, -185.20, 34.60, SQ.DECK + 3.62, -185.22);
+            S('collins', 27.20, SQ.DECK + 2.30, -178.90, 33.70, SQ.DECK + 3.20, -178.92);
+            S('metro', 36.38, SQ.DECK + 2.10, -172.50, 36.40, SQ.DECK + 3.10, -166.70);
 
             // ---- the lift, standing on the plaza beside the escalators
-            B(35.95, SQ.DECK, -156.90, 38.45, SQ.DECK + 0.30, -160.50);
-            for (const s of [[35.95, 36.20], [38.20, 38.45]]) B(s[0], SQ.DECK, -156.90, s[1], SQ.DECK + 3.55, -160.50);
-            B(35.95, SQ.DECK + 3.20, -156.90, 38.45, SQ.DECK + 3.70, -160.50);
-            G(36.20, SQ.DECK + 0.30, -156.94, 38.20, SQ.DECK + 3.20, -156.90);
-            G(36.20, SQ.DECK + 0.30, -160.50, 38.20, SQ.DECK + 3.20, -160.54);
-            G(38.20, SQ.DECK + 0.30, -157.0, 38.24, SQ.DECK + 3.20, -160.4);
+            B(22.45, SQ.DECK, -179.60, 24.95, SQ.DECK + 0.30, -176.00);
+            for (const s of [[22.45, 22.70], [24.70, 24.95]]) B(s[0], SQ.DECK, -179.60, s[1], SQ.DECK + 3.55, -176.00);
+            B(22.45, SQ.DECK + 3.20, -179.60, 24.95, SQ.DECK + 3.70, -176.00);
+            G(22.70, SQ.DECK + 0.30, -179.56, 24.70, SQ.DECK + 3.20, -179.60);
+            G(22.70, SQ.DECK + 0.30, -176.00, 24.70, SQ.DECK + 3.20, -175.96);
+            G(22.66, SQ.DECK + 0.30, -179.50, 22.70, SQ.DECK + 3.20, -176.10);
 
-            // ---- the glazed pavilion on the Swanston side, on its stone
+            // ---- the glazed pavilion on the hotel side, on its stone
             //      plinth, with the bench along the front of it
-            B(19.60, SQ.DECK, -156.00, 23.40, SQ.DECK + 0.55, -163.00);
-            for (const c of [[19.60, 19.86], [23.14, 23.40]]) {
-                B(c[0], SQ.DECK + 0.55, -156.00, c[1], SQ.DECK + 3.40, -163.00);
+            B(37.50, SQ.DECK, -180.50, 41.30, SQ.DECK + 0.55, -173.50);
+            for (const c of [[37.50, 37.76], [41.04, 41.30]]) {
+                B(c[0], SQ.DECK + 0.55, -180.50, c[1], SQ.DECK + 3.40, -173.50);
             }
-            B(19.60, SQ.DECK + 3.10, -155.86, 23.40, SQ.DECK + 3.60, -163.14);
-            G(19.86, SQ.DECK + 0.55, -155.96, 23.14, SQ.DECK + 3.10, -156.00);
-            G(19.86, SQ.DECK + 0.55, -163.00, 23.14, SQ.DECK + 3.10, -163.04);
-            G(19.82, SQ.DECK + 0.55, -156.0, 19.86, SQ.DECK + 3.10, -163.0);
-            bx3(P.qTrim, null, 19.60, SQ.DECK + 0.42, -163.00, 20.90, SQ.DECK + 0.55, -164.10);
+            B(37.50, SQ.DECK + 3.10, -180.64, 41.30, SQ.DECK + 3.60, -173.36);
+            G(37.76, SQ.DECK + 0.55, -180.54, 41.04, SQ.DECK + 3.10, -180.50);
+            G(37.76, SQ.DECK + 0.55, -173.50, 41.04, SQ.DECK + 3.10, -173.46);
+            G(41.04, SQ.DECK + 0.55, -180.50, 41.08, SQ.DECK + 3.10, -173.50);
+            bx3(P.qTrim, null, 40.00, SQ.DECK + 0.42, -173.50, 41.30, SQ.DECK + 0.55, -172.40);
 
         }
 
@@ -4044,416 +4102,6 @@ export default function build(world) {
             }
             im.instanceMatrix.needsUpdate = true;
             scene.add(im);
-        }
-
-        /* ============================================================
-           21h · Town Hall Station — the Metro Tunnel, twenty-five metres down
-
-           This is the part of the brief that is not in the photograph: going
-           in through the box in the plaza means going into the tunnel world.
-           There is no portal in the runtime and there does not need to be —
-           the walk keeps four vertical spans per cell, so the station is
-           simply built underneath, and the escalators are a walk rather than
-           a transition. Three floors, in the order you meet them:
-
-               0.17   the plaza
-             −15.0    the ticket hall, under the square
-             −25.0    the concourse, the platforms and the train
-
-           Built in the language the Metro Tunnel's own stations are built in
-           and the one `station.scene.js` already speaks: a single cavern with
-           a segmental vault, the concourse down the middle of it, a platform
-           either side, full-height screen doors onto both tracks, and cone
-           lamps on the blade columns.
-
-           No lights. The world's four are spent above ground and a station
-           lit by four more would be four more full-screen passes on an iPad;
-           so every bright thing down here is an emissive material with a dark
-           albedo under it, which is also what an artificially lit room
-           actually is.
-           ============================================================ */
-        const ST = {
-            HALL: SQ.HALL, HCEIL: -9.5,
-            PLAT: SQ.PLAT, SPRING: -19.0, RISE: 6.0, WALL: 17.0,
-            CONC: 6.5, EDGE: 12.7, TRACK: 15.2, RAIL: -26.1,
-            ZN: -236.0, ZS: -56.0,                 // the cavern's two ends
-            PZN: -216.0, PZS: -57.0,               // the platforms'
-            SHAFT_N: -236.0, SHAFT_S: -218.0,      // the flat-ceilinged end the escalators land in
-        };
-        /* The train is seven twenty-two-metre cars with three doors in each,
-           so the screen doors in the platform wall are drilled on 7.53 m
-           centres off where the train stops — which is the only way a screen
-           door and the door behind it are ever in the same place. */
-        const CAR_L = 22.6, TRAIN_N = 7, DOOR_W = 1.72, DOOR_P = CAR_L / 3;
-        const BERTH_Z = -134.0;
-        const doorZs = [];
-        for (let i = 0; i < TRAIN_N * 3; i++) {
-            doorZs.push(BERTH_Z - (TRAIN_N / 2) * CAR_L + DOOR_P * (i + 0.5));
-        }
-        {
-            const C_ = (x0, y0, z0, x1, y1, z1) => bx3(P.sCrete, null, x0, y0, z0, x1, y1, z1);
-
-            /* ---- the ticket hall, under the square. A floor, four walls, and
-                   a ceiling with the escalator hole in it — drawn as the four
-                   pieces around the hole rather than as a shape, because four
-                   boxes are cheaper than a triangulation and this hole is a
-                   rectangle. ---- */
-            const HX0 = 18.6, HX1 = 43.0, HZS = -150.0, HZN = -198.0;
-            C_(HX0, ST.HALL - 0.5, HZS, HX1, ST.HALL, HZN);                      // floor
-            C_(HX0 - 0.5, ST.HALL, HZS, HX0, ST.HCEIL, HZN);                     // west wall
-            C_(HX1, ST.HALL, HZS, HX1 + 0.5, ST.HCEIL, HZN);                     // east
-            C_(HX0 - 0.5, ST.HALL, HZS, HX1 + 0.5, ST.HCEIL, HZS + 0.5);         // south
-            C_(HX0 - 0.5, ST.HALL, HZN, 19.5, ST.HCEIL, HZN - 0.5);              // north, either
-            C_(34.0, ST.HALL, HZN, HX1 + 0.5, ST.HCEIL, HZN - 0.5);              // side of the passage
-            for (const c of [[HX0, HZS, HX1, SQ.VZ1], [HX0, SQ.VZ0, HX1, HZN],
-                             [HX0, SQ.VZ1, SQ.VX0, SQ.VZ0], [SQ.VX1, SQ.VZ1, HX1, SQ.VZ0]]) {
-                C_(c[0], ST.HCEIL, c[1], c[2], ST.HCEIL + 0.5, c[3]);
-            }
-
-            /* the fare gates, across the hall where the passage leaves it —
-               eight aisles, and the one thing down here that tells you which
-               side of the barrier you are standing on */
-            for (let i = 0; i < 10; i++) {
-                const x = 21.0 + i * 1.55;
-                bx3(P.sClad, null, x, ST.HALL, -186.2, x + 0.32, ST.HALL + 1.02, -184.2);
-                const g = boxG(0.26, 0.06, 0.44);          // the arrow on the pedestal
-                put(g, x + 0.16, ST.HALL + 1.05, -185.2);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-            /* the light lines in the hall and the passage. A room this size
-               lit only by what leaks down the escalators is a corridor, and
-               the whole point of the hall is that you come out of the weather
-               into somewhere. */
-            for (const r of [[19.6, 42.0, -154.0], [19.6, 42.0, -193.0],
-                             [19.6, 24.6, -172.0], [37.0, 42.0, -172.0]]) {
-                const g = boxG(Math.abs(r[1] - r[0]), 0.10, 0.62);
-                put(g, (r[0] + r[1]) / 2, ST.HCEIL - 0.22, r[2]);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-            for (let i = 0; i < 3; i++) {
-                const g = boxG(0.62, 0.10, 9.0);
-                put(g, 27.5, ST.HCEIL - 0.22, -203.0 - i * 10.5);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-
-            /* ---- the passage north to the shaft, and the landing that
-                   cantilevers out of its west end over the concourse ---- */
-            const PX0 = 17.0, PX1 = 34.0, PZS = -198.0, PZN = -232.0;
-            C_(PX0, ST.HALL - 0.5, PZS, PX1, ST.HALL, PZN);
-            C_(PX0, ST.HCEIL, PZS, PX1, ST.HCEIL + 0.5, PZN);
-            C_(PX0 - 0.5, ST.HALL, PZN, PX1, ST.HCEIL, PZN - 0.5);
-            C_(PX1, ST.HALL, PZS, PX1 + 0.5, ST.HCEIL, PZN);
-            C_(14.0, ST.HALL - 0.5, -230.0, PX0, ST.HALL, -218.0);               // the landing
-
-            /* ---- the cavern ----
-
-               A segmental vault, springing at −19 and six metres of rise, over
-               a floor at −25. Written as one profile extruded a hundred and
-               sixty metres, which is what it is — and the reason the two ends
-               are drawn as a rectangle with the same profile cut out of them,
-               so the mouth of the vault is the mouth of the vault rather than
-               a rectangle that nearly is. */
-            const arcPts = (r, rise, n) => {
-                const out = [];
-                for (let i = 0; i <= n; i++) {
-                    const a = Math.PI * (i / n);
-                    out.push([-Math.cos(a) * r, Math.sin(a) * rise]);
-                }
-                return out;
-            };
-            {
-                const inner = arcPts(ST.WALL, ST.RISE, 20);
-                const outer = arcPts(ST.WALL + 0.7, ST.RISE + 0.7, 20).reverse();
-                const g = profileG(inner.concat(outer), ST.SHAFT_S - ST.ZS);
-                put(g, 0, ST.SPRING, (ST.SHAFT_S + ST.ZS) / 2);
-                P.sCrete.push(g);
-            }
-            // the side walls under the springing, and the floor across the lot
-            for (const s of [-1, 1]) {
-                C_(s * ST.WALL, ST.PLAT, ST.ZN, s * (ST.WALL + 0.7), ST.SPRING, ST.ZS);
-            }
-            /* One-point-two metres thick, and the thickness is load-bearing
-               in a way that has nothing to do with structure. The walk merges
-               two surfaces less than 1.4 m apart into one solid; a slab
-               thicker than that is a top and a bottom the grid keeps as two
-               separate spans, and the platform column already spends three on
-               the street overhead, the vault and the floor. A fourth pushed it
-               to the cap, and a cap that overflows folds the newest sample into
-               whichever span is nearest — which put the hanging platform signs
-               into the floor and stood anybody underneath one three metres in
-               the air. Thinner than the merge gap, the slab is one span. */
-            C_(-ST.EDGE, ST.PLAT - 1.2, ST.ZN, ST.EDGE, ST.PLAT, ST.ZS);      // concourse + platforms
-            for (const s of [-1, 1]) {                                        // and the trackbed beside them
-                C_(s * ST.EDGE, ST.RAIL - 0.55, ST.ZN, s * ST.WALL, ST.RAIL - 0.15, ST.ZS);
-            }
-            // the flat-ceilinged end the escalators come down into
-            C_(-ST.WALL, ST.HCEIL, ST.SHAFT_N, ST.WALL, ST.HCEIL + 0.7, ST.SHAFT_S);
-            C_(-ST.WALL - 0.7, ST.PLAT, ST.ZN, ST.WALL + 0.7, ST.HCEIL + 0.7, ST.ZN - 0.7);
-
-            /* the spandrel where the flat ceiling meets the vault: a wall with
-               the vault's own section cut out of it, so what you walk towards
-               from the escalator is an arch */
-            {
-                const shape = new THREE.Shape();
-                shape.moveTo(-ST.WALL - 0.7, -0.4);
-                shape.lineTo(ST.WALL + 0.7, -0.4);
-                shape.lineTo(ST.WALL + 0.7, ST.HCEIL - ST.SPRING + 0.7);
-                shape.lineTo(-ST.WALL - 0.7, ST.HCEIL - ST.SPRING + 0.7);
-                shape.closePath();
-                const hole = new THREE.Path();
-                const a = arcPts(ST.WALL, ST.RISE, 18);
-                hole.moveTo(a[0][0], a[0][1]);
-                for (let i = 1; i < a.length; i++) hole.lineTo(a[i][0], a[i][1]);
-                hole.lineTo(ST.WALL, -0.4); hole.lineTo(-ST.WALL, -0.4);
-                hole.closePath();
-                shape.holes.push(hole);
-                const g = new THREE.ExtrudeGeometry(shape, { depth: 0.7, bevelEnabled: false });
-                put(g, 0, ST.SPRING, ST.SHAFT_S - 0.35);
-                P.sCrete.push(g);
-            }
-
-            /* the two portal walls, at either end of the platforms, with the
-               tunnels going on through them */
-            for (const e of [[ST.ZS, -1], [ST.ZN + 0.7, 1]]) {
-                C_(-ST.EDGE, ST.PLAT, e[0], ST.EDGE, ST.SPRING + ST.RISE, e[0] + e[1] * 0.8);
-                for (const s of [-1, 1]) {
-                    C_(s * ST.EDGE, ST.PLAT + 5.4, e[0], s * ST.WALL, ST.SPRING + ST.RISE, e[0] + e[1] * 0.8);
-                }
-            }
-            // and the bores themselves, an annulus extruded, so the train has
-            // somewhere to be when it is not here
-            {
-                const ring = new THREE.Shape();
-                ring.absarc(0, 0, 4.3, 0, Math.PI * 2, false);
-                const hole = new THREE.Path();
-                hole.absarc(0, 0, 3.10, 0, Math.PI * 2, true);
-                ring.holes.push(hole);
-                for (const s of [-1, 1]) for (const e of [[ST.ZS, 30], [ST.ZN, -30]]) {
-                    const g = new THREE.ExtrudeGeometry(ring, { depth: Math.abs(e[1]), bevelEnabled: false, curveSegments: 14 });
-                    g.translate(0, 0, e[1] > 0 ? 0 : -Math.abs(e[1]));
-                    put(g, s * ST.TRACK, ST.RAIL + 2.6, e[0]);
-                    P.sCrete.push(g);
-                }
-            }
-
-            /* ---- the platform edge, its tactile strip, and the screen doors.
-
-                   Full height, because that is what the Metro Tunnel built and
-                   because a person who can walk can walk onto a track. Every
-                   post and header is here; the leaves that slide are instanced
-                   further down, where the train is. ---- */
-            for (const s of [-1, 1]) {
-                const x = s * ST.EDGE;
-                bx3(P.sTact, null, x - s * 0.62, ST.PLAT - 0.03, ST.PZN, x, ST.PLAT + 0.02, ST.PZS);
-                // the header over the whole run, and a post at every jamb
-                bx3(P.sSteel, null, x, ST.PLAT + 3.05, ST.PZN, x + s * 0.22, ST.PLAT + 3.45, ST.PZS);
-                bx3(P.sSteel, null, x, ST.PLAT, ST.PZN, x + s * 0.22, ST.PLAT + 0.16, ST.PZS);
-                let z = ST.PZN;
-                for (const dz of doorZs) {
-                    if (dz - DOOR_W / 2 > z) {
-                        bx3(P.sGlass, null, x + s * 0.02, ST.PLAT + 0.16, z, x + s * 0.16, ST.PLAT + 3.05, dz - DOOR_W / 2);
-                    }
-                    for (const j of [-1, 1]) {
-                        bx3(P.sSteel, null, x, ST.PLAT, dz + j * (DOOR_W / 2), x + s * 0.24, ST.PLAT + 3.05, dz + j * (DOOR_W / 2 + 0.13));
-                    }
-                    z = dz + DOOR_W / 2;
-                }
-                bx3(P.sGlass, null, x + s * 0.02, ST.PLAT + 0.16, z, x + s * 0.16, ST.PLAT + 3.05, ST.PZS);
-            }
-
-            /* ---- the blade columns down the concourse, their longitudinal
-                   beams, and the cone lamps on them: the station's whole
-                   lighting scheme and the reason it is warm down here ---- */
-            for (const s of [-1, 1]) {
-                const x = s * ST.CONC;
-                bx3(P.sClad, null, x - 0.19, ST.PLAT + 4.30, ST.PZN, x + 0.19, ST.PLAT + 5.20, ST.PZS);
-                for (let i = 0; ; i++) {
-                    const z = ST.PZN + 6.0 + i * 7.6;
-                    if (z > ST.PZS - 4.0) break;
-                    bx3(P.sClad, null, x - 0.16, ST.PLAT, z - 0.55, x + 0.16, ST.PLAT + 4.30, z + 0.55);
-                    if (i % 2) continue;
-                    const g = coneG(0.42, 0.86, 10);
-                    put(g, x + s * 0.60, ST.PLAT + 4.05, z, Math.PI, 0, 0);
-                    P.sSign.push(sgn(g, 'warm'));
-                }
-            }
-            /* the light line along the crown of the vault, which is what makes
-               a two-hundred-metre tube read as one room */
-            {
-                const g = boxG(1.30, 0.10, Math.abs(ST.PZN - ST.PZS));
-                put(g, 0, ST.SPRING + ST.RISE - 0.24, (ST.PZN + ST.PZS) / 2);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-            // and the cove under the platform edge, washing the floor
-            for (const s of [-1, 1]) {
-                const g = boxG(0.16, 0.16, Math.abs(ST.PZN - ST.PZS));
-                put(g, s * (ST.EDGE - 0.78), ST.PLAT + 2.90, (ST.PZN + ST.PZS) / 2);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-            // the two lines in the haunches, which are what actually light the
-            // platforms: the one along the crown lights the vault, and a vault
-            // is not what anybody down here is standing on
-            for (const s of [-1, 1]) {
-                const g = boxG(0.70, 0.14, Math.abs(ST.PZN - ST.PZS));
-                put(g, s * (ST.EDGE - 2.6), ST.PLAT + 7.40, (ST.PZN + ST.PZS) / 2);
-                P.sSign.push(sgn(g, 'strip'));
-            }
-
-            /* ---- the platform signs, hung off the beams where they are hung
-                   in every station anybody has ever waited in ---- */
-            for (const s of [-1, 1]) for (let i = 0; i < 5; i++) {
-                const z = ST.PZN + 16.0 + i * 30.0;
-                bx3(P.sClad, null, s * ST.CONC - 0.06, ST.PLAT + 3.55, z - 0.03, s * (ST.CONC + 3.4), ST.PLAT + 3.62, z + 0.03);
-                const g = boxG(2.60, 0.80, 0.06);
-                put(g, s * (ST.CONC + 1.9), ST.PLAT + 3.10, z);
-                P.sSign.push(sgn(g, 'platform'));
-            }
-            // the station's name on the concourse wall you face coming down
-            {
-                const g = boxG(9.0, 1.6, 0.06);
-                put(g, 0, ST.PLAT + 3.4, ST.SHAFT_S - 0.72);
-                P.sSign.push(sgn(g, 'townhall'));
-            }
-
-            /* ---- the escalators from the ticket hall down to the concourse.
-                   Two and a stair, the same as above, and the same rule: the
-                   angle is read off the two ends. ---- */
-            {
-                const X0 = 14.0, X1 = -6.0, Y0 = ST.HALL, Y1 = ST.PLAT;
-                const sl = (Y1 - Y0) / (X1 - X0);
-                const yAt = (x) => Y0 + (x - X0) * sl;
-                const X2 = X1 - 1.6;
-                const bank = (cz, w, stair) => {
-                    rampX(w, 0.24, X0, Y0 - 0.12, X2, yAt(X2) - 0.12, cz, stair ? P.sCrete : P.sSteel);
-                    rampX(w + 0.90, 1.30, X0, Y0 - 0.95, X2, yAt(X2) - 0.95, cz, P.sCrete);
-                    if (stair) {
-                        const n = 62;
-                        for (let i = 0; i < n; i++) {
-                            const xa = X0 + (X1 - X0) * (i / n), xb = X0 + (X1 - X0) * ((i + 1) / n);
-                            bx3(P.sCrete, null, xa, yAt(xb) - 0.34, cz - w / 2, xb, yAt(xb), cz + w / 2);
-                        }
-                    }
-                    for (const s of [-1, 1]) {
-                        const zz = cz + s * (w / 2 + 0.14);
-                        rampX(0.10, 1.02, X0, Y0 + 0.51, X2, yAt(X2) + 0.51, zz, P.gGlass);
-                        rampX(0.16, 0.11, X0, Y0 + 1.07, X2, yAt(X2) + 1.07, zz, P.gTrim);
-                    }
-                };
-                bank(-221.4, 1.62, false);
-                bank(-223.2, 1.62, false);
-                bank(-226.6, 3.00, true);
-            }
-        }
-
-        /* ------------------------------------------------------------
-           21i · the train
-
-           A seven-car HCMT, which is what runs through this tunnel. Not the
-           library model in `hcmt.scene.js` — that one is two hundred meshes
-           because it is the subject of its own world, and here it is one
-           thing standing at a platform in a world that already spends a
-           hundred and fifty. So: one car, drawn once as merged geometry with
-           the livery on a canvas, stood up seven times as an InstancedMesh,
-           with the two nose cars' fronts merged in separately.
-
-           Instanced geometry is left out of the walk's grid on purpose — the
-           app cannot know where the instances went — which happens to be
-           exactly right for a train that moves.
-           ------------------------------------------------------------ */
-        const CAR_W = 3.05;
-        const TRAIN = { z: BERTH_Z, v: 0, t: 0, phase: 'dwell', door: 1 };
-        let trainIM = null, trainNose = null, doorIM = null;
-        {
-            // the livery: pale champagne body, a dark window band, sky-blue
-            // doors, and the yellow front the whole fleet is known by
-            const skin = tex(2048, 512, (g, W, H) => {
-                const grad = g.createLinearGradient(0, 0, 0, H);
-                grad.addColorStop(0.00, '#8f8c86'); grad.addColorStop(0.22, '#c6c3bb');
-                grad.addColorStop(0.62, '#b3b0a8'); grad.addColorStop(1.00, '#43454a');
-                g.fillStyle = grad; g.fillRect(0, 0, W, H);
-                // the window band
-                g.fillStyle = '#121316'; g.fillRect(0, H * 0.26, W, H * 0.30);
-                // three doors, on the pitch the screen doors are drilled to
-                for (let d = 0; d < 3; d++) {
-                    const cx = W * ((d + 0.5) / 3), w = W * 0.075;
-                    g.fillStyle = '#79bee4'; g.fillRect(cx - w / 2, H * 0.16, w, H * 0.54);
-                    g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(cx - 0.8, H * 0.16, 1.6, H * 0.54);
-                    g.fillStyle = '#0f1114'; g.fillRect(cx - w / 2 + 3, H * 0.22, w - 6, H * 0.22);
-                }
-                // the windows between them
-                for (let i = 0; i < 12; i++) {
-                    const x = W * (0.045 + i * 0.0785);
-                    if (Math.abs((x / W) % (1 / 3) - 1 / 6) < 0.045) continue;
-                    g.fillStyle = 'rgba(150,178,196,0.16)'; g.fillRect(x, H * 0.28, W * 0.052, H * 0.24);
-                }
-                // the skirt, and the lime line along the lower body
-                g.fillStyle = '#2b2d2f'; g.fillRect(0, H * 0.74, W, H * 0.26);
-                g.fillStyle = '#b6d34a'; g.fillRect(0, H * 0.705, W, H * 0.022);
-            });
-            const skinE = tex(1024, 256, (g, W, H) => {
-                g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
-                g.fillStyle = '#e8f2ff'; g.fillRect(0, H * 0.28, W, H * 0.26);      // the saloon, lit
-                for (let d = 0; d < 3; d++) {
-                    const cx = W * ((d + 0.5) / 3), w = W * 0.075;
-                    g.fillStyle = '#dff0ff'; g.fillRect(cx - w / 2, H * 0.22, w, H * 0.22);
-                }
-            });
-            const trainMat = stdMat(0xffffff, {
-                map: skin, emissive: 0xffffff, emissiveMap: skinE,
-                emissiveIntensity: 0.85, roughness: 0.30, metalness: 0.30,
-            });
-
-            // one car: body, roof, skirt, and two bogies
-            const carP = [];
-            let g = boxG(CAR_W, 2.30, CAR_L - 0.6);
-            put(g, 0, 2.05, 0); carP.push(g);
-            g = boxG(CAR_W - 0.30, 0.70, CAR_L - 0.9);
-            put(g, 0, 3.50, 0); carP.push(uvScale(g, 1, 0.12));
-            g = boxG(CAR_W - 0.42, 0.86, CAR_L - 0.6);
-            put(g, 0, 0.52, 0); carP.push(uvScale(g, 1, 0.12));
-            for (const bz of [-CAR_L * 0.29, CAR_L * 0.29]) {
-                g = boxG(CAR_W - 0.85, 0.52, 3.20); put(g, 0, 0.62, bz); carP.push(uvScale(g, 1, 0.10));
-                for (const wz of [-1.05, 1.05]) for (const s of [-1, 1]) {
-                    g = cylG(0.42, 0.42, 0.11, 10);
-                    put(g, s * 0.72, 0.42, bz + wz, 0, 0, Math.PI / 2);
-                    carP.push(uvScale(g, 0.06, 0.06));
-                }
-            }
-            trainIM = new THREE.InstancedMesh(merge(carP), trainMat, TRAIN_N);
-            scene.add(trainIM);
-            world.ghost(trainIM);
-
-            // the two cab noses, which are the one part of the train that is
-            // not seven of the same thing
-            {
-                const noseP = [];
-                for (const e of [-1, 1]) {
-                    const z0 = e * ((TRAIN_N * CAR_L) / 2 - 0.3);
-                    let n = boxG(CAR_W - 0.16, 2.10, 1.9);
-                    put(n, 0, 2.00, z0 + e * 0.95); noseP.push(uvScale(n, 1, 0.10));
-                    n = boxG(CAR_W - 0.55, 1.35, 1.2);
-                    put(n, 0, 2.55, z0 + e * 1.75); noseP.push(uvScale(n, 1, 0.10));
-                    n = boxG(CAR_W - 0.30, 0.90, 0.5);
-                    put(n, 0, 1.10, z0 + e * 2.05); noseP.push(uvScale(n, 1, 0.10));
-                }
-                trainNose = mesh(merge(noseP), trainMat);
-                scene.add(trainNose);
-                world.ghost(trainNose);
-            }
-
-            /* The doors. Every screen door on both platforms and every train
-               door that lines up with one, as one instanced set of leaves —
-               they only ever move together, because a train's doors and the
-               screen's doors in front of them are one mechanism as far as
-               anybody standing on the platform is concerned. The train's
-               leaves are scaled to nothing whenever the train is not berthed,
-               which is the cheapest way to make them not be there. */
-            {
-                const leaf = boxG(0.12, 2.86, DOOR_W / 2 - 0.02);
-                doorIM = new THREE.InstancedMesh(leaf, M21.glass, doorZs.length * 8);
-                scene.add(doorIM);
-                world.ghost(doorIM);
-            }
         }
 
         /* A room behind a shopfront, said once for the whole west side.
@@ -4905,7 +4553,7 @@ export default function build(world) {
         }
 
         /* ------------------------------------------------------------
-           21j · everything merged, and the one thing that moves
+           21j · everything merged
            ------------------------------------------------------------ */
         {
             /* Three objects, each a group of the meshes it is made of — the
@@ -4926,14 +4574,12 @@ export default function build(world) {
                     // no way onto it, so it is scenery rather than surface.
                     // Ghosted, it stops spending one of the four vertical spans
                     // the walk keeps per cell on every square metre of the
-                    // plaza — spans the plaza needs for the paving, the ticket
-                    // hall and the platform under them.
+                    // plaza — spans the plaza needs for the paving and for the
+                    // shaft under it.
                     [P.qRoof, M21.soffit],
                 ]],
                 ['townhallstation_00', [
-                    [P.sCrete, M21.crete], [P.sSteel, M21.steel], [P.sClad, M21.batten],
-                    [P.sGlass, M21.glass], [P.sTrim, M21.bronze], [P.sSign, M21.sign],
-                    [P.sTact, M21.tact],
+                    [P.sCrete, M21.crete], [P.sSteel, M21.steel], [P.sTrim, M21.bronze],
                 ], [
                     /* And the balustrades down the escalators, for a reason
                        worth writing down: the walk merges two surfaces less
@@ -4941,7 +4587,7 @@ export default function build(world) {
                        between them. A metre of glass standing on an escalator
                        deck is exactly that — so left solid, the surface the
                        walk offers down the whole flight is the top of the
-                       handrail, and you ride to the platform floating a metre
+                       handrail, and you ride to the bottom floating a metre
                        above the steps. The deck is what you stand on; the rail
                        beside it is scenery, and the batten walls either side of
                        the bank are what actually stops anybody. */
@@ -4965,81 +4611,6 @@ export default function build(world) {
                 scene.add(group);
                 world.part(name, group);
             }
-        }
-
-        /* The train, and the doors with it. One eighty-second round: it stands
-           at the platform with the doors open, they close, it goes north into
-           the tunnel, and two minutes of railway later another one comes in
-           from the south and stops in the same place. Nothing in here
-           allocates — the matrix and the two vectors are made once, up
-           there, and composed into every frame. */
-        {
-            const _mm = new THREE.Matrix4();
-            const _pp = new THREE.Vector3();
-            const _qq = new THREE.Quaternion();
-            const _ss = new THREE.Vector3(1, 1, 1);
-            const BERTH = TRAIN.z, TUNNEL_N = BERTH - 210, TUNNEL_S = BERTH + 210;
-
-            world.frame((dt, t) => {
-                const T = TRAIN;
-                T.t += dt;
-                if (T.phase === 'dwell') {
-                    T.door = Math.min(1, T.door + dt * 0.55);
-                    if (T.t > 22) { T.phase = 'closing'; T.t = 0; }
-                } else if (T.phase === 'closing') {
-                    T.door = Math.max(0, T.door - dt * 0.55);
-                    if (T.door <= 0 && T.t > 3.6) { T.phase = 'away'; T.t = 0; T.v = 0; }
-                } else if (T.phase === 'away') {
-                    T.v = Math.min(19, T.v + dt * 1.15);
-                    T.z -= T.v * dt;
-                    if (T.z < TUNNEL_N) { T.phase = 'gap'; T.t = 0; T.z = TUNNEL_S; T.v = 19; }
-                } else if (T.phase === 'gap') {
-                    if (T.t > 26) T.phase = 'in';
-                } else {
-                    const left = T.z - BERTH;
-                    T.v = Math.max(1.1, Math.min(T.v, Math.sqrt(Math.max(0, left) * 2 * 1.05)));
-                    T.z -= T.v * dt;
-                    if (T.z <= BERTH) { T.z = BERTH; T.v = 0; T.phase = 'dwell'; T.t = 0; T.door = 0; }
-                }
-
-                for (let i = 0; i < TRAIN_N; i++) {
-                    _pp.set(-ST.TRACK, ST.RAIL, T.z + (i - (TRAIN_N - 1) / 2) * CAR_L);
-                    _mm.compose(_pp, _qq.set(0, 0, 0, 1), _ss.set(1, 1, 1));
-                    trainIM.setMatrixAt(i, _mm);
-                }
-                trainIM.instanceMatrix.needsUpdate = true;
-                trainNose.position.set(-ST.TRACK, ST.RAIL, T.z);
-
-                // the leaves: two per doorway, both platforms' screens always,
-                // and the train's own only while it is standing here
-                const berthed = T.phase === 'dwell' || T.phase === 'closing';
-                const slide = T.door * (DOOR_W / 2 - 0.03);
-                let k = 0;
-                for (const s of [-1, 1]) {
-                    for (const dz of doorZs) {
-                        for (const j of [-1, 1]) {
-                            _pp.set(s * (ST.EDGE + 0.09), ST.PLAT + 1.51,
-                                    dz + j * (DOOR_W / 4 + slide));
-                            _mm.compose(_pp, _qq.set(0, 0, 0, 1), _ss.set(1, 1, 1));
-                            doorIM.setMatrixAt(k++, _mm);
-                        }
-                    }
-                }
-                for (const dz of doorZs) {
-                    for (const j of [-1, 1]) {
-                        const on = berthed ? 1 : 0.0001;
-                        _pp.set(-(ST.TRACK - 1.55), ST.RAIL + 1.95,
-                                dz + j * (DOOR_W / 4 + slide));
-                        _mm.compose(_pp, _qq.set(0, 0, 0, 1), _ss.set(on, on, on));
-                        doorIM.setMatrixAt(k++, _mm);
-                    }
-                }
-                for (; k < doorIM.count; k++) {
-                    _mm.compose(_pp.set(0, -900, 0), _qq.set(0, 0, 0, 1), _ss.set(0.0001, 0.0001, 0.0001));
-                    doorIM.setMatrixAt(k, _mm);
-                }
-                doorIM.instanceMatrix.needsUpdate = true;
-            });
         }
     }
 
