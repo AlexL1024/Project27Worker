@@ -955,114 +955,282 @@ export default function build(world) {
         }
     };
 
-    /* One flank of an A-class. u = 0 is the cab end. The window and door glass
-       is cleared straight out of the texture so the saloon shows through, and
-       the material runs alphaTest rather than transparency — nine windows a
-       side across four trams is not a sorting problem worth having. */
+    /* One flank of an A-class, and the same flank whichever way round you are
+       standing. The car this world runs is double-ended, so this is drawn
+       symmetric about its own middle: a cab window and a fleet number at each
+       end, three doorways at a fifth, a half and four fifths of the length,
+       and three saloon windows in each bay between them. Mirror the canvas and
+       draw the same green burst again and the two ends match to the pixel,
+       which no amount of eyeballing two separate drawings would have managed.
+
+       The doorways are cleared straight out now rather than painted on. They
+       are real openings with real leaves sliding across them, so what the
+       texture keeps is the yellow frame the leaves slide over. The window
+       glass is cleared the same way so the saloon shows through, and the
+       material runs alphaTest rather than transparency — twenty openings a
+       side across nine cars is not a sorting problem worth having. */
+    const CAB_U = [0.0325, 0.0926];
+    const DOOR_U = [[0.1397, 0.2203], [0.4597, 0.5403], [0.7797, 0.8603]];
+    const WIN_U = [[0.1000, 0.1320],
+                   [0.2323, 0.2961], [0.3081, 0.3719], [0.3839, 0.4477],
+                   [0.5523, 0.6161], [0.6281, 0.6919], [0.7039, 0.7677],
+                   [0.8680, 0.9000]];
     const tramSideTex = (fleet, mirror) => tex(2048, 420, (g, W, H) => {
         if (mirror) { g.translate(W, 0); g.scale(-1, 1); }
         g.clearRect(0, 0, W, H);
         g.fillStyle = '#f3f5f1'; g.fillRect(0, 0, W, H);
 
+        // The shards, at one end and then the same shards mirrored at the
+        // other. Two calls to the same seed rather than two seeds, because the
+        // whole point of this rebuild is that the back looks like the front.
         const burst = (a, b, seed) => {
             g.save(); g.beginPath(); g.rect(W * a, 0, W * (b - a), H); g.clip();
-            ptvPattern(g, W * (a - 0.03), 0, W * (b - a + 0.06), H, seed); g.restore();
+            ptvPattern(g, W * (a - 0.02), 0, W * (b - a + 0.04), H, seed); g.restore();
         };
-        burst(0.100, 0.360, 3);
-        burst(0.845, 1.00, 11);
-        // the green flash along the roof fascia over the cab
-        g.fillStyle = '#4f9c2e';
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(W * 0.115, 0); g.lineTo(0, H * 0.30); g.closePath(); g.fill();
-        g.fillStyle = '#8cc63e';
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(W * 0.070, 0); g.lineTo(0, H * 0.17); g.closePath(); g.fill();
-        // lime line along the lower body, then the dark underframe
-        g.fillStyle = '#c5d92f'; g.fillRect(0, H * 0.845, W, H * 0.022);
-        g.fillStyle = '#4d5257'; g.fillRect(0, H * 0.895, W, H * 0.105);
+        g.save(); burst(0.000, 0.300, 3); g.restore();
+        g.save(); g.translate(W, 0); g.scale(-1, 1); burst(0.000, 0.300, 3); g.restore();
+        // and the green flash along the roof fascia over each cab
+        for (const m of [0, 1]) {
+            g.save(); if (m) { g.translate(W, 0); g.scale(-1, 1); }
+            g.fillStyle = '#4f9c2e';
+            g.beginPath(); g.moveTo(0, 0); g.lineTo(W * 0.105, 0); g.lineTo(0, H * 0.26); g.closePath(); g.fill();
+            g.fillStyle = '#8cc63e';
+            g.beginPath(); g.moveTo(0, 0); g.lineTo(W * 0.062, 0); g.lineTo(0, H * 0.15); g.closePath(); g.fill();
+            g.restore();
+        }
+        // lime line along the lower body, then the dark rubbing strip at the hem
+        g.fillStyle = '#c5d92f'; g.fillRect(0, H * 0.872, W, H * 0.020);
+        g.fillStyle = '#4d5257'; g.fillRect(0, H * 0.940, W, H * 0.060);
 
-        const glassY = H * 0.16, glassH = H * 0.40;
+        /* The window band. The body box runs from the floor at 0.88 to the
+           roof at 3.22, so the glass — 1.95 to 2.62 off the rail, a sill just
+           over a metre above the saloon floor — lands between these two
+           fractions and nowhere else, and the hopper rail is the hinge line of
+           the top-hung light that opens over it. */
+        const glassY = H * 0.256, glassH = H * 0.286;
         const opening = (u0, u1) => {
             g.clearRect(W * u0, glassY, W * (u1 - u0), glassH);
-            g.strokeStyle = '#15191c'; g.lineWidth = W / 340;       // rubber surround
+            g.strokeStyle = '#15191c'; g.lineWidth = W / 340;
             g.strokeRect(W * u0, glassY, W * (u1 - u0), glassH);
-            g.fillStyle = '#2a3036';                                // hopper vent rail
-            g.fillRect(W * u0, glassY + glassH * 0.30, W * (u1 - u0), Math.max(2, H / 90));
+            g.fillStyle = '#2a3036';
+            g.fillRect(W * u0, glassY + glassH * 0.30, W * (u1 - u0), Math.max(2, H / 88));
         };
-        opening(0.028, 0.082);                                      // the driver's window
-        [[0.180, 0.252], [0.257, 0.329], [0.334, 0.406],
-         [0.497, 0.569], [0.574, 0.646], [0.651, 0.723],
-         [0.812, 0.884], [0.889, 0.961]].forEach((p) => opening(p[0], p[1]));
+        opening(CAB_U[0], CAB_U[1]);
+        WIN_U.forEach((p) => opening(p[0], p[1]));
 
-        [[0.098, 0.166], [0.420, 0.488], [0.735, 0.803]].forEach((d) => {
+        // The doorways: a yellow frame painted on the body, and nothing at all
+        // inside it. The leaf that fills it is geometry, and it slides.
+        DOOR_U.forEach((d) => {
             const dx = W * d[0], dw = W * (d[1] - d[0]);
-            g.fillStyle = '#dfe62b'; g.fillRect(dx, H * 0.055, dw, H * 0.795);      // lime door frame
-            g.fillStyle = '#f3f5f1'; g.fillRect(dx + dw * 0.085, H * 0.075, dw * 0.83, H * 0.755);
-            g.clearRect(dx + dw * 0.06, glassY, dw * 0.88, glassH * 0.95);
-            g.strokeStyle = '#15191c'; g.lineWidth = W / 380;
-            g.strokeRect(dx + dw * 0.06, glassY, dw * 0.88, glassH * 0.95);
+            g.fillStyle = '#dfe62b'; g.fillRect(dx - dw * 0.09, H * 0.140, dw * 1.18, H * 0.838);
+            g.clearRect(dx, H * 0.155, dw, H * 0.810);
             g.strokeStyle = '#9aa018'; g.lineWidth = W / 620;
-            g.beginPath(); g.moveTo(dx + dw / 2, H * 0.055); g.lineTo(dx + dw / 2, H * 0.85); g.stroke();
-            g.strokeRect(dx, H * 0.055, dw, H * 0.795);
-            g.fillStyle = '#2f3439'; g.fillRect(dx + dw * 0.40, H * 0.66, dw * 0.20, H * 0.10);
+            g.strokeRect(dx - dw * 0.09, H * 0.140, dw * 1.18, H * 0.838);
         });
 
         g.textBaseline = 'middle';
-        g.fillStyle = '#26301a';
-        g.font = 'bold ' + (H * 0.085).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.textAlign = 'left'; g.fillText(String(fleet), W * 0.088, H * 0.735);
-        g.textAlign = 'right'; g.fillText(String(fleet), W * 0.975, H * 0.735);
+        for (const m of [0, 1]) {
+            g.save(); if (m) { g.translate(W, 0); g.scale(-1, 1); g.textAlign = 'right'; }
+            else g.textAlign = 'left';
+            const at = (u) => (m ? W * (1 - u) : W * u);
+            g.fillStyle = '#26301a';
+            g.font = 'bold ' + (H * 0.090).toFixed(0) + 'px Helvetica, Arial, sans-serif';
+            g.fillText(String(fleet), at(0.036), H * 0.760);
+            g.font = 'bold ' + (H * 0.048).toFixed(0) + 'px Helvetica, Arial, sans-serif';
+            g.fillText(String(fleet), at(0.036), H * 0.208);
+            g.restore();
+        }
         g.textAlign = 'left';
-        [0.545, 0.600].forEach((u) => {                              // two PT> marks amidships
+        [0.398, 0.578].forEach((u) => {                              // two PT> marks amidships
             g.fillStyle = '#0f5c2e';
-            g.font = 'bold ' + (H * 0.075).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-            g.fillText('PT', W * u, H * 0.735);
+            g.font = 'bold ' + (H * 0.078).toFixed(0) + 'px Helvetica, Arial, sans-serif';
+            g.fillText('PT', W * u, H * 0.760);
             g.beginPath();
-            g.moveTo(W * (u + 0.020), H * 0.695); g.lineTo(W * (u + 0.030), H * 0.735);
-            g.lineTo(W * (u + 0.020), H * 0.775); g.closePath(); g.fill();
+            g.moveTo(W * (u + 0.019), H * 0.718); g.lineTo(W * (u + 0.029), H * 0.760);
+            g.lineTo(W * (u + 0.019), H * 0.802); g.closePath(); g.fill();
         });
-        const ax = W * 0.640, aw = W * 0.085, ay = H * 0.640, ah = H * 0.185;
-        g.fillStyle = '#ffffff'; g.fillRect(ax, ay, aw, ah);
-        g.fillStyle = '#78be20'; g.fillRect(ax + aw * 0.66, ay + ah * 0.16, aw * 0.26, ah * 0.68);
-        g.fillStyle = '#1c6b3a';
+    });
+
+    /* Either end of the car, which on a double-ended tram is the same drawing
+       twice: the cab dark behind its screen, the black destination surround
+       over it, and the myki panel on the white below the sill. */
+    const tramEndTex = (fleet) => tex(512, 448, (g, W, H) => {
+        g.fillStyle = '#f4f6f3'; g.fillRect(0, 0, W, H);
+        g.fillStyle = '#1b2126'; g.fillRect(0, H * 0.09, W, H * 0.595);      // the cab, seen through the screen
+        g.fillStyle = 'rgba(150,190,220,.13)'; g.fillRect(0, H * 0.19, W, H * 0.20);
+        g.fillStyle = '#0a0a0a'; g.fillRect(W * 0.10, H * 0.090, W * 0.80, H * 0.098);
+        g.fillStyle = '#2b3138';                                              // the driver, in silhouette
+        g.beginPath(); g.ellipse(W * 0.30, H * 0.60, W * 0.13, H * 0.13, 0, 0, 6.3); g.fill();
+        g.beginPath(); g.ellipse(W * 0.30, H * 0.44, W * 0.055, H * 0.055, 0, 0, 6.3); g.fill();
+        for (const m of [0, 1]) {
+            g.save();
+            if (m) { g.translate(W, 0); g.scale(-1, 1); }
+            g.beginPath(); g.rect(0, H * 0.700, W * 0.20, H * 0.300); g.clip();
+            ptvPattern(g, -W * 0.04, H * 0.690, W * 0.28, H * 0.320, 3);
+            g.restore();
+        }
+        g.fillStyle = '#c5d92f'; g.fillRect(0, H * 0.700, W, H * 0.016);
+        g.fillStyle = '#f7f8f5'; g.fillRect(W * 0.13, H * 0.760, W * 0.74, H * 0.185);
+        g.fillStyle = '#1c6b3a'; g.textBaseline = 'middle'; g.textAlign = 'left';
         g.font = 'bold ' + (H * 0.048).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.fillText('myki', ax + aw * 0.07, ay + ah * 0.34);
+        g.fillText('Set and forget with', W * 0.16, H * 0.805);
+        g.fillText('myki auto top up', W * 0.16, H * 0.862);
         g.fillStyle = '#3d4348';
         g.font = (H * 0.040).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.fillText('auto top up', ax + aw * 0.07, ay + ah * 0.68);
-    });
-
-    const tramFrontTex = tex(512, 176, (g, W, H) => {
-        g.fillStyle = '#f7f8f5'; g.fillRect(0, 0, W, H);
-        g.fillStyle = '#1c6b3a'; g.textBaseline = 'middle'; g.textAlign = 'left';
-        g.font = 'bold ' + (H * 0.17).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.fillText('Set and forget with', W * 0.05, H * 0.24);
-        g.fillText('myki auto top up', W * 0.05, H * 0.50);
-        g.fillStyle = '#3d4348';
-        g.font = (H * 0.15).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.fillText('on the PTV app', W * 0.05, H * 0.76);
-        g.fillStyle = '#78be20'; g.fillRect(W * 0.72, H * 0.14, W * 0.14, H * 0.72);
-        g.fillStyle = '#12351f'; g.fillRect(W * 0.745, H * 0.22, W * 0.09, H * 0.44);
+        g.fillText('on the PTV app', W * 0.16, H * 0.915);
+        g.fillStyle = '#78be20'; g.fillRect(W * 0.71, H * 0.785, W * 0.13, H * 0.135);
         g.fillStyle = '#f7f8f5';
-        g.font = 'bold ' + (H * 0.12).toFixed(0) + 'px Helvetica, Arial, sans-serif';
-        g.textAlign = 'center'; g.fillText('myki', W * 0.79, H * 0.44);
+        g.font = 'bold ' + (H * 0.034).toFixed(0) + 'px Helvetica, Arial, sans-serif';
+        g.textAlign = 'center'; g.fillText('myki', W * 0.775, H * 0.852);
+        g.fillStyle = '#26301a';
+        g.font = 'bold ' + (H * 0.036).toFixed(0) + 'px Helvetica, Arial, sans-serif';
+        g.textAlign = 'left'; g.fillText(String(fleet), W * 0.05, H * 0.736);
+        g.fillStyle = '#2c3238'; g.fillRect(0, H * 0.955, W, H * 0.045);
     });
 
-    const tramBackTex = (fleet) => tex(256, 292, (g, W, H) => {
-        g.fillStyle = '#f4f6f3'; g.fillRect(0, 0, W, H);
-        g.save(); g.beginPath(); g.rect(0, H * 0.60, W, H * 0.40); g.clip();
-        ptvPattern(g, 0, H * 0.60, W, H * 0.40, 11); g.restore();
-        g.fillStyle = '#0a0a0a'; g.fillRect(W * 0.30, H * 0.05, W * 0.40, H * 0.09);
-        g.fillStyle = '#ffb020'; g.font = 'bold ' + (H * 0.12).toFixed(0) + 'px "Courier New", monospace';
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText(String(fleet), W * 0.5, H * 0.095);
-        g.fillStyle = '#1b2126'; g.fillRect(W * 0.09, H * 0.20, W * 0.82, H * 0.36);
-        g.fillStyle = 'rgba(150,190,220,.16)'; g.fillRect(W * 0.09, H * 0.20, W * 0.82, H * 0.15);
-        g.strokeStyle = '#e6e8e4'; g.lineWidth = W / 45; g.strokeRect(W * 0.09, H * 0.20, W * 0.82, H * 0.36);
-        g.fillStyle = '#c8341f';
-        [[0.16, 0.78], [0.84, 0.78]].forEach((p) => {
-            g.beginPath(); g.ellipse(W * p[0], H * p[1], W * 0.07, H * 0.03, 0, 0, 6.3); g.fill();
-        });
-        g.fillStyle = '#2c3238'; g.fillRect(0, H * 0.90, W, H * 0.10);
+    /* One door leaf. Yellow all the way round its edge, which is the thing you
+       actually see of a Melbourne tram door from across the street, tinted
+       glass in the top two thirds and a white panel under it. */
+    const doorLeafTex = tex(128, 384, (g, W, H) => {
+        g.fillStyle = '#dfe62b'; g.fillRect(0, 0, W, H);
+        g.fillStyle = '#15191c'; g.fillRect(W * 0.10, H * 0.030, W * 0.80, H * 0.940);
+        g.fillStyle = '#2b343c'; g.fillRect(W * 0.14, H * 0.055, W * 0.72, H * 0.520);
+        g.fillStyle = 'rgba(160,196,224,.16)'; g.fillRect(W * 0.14, H * 0.055, W * 0.72, H * 0.200);
+        g.fillStyle = '#f3f5f1'; g.fillRect(W * 0.14, H * 0.600, W * 0.72, H * 0.345);
+        g.fillStyle = '#dfe62b'; g.fillRect(W * 0.14, H * 0.585, W * 0.72, H * 0.018);
+        g.fillStyle = '#c8341f'; g.fillRect(W * 0.36, H * 0.660, W * 0.28, H * 0.055);
     });
+
+    /* ---- the saloon of an A-class, as one texture ----------------------
+       Everything inside the car — the cream panels, the blue floor, the green
+       moquette, the perforated ceiling, a myki reader, a poster, a
+       passenger's coat — is one patch of this one atlas. That is what lets the
+       whole interior of nine trams be a single mesh drawn nine times: one
+       texture is one material, and one material is one InstancedMesh. The
+       tram material reads it twice, as colour and as emission, which is how a
+       saloon lights itself without spending one of the four real lights this
+       world is allowed on a tram that is mostly seen through wet glass. */
+    const ATL_C = 8, ATL_R = 3;
+    const interiorAtlas = tex(1024, 384, (g, W, H) => {
+        const CW = W / ATL_C, CH = H / ATL_R;
+        const cell = (col, row, draw) => {
+            const x = col * CW, y = (ATL_R - 1 - row) * CH;
+            g.save(); g.beginPath(); g.rect(x, y, CW, CH); g.clip(); g.translate(x, y);
+            draw(CW, CH); g.restore();
+        };
+        const flat = (col, row, hex, then) => cell(col, row, (w, h) => {
+            g.fillStyle = hex; g.fillRect(0, 0, w, h);
+            if (then) then(w, h);
+        });
+
+        flat(0, 0, '#b8ac93', (w, h) => {                 // cream-beige wall panel
+            g.fillStyle = 'rgba(120,104,78,.16)';
+            for (let i = 0; i < 3; i++) g.fillRect(0, h * (0.24 + i * 0.26), w, 1.5);
+        });
+        flat(1, 0, '#6f747b', (w, h) => {                 // grey panel under the windows
+            g.fillStyle = 'rgba(30,34,38,.20)'; g.fillRect(0, h * 0.88, w, h * 0.12);
+        });
+        flat(2, 0, '#182a54', (w, h) => {                 // the deep blue floor
+            g.fillStyle = 'rgba(140,160,200,.10)';
+            for (let i = 0; i < 260; i++) g.fillRect(rnd() * w, rnd() * h, 2, 2);
+        });
+        flat(3, 0, '#aeaca2', (w, h) => {                 // pale perforated ceiling
+            g.fillStyle = 'rgba(90,92,86,.32)';
+            for (let y = 4; y < h; y += 7) for (let x = 4; x < w; x += 7) g.fillRect(x, y, 2, 2);
+        });
+        flat(4, 0, '#fffbef');                            // the fluorescent strip
+        flat(5, 0, '#1a6f2c', (w, h) => {                 // the moquette: green, with yellow and black
+            g.strokeStyle = '#0b4a1a'; g.lineWidth = 4;
+            for (let i = 0; i < 5; i++) {
+                g.beginPath(); g.moveTo(-12 + i * 30, h);
+                g.quadraticCurveTo(8 + i * 30, h * 0.42, 38 + i * 30, -10); g.stroke();
+            }
+            g.strokeStyle = '#e0c93a'; g.lineWidth = 2.5;
+            for (let i = 0; i < 4; i++) {
+                g.beginPath(); g.moveTo(i * 34, h);
+                g.quadraticCurveTo(22 + i * 34, h * 0.52, 6 + i * 34, 0); g.stroke();
+            }
+            g.strokeStyle = '#121b12'; g.lineWidth = 1.1;
+            for (let i = 0; i < 4; i++) {
+                g.beginPath(); g.moveTo(i * 34 - 8, 0); g.lineTo(i * 34 + 30, h); g.stroke();
+            }
+            g.fillStyle = '#e0c93a';
+            for (let i = 0; i < 70; i++) g.fillRect(rnd() * w, rnd() * h, 2.5, 2.5);
+        });
+        flat(6, 0, '#7d8388', (w, h) => {                 // the grey moulded seat shell
+            g.fillStyle = 'rgba(40,44,48,.16)'; g.fillRect(0, h * 0.80, w, h * 0.20);
+            g.fillStyle = 'rgba(255,255,255,.14)'; g.fillRect(0, 0, w, h * 0.10);
+        });
+        flat(7, 0, '#2f8c33');                            // the bright green of the poles and grabs
+
+        flat(0, 1, '#f2c318', (w, h) => {                 // a myki reader, yellow, with its screen
+            g.fillStyle = '#1a1d20'; g.fillRect(w * 0.16, h * 0.10, w * 0.68, h * 0.34);
+            g.fillStyle = '#4fd0e0'; g.fillRect(w * 0.20, h * 0.14, w * 0.60, h * 0.26);
+            g.fillStyle = '#1c6b3a';
+            g.beginPath(); g.arc(w * 0.5, h * 0.68, w * 0.20, 0, 6.3); g.fill();
+            g.fillStyle = '#f2c318';
+            g.beginPath(); g.arc(w * 0.5, h * 0.68, w * 0.11, 0, 6.3); g.fill();
+        });
+        flat(1, 1, '#1b3f8f', (w, h) => {                 // the blue oval it is mounted on
+            g.fillStyle = '#2b58c0';
+            g.beginPath(); g.ellipse(w * 0.5, h * 0.5, w * 0.42, h * 0.46, 0, 0, 6.3); g.fill();
+            g.fillStyle = '#f2c318'; g.fillRect(w * 0.20, h * 0.80, w * 0.60, h * 0.05);
+        });
+        flat(2, 1, '#1b3f8f', (w, h) => {                 // the blue cab door, with its white graphics
+            g.fillStyle = '#e9eef6';
+            g.fillRect(w * 0.10, h * 0.12, w * 0.30, h * 0.05);
+            g.fillRect(w * 0.10, h * 0.22, w * 0.52, h * 0.03);
+            g.beginPath(); g.arc(w * 0.5, h * 0.55, w * 0.18, 0, 6.3); g.fill();
+            g.fillStyle = '#1b3f8f';
+            g.beginPath(); g.arc(w * 0.5, h * 0.55, w * 0.12, 0, 6.3); g.fill();
+            g.fillStyle = '#e9eef6'; g.fillRect(w * 0.46, h * 0.74, w * 0.08, h * 0.16);
+        });
+        flat(3, 1, '#d8d6cd', (w, h) => {                 // a route diagram
+            g.strokeStyle = '#1c6b3a'; g.lineWidth = 5;
+            g.beginPath(); g.moveTo(w * 0.12, h * 0.72); g.lineTo(w * 0.88, h * 0.72); g.stroke();
+            g.fillStyle = '#1c6b3a';
+            for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(w * (0.14 + i * 0.145), h * 0.72, 5, 0, 6.3); g.fill(); }
+            g.fillStyle = '#25313a'; g.fillRect(w * 0.10, h * 0.16, w * 0.52, h * 0.10);
+            g.fillStyle = '#7c8790'; g.fillRect(w * 0.10, h * 0.32, w * 0.70, h * 0.05);
+        });
+        flat(4, 1, '#ccd3da', (w, h) => {                 // and a notice beside it
+            g.fillStyle = '#1b3f8f'; g.fillRect(0, 0, w, h * 0.22);
+            g.fillStyle = '#e8eef4'; g.fillRect(w * 0.08, h * 0.07, w * 0.56, h * 0.08);
+            g.fillStyle = '#5b6670';
+            for (let i = 0; i < 5; i++) g.fillRect(w * 0.10, h * (0.34 + i * 0.12), w * (0.50 + rnd() * 0.32), h * 0.05);
+        });
+        flat(5, 1, '#c8321c', (w, h) => {                 // the stop-request red
+            g.fillStyle = 'rgba(255,255,255,.30)'; g.fillRect(0, 0, w, h * 0.16);
+        });
+        flat(6, 1, '#98a2a8', (w, h) => {                 // the convex mirror
+            const grd = g.createRadialGradient(w * 0.38, h * 0.34, 2, w * 0.5, h * 0.5, w * 0.6);
+            grd.addColorStop(0, '#f2f6f8'); grd.addColorStop(1, '#6f7c85');
+            g.fillStyle = grd; g.fillRect(0, 0, w, h);
+        });
+        flat(7, 1, '#15191c');                            // black: rubber, screens, shadow
+
+        flat(0, 2, '#2a3550');                            // a passenger's coat, navy
+        flat(1, 2, '#7d2b2b');                            // and a red one
+        flat(2, 2, '#4a5340');                            // and an olive one
+        flat(3, 2, '#c39b7c');                            // skin
+        flat(4, 2, '#2b2620');                            // hair
+        flat(5, 2, '#cbbfa6');                            // the cream of a window surround
+        flat(6, 2, '#7f8a90');                            // brushed handrail
+        flat(7, 2, '#3a4046');                            // dark grey trim
+    });
+
+    /* Where a piece of the saloon looks up its colour. Called on the geometry
+       before it goes in the bucket, and never after — the merge that follows
+       has one uv attribute for everything in it, and this is the only chance
+       to say which square of the atlas each face reads. */
+    const atl = (geo, col, row) => {
+        const uv = geo.attributes.uv, m = 0.055;
+        for (let k = 0; k < uv.count; k++) {
+            uv.setXY(k, (col + m + uv.getX(k) * (1 - 2 * m)) / ATL_C,
+                        (row + m + uv.getY(k) * (1 - 2 * m)) / ATL_R);
+        }
+        return geo;
+    };
 
     /* the green moquette of an A-class seat */
     const seatTex = tex(128, 128, (g, S) => {
@@ -6834,13 +7002,24 @@ export default function build(world) {
     /* ============================================================
        17 · the trams
 
-       A-class (Comeng, Dandenong, 1984–87): a single-ended four-axle bogie car,
-       16.64 m over the body, 2.67 m wide, roof 3.22 m above rail, three
-       doorways a side, a cab at the leading end only, an air-conditioning pod
-       well forward on the roof and a single-arm pantograph behind it.
+       A-class (Comeng, Dandenong, 1984–87): 16.64 m over the body, 2.67 m
+       wide, roof 3.22 m above rail, three doorways a side, bogies at the
+       quarter points. The real ones are single-ended, with a cab at one end
+       and a blank back at the other. These are not: somebody asked to be able
+       to walk round one and have it read the same from every side, so the car
+       here is built double-ended — cab, raked screen, destination box, bumper,
+       headlights and tail lamps at both ends — and mirror-symmetric across its
+       centreline, with the same three doorways on each flank. Every end piece
+       is drawn once at +Z and cloned through a half turn to -Z, so the two
+       ends agree to the millimetre rather than to the eye.
 
-       Seven meshes each, which is what four of them cost together: the body is
-       one box with six materials, and everything else is merged by material.
+       Nine cars for twenty-five meshes, where eight used to cost fifty-six.
+       The shell, the dark work, the lamps, the saloon fittings, the saloon
+       floor and the twelve sliding door leaves are all one geometry each, and
+       every car is one more matrix in six InstancedMeshes. What stays private
+       to a car is what says which car it is: the flanks with its fleet number
+       painted on and the two destination boxes. That is one body and one
+       display each, and everything else is shared.
        ============================================================ */
     const lampCellTex = tex(96, 32, (g, W, H) => {
         // three cells, so one emissive mesh can carry a headlight, an indicator
@@ -6854,80 +7033,90 @@ export default function build(world) {
         return g;
     };
 
-    const TRAM_L = 16.64;
-    function makeTram(fleet, route, dest, via) {
-        const G = new THREE.Group();
-        const L = TRAM_L, W = 2.67, FLOOR = 0.88, BH = 2.34;
-        const ROOF = FLOOR + BH, NOSE = 1.95, Lb = L - NOSE, Zb = -NOSE / 2, FZ = L / 2, SET = 0.32;
-        const white = [], dark = [], glass = [], inside = [], lamps = [];
+    const TRAM_L = 16.64, TRAM_W = 2.67, TRAM_FLOOR = 0.88, TRAM_ROOF = 3.22;
+    const TRAM_BH = TRAM_ROOF - TRAM_FLOOR;
+    const DOOR_W = 1.34;                       // clear width of one double doorway
+    const DOOR_Z = [-TRAM_L * 0.32, 0, TRAM_L * 0.32];
+    const LEAF_W = DOOR_W / 2 - 0.01;
+
+    /* ---- the shell: everything outside the glass, built once -------------
+       Two buckets, white and dark, because a wet A-class is exactly two
+       colours plus its livery, and two merges is two draw calls for nine
+       trams. The lamps are a third, emissive, reading three cells out of one
+       strip so a headlight, an indicator and a tail lamp cost one material. */
+    const tramShell = () => {
+        const white = [], dark = [], lamps = [];
+        const L = TRAM_L, W = TRAM_W, ROOF = TRAM_ROOF, FZ = L / 2;
         let g;
 
-        // ---- body: one box, six materials, the livery painted on two of them
-        const sideR = stdMat(0xffffff, { map: tramSideTex(fleet, false), roughness: 0.24, metalness: 0.10, alphaTest: 0.5 });
-        const sideL = stdMat(0xffffff, { map: tramSideTex(fleet, true), roughness: 0.24, metalness: 0.10, alphaTest: 0.5 });
-        const roofM = stdMat(0xdcdeda, { roughness: 0.58 });
-        const backM = stdMat(0xffffff, { map: tramBackTex(fleet), roughness: 0.30 });
-        const whiteM = stdMat(0xf3f5f1, { roughness: 0.22, metalness: 0.10 });
-        const body = mesh(boxG(W, BH, Lb),
-            [sideR, sideL, roofM, stdMat(0x22272b, { roughness: 0.60 }), whiteM, backM],
-            0, FLOOR + BH / 2, Zb);
-        G.add(body);
+        // the roof crown, and the rain gutter that runs the whole length
+        g = boxG(W - 0.16, 0.10, L - 0.9); put(g, 0, ROOF + 0.045, 0); white.push(g);
+        g = boxG(W + 0.04, 0.08, L - 0.7); put(g, 0, ROOF - 0.075, 0); dark.push(g);
 
-        // ---- roof crown and the rain gutter that runs the whole length
-        g = boxG(W - 0.20, 0.11, L - 0.5); put(g, 0, ROOF + 0.05, -0.1); white.push(g);
-        g = boxG(W + 0.05, 0.09, L - 0.3); put(g, 0, ROOF - 0.085, -0.1); dark.push(g);
-
-        /* ---- the cab end. The lower half runs out to the front face; above
-                the windscreen sill the body steps back, and the raked screen
-                bridges the two. ---- */
-        g = boxG(W - 0.05, 0.68, NOSE); put(g, 0, 1.20, FZ - NOSE / 2); white.push(g);
-        g = boxG(W - 0.13, ROOF - 1.52, NOSE - SET); put(g, 0, (1.52 + ROOF) / 2, FZ - SET - (NOSE - SET) / 2); white.push(g);
-        const wsB = 1.60, wsT = 2.80, rake = Math.atan2(SET, wsT - wsB), wsL = Math.hypot(wsT - wsB, SET);
-        g = boxG(W - 0.36, wsL, 0.05); put(g, 0, (wsB + wsT) / 2, FZ - SET / 2 + 0.02, -rake); glass.push(g);
-        g = boxG(W - 0.30, wsL + 0.09, 0.03); put(g, 0, (wsB + wsT) / 2, FZ - SET / 2 - 0.01, -rake); dark.push(g);
-        g = boxG(0.05, 1.05, 0.04); put(g, -0.30, (wsB + wsT) / 2 - 0.06, FZ - SET / 2 + 0.06, -rake, 0, 0.62); dark.push(g);
-        g = boxG(W - 0.24, 0.14, 0.34); put(g, 0, 2.90, FZ - SET - 0.02); white.push(g);
-        g = boxG(W - 0.26, 0.32, 0.30); put(g, 0, 3.10, FZ - SET - 0.02); dark.push(g);
-        for (const s of [-1, 1]) {                        // the front corners are rounded off
-            g = boxG(0.26, ROOF - 1.00, 0.26); put(g, s * (W / 2 - 0.19), (1.00 + ROOF) / 2, FZ - 0.10, 0, s * Math.PI / 4, 0);
-            white.push(g);
+        /* One end, at +Z. It goes into the world twice, the second time turned
+           through half a circle — which is the cheapest possible guarantee
+           that the back of this tram is the front of it. */
+        const eW = [], eD = [], eL = [];
+        {
+            const wsB = 1.62, wsT = 2.76, SET = 0.30;
+            const rake = Math.atan2(SET, wsT - wsB), wsL = Math.hypot(wsT - wsB, SET);
+            let q;
+            // the full-height wraparound screen, raked back, and its rubber
+            q = boxG(W - 0.38, wsL, 0.05); put(q, 0, (wsB + wsT) / 2, FZ - SET / 2 + 0.07, -rake); eD.push(q);
+            q = boxG(W - 0.30, wsL + 0.10, 0.03); put(q, 0, (wsB + wsT) / 2, FZ - SET / 2 + 0.03, -rake); eD.push(q);
+            q = boxG(0.04, 1.02, 0.03); put(q, -0.26, (wsB + wsT) / 2 - 0.10, FZ - SET / 2 + 0.11, -rake, 0, 0.58); eD.push(q);
+            // the soffit closing the wedge over the screen, the fascia, and
+            // the black box the destination reads out of
+            q = boxG(W - 0.32, 0.11, 0.36); put(q, 0, wsT + 0.05, FZ - 0.18); eW.push(q);
+            q = boxG(W - 0.06, 0.15, 0.12); put(q, 0, 2.89, FZ + 0.03); eW.push(q);
+            q = boxG(W - 0.22, 0.32, 0.09); put(q, 0, 3.06, FZ + 0.05); eD.push(q);
+            q = boxG(W - 0.02, 0.11, 0.24); put(q, 0, ROOF - 0.03, FZ - 0.05); eW.push(q);
+            // the front corners, taken off at forty-five degrees
+            for (const s of [-1, 1]) {
+                q = boxG(0.26, ROOF - 1.02, 0.26);
+                put(q, s * (W / 2 - 0.19), (1.02 + ROOF) / 2, FZ - 0.10, 0, s * Math.PI / 4, 0);
+                eW.push(q);
+            }
+            // the black rubber bumper, and a light cluster either side of it
+            q = boxG(W + 0.02, 0.26, 0.30); put(q, 0, 0.78, FZ + 0.02); eD.push(q);
+            q = boxG(W - 0.04, 0.13, 0.36); put(q, 0, 0.60, FZ + 0.00); eD.push(q);
+            for (const s of [-1, 1]) {
+                const cx = s * (W / 2 - 0.44);
+                q = boxG(0.68, 0.30, 0.06); put(q, cx, 1.08, FZ + 0.04); eD.push(q);
+                q = uvCell(new THREE.PlaneGeometry(0.18, 0.20), 3, 0); put(q, cx - s * 0.20, 1.08, FZ + 0.08); eL.push(q);
+                q = uvCell(new THREE.PlaneGeometry(0.15, 0.20), 3, 1); put(q, cx + s * 0.20, 1.08, FZ + 0.08); eL.push(q);
+                q = uvCell(new THREE.PlaneGeometry(0.15, 0.20), 3, 2); put(q, cx, 1.08, FZ + 0.08); eL.push(q);
+            }
+            q = boxG(0.34, 0.30, 0.44); put(q, 0, 0.50, FZ - 0.18); eD.push(q);      // the coupler pocket
         }
-        // bumper and the light clusters either side of it
-        g = boxG(W - 0.02, 0.46, 0.34); put(g, 0, 0.86, FZ - 0.10); dark.push(g);
-        g = boxG(W + 0.02, 0.14, 0.40); put(g, 0, 0.66, FZ - 0.12); dark.push(g);
-        for (const s of [-1, 1]) {
-            const cx = s * (W / 2 - 0.42);
-            g = boxG(0.62, 0.30, 0.06); put(g, cx, 0.86, FZ + 0.06); dark.push(g);
-            g = uvCell(new THREE.PlaneGeometry(0.17, 0.19), 3, 0); put(g, cx - s * 0.19, 0.86, FZ + 0.10); lamps.push(g);
-            g = uvCell(new THREE.PlaneGeometry(0.15, 0.19), 3, 1); put(g, cx + s * 0.19, 0.86, FZ + 0.10); lamps.push(g);
-            g = uvCell(new THREE.PlaneGeometry(0.15, 0.19), 3, 2); put(g, cx, 0.86, FZ + 0.10); lamps.push(g);
-            g = uvCell(new THREE.PlaneGeometry(0.20, 0.16), 3, 2);
-            put(g, s * (W / 2 - 0.5), 1.05, -L / 2 - 0.02, 0, Math.PI, 0); lamps.push(g);   // and the tail lamps
+        for (const e of [1, -1]) {
+            const R = MX(0, 0, 0, 0, e > 0 ? 0 : Math.PI, 0);
+            for (const q of eW) white.push(q.clone().applyMatrix4(R));
+            for (const q of eD) dark.push(q.clone().applyMatrix4(R));
+            for (const q of eL) lamps.push(q.clone().applyMatrix4(R));
         }
-        for (const s of [1, -1]) { g = boxG(0.34, 0.30, 0.42); put(g, 0, 0.58, s * (L / 2 - 0.06)); dark.push(g); }
 
-        // ---- skirt, bogies and wheels
-        g = boxG(W - 0.09, 0.52, L - 1.1); put(g, 0, 0.62, -0.1); dark.push(g);
+        // ---- the skirt, and the two bogies showing under it
+        g = boxG(W - 0.08, 0.48, L - 2.2); put(g, 0, 0.62, 0); dark.push(g);
         for (const s of [-1, 1]) {
             const bz = s * L * 0.285;
-            g = boxG(2.16, 0.46, 2.7); put(g, 0, 0.55, bz); dark.push(g);
+            g = boxG(2.16, 0.44, 2.7); put(g, 0, 0.56, bz); dark.push(g);
             g = boxG(1.2, 0.30, 1.5); put(g, 0, 0.40, bz); dark.push(g);
             for (const a of [-1, 1]) for (const b of [-1, 1]) {
                 g = cylG(0.33, 0.33, 0.11, 12); put(g, a * 0.72, 0.33, bz + b * 0.95, 0, 0, Math.PI / 2); dark.push(g);
                 g = cylG(0.20, 0.20, 0.13, 10); put(g, a * 0.62, 0.33, bz + b * 0.95, 0, 0, Math.PI / 2); dark.push(g);
             }
             g = boxG(1.7, 0.16, 0.5); put(g, 0, 0.20, bz); dark.push(g);
+            // and an air-conditioning pod over each bogie, which is the other
+            // half of making the roof read the same whichever end you are at
+            g = boxG(1.62, 0.32, 2.10); put(g, 0, ROOF + 0.26, s * L * 0.27); dark.push(g);
+            g = boxG(1.46, 0.06, 1.92); put(g, 0, ROOF + 0.45, s * L * 0.27); white.push(g);
         }
 
-        // ---- roof equipment: the air-conditioning pod, well forward
-        g = boxG(1.62, 0.34, 2.30); put(g, 0, ROOF + 0.27, FZ - 3.05); dark.push(g);
-        g = boxG(1.48, 0.07, 2.10); put(g, 0, ROOF + 0.47, FZ - 3.05); white.push(g);
-        g = boxG(1.05, 0.22, 1.30); put(g, 0, ROOF + 0.16, -L * 0.34); dark.push(g);
-
-        // ---- the single-arm pantograph, reaching for the wire at 5.90 m
+        // ---- the single-arm pantograph, amidships, reaching for the wire
         {
             const py = ROOF + 0.11, TOP = WIRE_H - py - 0.06;
-            const kneeY = TOP * 0.58, kneeZ = 0.05, pz0 = -L * 0.14;
+            const kneeY = TOP * 0.58, kneeZ = 0.05, pz0 = 0;
             g = boxG(1.55, 0.12, 0.62); put(g, 0, py + 0.06, pz0 - 0.5); dark.push(g);
             const lowL = Math.hypot(kneeY - 0.1, kneeZ + 0.62), lowA = Math.atan2(kneeZ + 0.62, kneeY - 0.1);
             const upL = Math.hypot(TOP - kneeY, 0.85 - kneeZ), upA = Math.atan2(0.85 - kneeZ, TOP - kneeY);
@@ -6939,101 +7128,313 @@ export default function build(world) {
             g = boxG(1.85, 0.06, 0.14); put(g, 0, py + TOP, pz0 + 0.85); dark.push(g);
             g = boxG(1.85, 0.05, 0.10); put(g, 0, py + TOP - 0.10, pz0 + 0.62); dark.push(g);
         }
+        return { white, dark, lamps };
+    };
 
-        /* ---- the saloon, seen through the windows cut out of the livery.
-                This is what makes a tram in the rain read as a tram: a warm
-                lit box moving behind wet glass, with people in it. ---- */
-        g = boxG(W - 0.18, 0.06, Lb - 0.2); put(g, 0, FLOOR + 0.03, Zb); inside.push(g);
-        g = boxG(W - 0.22, 0.06, Lb - 0.3); put(g, 0, ROOF - 0.20, Zb); inside.push(g);
+    /* ---- the saloon -----------------------------------------------------
+       Cream-beige panels and window surrounds, a pale perforated ceiling with
+       the fluorescents recessed along it, a deep blue floor, grey under the
+       windows, green transverse pairs in moquette with a moulded grab across
+       the top of every back, bright green stanchions floor to ceiling with
+       grabs branching off them and loops hanging from the rail, yellow myki
+       readers on blue ovals at chest height, red stop buttons, the blue cab
+       doors with their white graphics, a convex mirror at each end and route
+       and notice boards on the panels.
+
+       Two buckets, and the split is not cosmetic. `floor` is the saloon's
+       floor and its two cab bulkheads, and on the car parked at Stop 13 that
+       one mesh is the only thing in the whole tram that collides — it is what
+       somebody stands on. `fit` is everything else in here and is ghosted on
+       every car, because the walk's grid at this stop is 1.46 m to a cell and
+       a seat left solid in it would swallow the aisle whole and leave people
+       walking down the tram on top of the seat backs. */
+    const tramSaloon = () => {
+        const fit = [], floor = [];
+        const L = TRAM_L, IX = 1.19, IZ = 6.86, FL = 0.95, CL = 3.03;
+        const zOf = (u) => (u - 0.5) * L;
+        let g;
+
+        g = boxG(IX * 2, 0.07, IZ * 2); put(g, 0, FL - 0.035, 0); floor.push(atl(g, 2, 0));
         for (const s of [-1, 1]) {
-            g = boxG(0.05, 0.92, Lb - 0.3); put(g, s * (W / 2 - 0.10), FLOOR + 0.52, Zb); inside.push(g);
-            for (const z of [-6.0, -3.4, -0.8, 1.8, 4.4]) {
-                g = boxG(0.92, 0.10, 0.92); put(g, s * (W / 2 - 0.62), FLOOR + 0.46, z); inside.push(g);
-                g = boxG(0.92, 0.52, 0.11); put(g, s * (W / 2 - 0.62), FLOOR + 0.72, z - 0.45); inside.push(g);
-            }
-            for (const z of [-5.2, -2.6, 0.0, 2.6, 5.0]) {
-                g = cylG(0.042, 0.042, ROOF - FLOOR - 0.24, 6); put(g, s * (W / 2 - 1.12), FLOOR + (ROOF - FLOOR - 0.24) / 2 + 0.12, z);
-                inside.push(g);
-            }
-            g = boxG(0.06, 0.06, Lb - 1.2); put(g, s * (W / 2 - 1.12), ROOF - 0.30, Zb); inside.push(g);
-        }
-        g = boxG(W - 0.30, 1.9, 0.08); put(g, 0, FLOOR + 0.95, FZ - NOSE - 0.1); inside.push(g);
-        for (let p = 0; p < 7; p++) {                      // a few passengers, in silhouette
-            const px = (p % 2 ? 1 : -1) * (W / 2 - 0.62), pz = -6.0 + p * 1.9;
-            g = boxG(0.42, 0.56, 0.30); put(g, px, FLOOR + 0.80, pz); dark.push(g);
-            g = sphG(0.115, 8, 6); put(g, px, FLOOR + 1.20, pz); dark.push(g);
+            g = boxG(IX * 2, CL - FL, 0.10); put(g, 0, (FL + CL) / 2, s * (IZ + 0.05));
+            floor.push(atl(g, 0, 0));
         }
 
-        // ---- the destination box, which at this hour is the most legible
-        //      thing on the whole car
-        const dt = destTex(route, dest, via);
-        const disp = mesh(new THREE.PlaneGeometry(W - 0.42, 0.24),
-            emissive(0xffffff, 0xffffff, 1.45, { map: dt, emissiveMap: dt, roughness: 0.4 }),
-            0, 3.10, FZ - SET + 0.14);
-        const apron = mesh(new THREE.PlaneGeometry(W - 0.62, 0.50),
-            stdMat(0xffffff, { map: tramFrontTex, roughness: 0.30 }), 0, 1.20, FZ + 0.012);
+        // ceiling, and the two recessed fluorescent runs down the length of it
+        g = boxG(IX * 2 - 0.06, 0.05, IZ * 2 - 0.10); put(g, 0, CL + 0.025, 0); fit.push(atl(g, 3, 0));
+        for (const s of [-1, 1]) {
+            g = boxG(0.22, 0.04, IZ * 2 - 1.30); put(g, s * 0.60, CL - 0.015, 0); fit.push(atl(g, 4, 0));
+        }
 
-        G.add(
-            merged(white, whiteM),
-            // The windscreen rides with the skirt and the bogies. On a day like
-            // this they are all the same wet dark grey, and four cars is four meshes.
-            merged(dark.concat(glass), stdMat(0x232a30, { roughness: 0.22, metalness: 0.44 })),
-            // 1.25 was a night-time number. Under ACES at twenty to five the
-            // saloon it lit clipped to a white hole, and because that sat at
-            // roughly twice the 0.80 bloom threshold the hole then bled out over
-            // the livery around it — a lit tram read as a blank one. 0.85 keeps
-            // the warm box the comment above asks for, with the seats and the
-            // standing passengers still legible against it, and keeps the saloon
-            // just under the threshold so the bloom pass is left for the things
-            // that are actually meant to flare: the destination box, the
-            // headlights, the signals and the billboards.
-            merged(inside, emissive(0xd7cdb2, 0xfff0d0, 0.85, { roughness: 0.70 })),
-            mesh(merge(lamps), emissive(0xffffff, 0xffffff, 2.8, {
-                map: lampCellTex, emissiveMap: lampCellTex, roughness: 0.3,
-            })),
-            disp, apron);
-        // Ghosted, all of it. The walk's grid is rasterised once from where
-        // things stand at build time, so a tram left solid would leave a
-        // sixteen-metre wall across Swanston Street that nobody can see.
-        G.traverse((o) => { if (o.isMesh) world.ghost(o); });
-        return G;
+        /* The lining. The body box is drawn from outside, so from in here its
+           walls are not there at all — backfaces, culled — and without this
+           you would stand in the saloon looking straight through the wall at
+           your elbow. It is built in the runs between the three doorways,
+           because a doorway is a hole right through the car. */
+        const SEG = [];
+        {
+            let a = -IZ + 0.06;
+            for (const dz of DOOR_Z) {
+                const d0 = dz - DOOR_W / 2, d1 = dz + DOOR_W / 2;
+                if (d0 > a) SEG.push([a, Math.min(d0, IZ - 0.06)]);
+                if (d1 > a) a = d1;
+            }
+            if (IZ - 0.06 > a) SEG.push([a, IZ - 0.06]);
+        }
+        for (const s of [-1, 1]) for (const seg of SEG) {
+            const zc = (seg[0] + seg[1]) / 2, zl = seg[1] - seg[0];
+            if (zl < 0.05) continue;
+            g = boxG(0.05, 0.83, zl); put(g, s * IX, 1.385, zc); fit.push(atl(g, 1, 0));
+            g = boxG(0.08, 0.15, zl); put(g, s * (IX - 0.015), 1.875, zc); fit.push(atl(g, 5, 2));
+            g = boxG(0.08, 0.12, zl); put(g, s * (IX - 0.015), 2.680, zc); fit.push(atl(g, 5, 2));
+            g = boxG(0.05, 0.29, zl); put(g, s * IX, 2.885, zc); fit.push(atl(g, 0, 0));
+        }
+        /* and a pillar in every gap the openings leave in the window band, so
+           the strip of body between two windows is body from both sides. */
+        {
+            const OPEN = [CAB_U, [1 - CAB_U[1], 1 - CAB_U[0]]].concat(WIN_U).concat(DOOR_U)
+                .slice().sort((a, b) => a[0] - b[0]);
+            for (let i = 0; i <= OPEN.length; i++) {
+                const u0 = i === 0 ? 0 : OPEN[i - 1][1], u1 = i === OPEN.length ? 1 : OPEN[i][0];
+                const z0 = Math.max(zOf(u0), -IZ + 0.06), z1 = Math.min(zOf(u1), IZ - 0.06);
+                if (z1 - z0 < 0.04) continue;
+                for (const s of [-1, 1]) {
+                    g = boxG(0.05, 0.67, z1 - z0); put(g, s * IX, 2.285, (z0 + z1) / 2);
+                    fit.push(atl(g, 0, 0));
+                }
+            }
+        }
+
+        /* Transverse pairs, facing the end of the car they are nearest, which
+           is what a double-ended tram does with its seats. Moquette on the
+           faces you sit against, a grey moulded shell behind them, and the
+           green grab moulded across the top of every back — the thing you
+           actually hold on an A-class, before you ever reach a pole. */
+        const ROWS = [-6.30, -4.10, -3.22, -2.34, -1.46, 1.46, 2.34, 3.22, 4.10, 6.30];
+        for (const z of ROWS) {
+            const f = z < 0 ? -1 : 1;
+            for (const s of [-1, 1]) {
+                const x = s * 0.72;
+                g = boxG(0.90, 0.09, 0.46); put(g, x, 1.360, z); fit.push(atl(g, 5, 0));
+                g = boxG(0.92, 0.17, 0.07); put(g, x, 1.265, z + f * 0.245); fit.push(atl(g, 6, 0));
+                g = boxG(0.88, 0.54, 0.06); put(g, x, 1.680, z - f * 0.235); fit.push(atl(g, 5, 0));
+                g = boxG(0.92, 0.66, 0.07); put(g, x, 1.720, z - f * 0.300); fit.push(atl(g, 6, 0));
+                g = boxG(0.80, 0.055, 0.10); put(g, x, 2.035, z - f * 0.290); fit.push(atl(g, 7, 0));
+                g = boxG(0.12, 0.36, 0.28); put(g, x, 1.130, z); fit.push(atl(g, 6, 0));
+            }
+        }
+
+        // stanchions, the grabs branching off their tops, the rail they run
+        // under and the loops hanging from it
+        const POLE_Z = [-6.00, -4.55, -0.95, 0.95, 4.55, 6.00];
+        for (const s of [-1, 1]) {
+            for (const z of POLE_Z) {
+                g = cylG(0.024, 0.024, CL - FL, 8); put(g, s * 0.31, (FL + CL) / 2, z); fit.push(atl(g, 7, 0));
+                g = boxG(0.34, 0.05, 0.05); put(g, s * 0.48, 2.880, z); fit.push(atl(g, 7, 0));
+            }
+            g = cylG(0.026, 0.026, IZ * 2 - 1.6, 8); put(g, s * 0.31, 2.880, 0, Math.PI / 2);
+            fit.push(atl(g, 7, 0));
+            for (const z of [-5.30, -3.60, -1.90, 1.90, 3.60, 5.30]) {
+                g = boxG(0.022, 0.17, 0.03); put(g, s * 0.31, 2.780, z); fit.push(atl(g, 7, 0));
+                g = new THREE.TorusGeometry(0.062, 0.011, 4, 10);
+                put(g, s * 0.31, 2.630, z, 0, Math.PI / 2, 0); fit.push(atl(g, 7, 0));
+            }
+            // the myki readers: a yellow reader on a blue oval, at chest height
+            for (const z of [-4.55, 0.95, 4.55]) {
+                g = cylG(0.19, 0.19, 0.03, 14); put(g, s * 0.265, 1.440, z, 0, 0, Math.PI / 2, 1.3, 1, 1);
+                fit.push(atl(g, 1, 1));
+                g = boxG(0.09, 0.20, 0.15); put(g, s * 0.200, 1.460, z); fit.push(atl(g, 0, 1));
+                g = boxG(0.05, 0.06, 0.05); put(g, s * 0.310, 1.640, z); fit.push(atl(g, 5, 1));
+            }
+            // a red lamp over each doorway, and the posters on the panels
+            for (const dz of DOOR_Z) {
+                g = boxG(0.09, 0.05, 0.14); put(g, s * (IX - 0.05), 2.740, dz); fit.push(atl(g, 5, 1));
+            }
+            g = boxG(0.03, 0.30, 0.52); put(g, s * (IX - 0.035), 2.860, -3.05); fit.push(atl(g, 3, 1));
+            g = boxG(0.03, 0.30, 0.52); put(g, s * (IX - 0.035), 2.860, 3.05); fit.push(atl(g, 4, 1));
+        }
+        // the blue cab doors in the bulkheads, and a convex mirror at each end
+        for (const s of [-1, 1]) {
+            g = boxG(0.78, 1.92, 0.05); put(g, 0, 1.910, s * (IZ - 0.02)); fit.push(atl(g, 2, 1));
+            g = boxG(0.03, 0.03, 0.24); put(g, s * 1.02, 2.720, s * (IZ - 0.78)); fit.push(atl(g, 7, 2));
+            g = sphG(0.15, 10, 6); put(g, s * 1.02, 2.720, s * (IZ - 0.62)); fit.push(atl(g, 6, 1));
+        }
+
+        /* And the people in it, because a lit saloon with nobody in it reads
+           as a museum piece rather than a tram at twenty to five. Seven
+           sitting and three standing, the same seven and three in every car —
+           at the distance you see nine trams from, nobody is going to check. */
+        const SIT = [[-6.30, -1], [-3.22, 1], [-2.34, -1], [1.46, 1], [2.34, -1], [4.10, 1], [6.30, -1]];
+        SIT.forEach((p, i) => {
+            const z = p[0], x = p[1] * 0.72 + p[1] * (i % 2 ? -0.20 : 0.20), f = z < 0 ? -1 : 1;
+            g = boxG(0.40, 0.52, 0.30); put(g, x, 1.680, z + f * 0.02); fit.push(atl(g, i % 3, 2));
+            g = sphG(0.105, 8, 6); put(g, x, 2.030, z + f * 0.02); fit.push(atl(g, 3, 2));
+            g = sphG(0.108, 8, 6); put(g, x, 2.065, z + f * 0.02, 0, 0, 0, 1, 0.62, 1); fit.push(atl(g, 4, 2));
+        });
+        [[-0.55, -2.90, 0], [0.58, 1.35, 1], [-0.60, 3.40, 2]].forEach((p) => {
+            g = boxG(0.42, 0.62, 0.30); put(g, p[0], 1.560, p[1]); fit.push(atl(g, p[2], 2));
+            g = boxG(0.34, 0.52, 0.22); put(g, p[0], 1.000, p[1]); fit.push(atl(g, 7, 2));
+            g = sphG(0.108, 8, 6); put(g, p[0], 1.960, p[1]); fit.push(atl(g, 3, 2));
+            g = sphG(0.111, 8, 6); put(g, p[0], 1.996, p[1], 0, 0, 0, 1, 0.62, 1); fit.push(atl(g, 4, 2));
+        });
+        return { fit, floor };
+    };
+
+    // The materials. Four for the car and one for its leaves, shared by every
+    // tram in the world — which is the whole reason the instancing works.
+    const tramWhiteM = stdMat(0xf3f5f1, { roughness: 0.22, metalness: 0.10 });
+    // The screen rides with the skirt and the bogies. On a day like this they
+    // are all the same wet dark grey, and nine cars is one mesh.
+    const tramDarkM = stdMat(0x232a30, { roughness: 0.22, metalness: 0.44 });
+    const tramLampM = emissive(0xffffff, 0xffffff, 2.8, {
+        map: lampCellTex, emissiveMap: lampCellTex, roughness: 0.3,
+    });
+    /* 0.40, and the number matters. The saloon has to be a warm lit box behind
+       wet glass without becoming a white hole: read twice — once as albedo and
+       once as emission — the cream panels land near 0.45 and only the
+       fluorescent strips reach the 0.80 bloom threshold, so the strips flare a
+       little and nothing else does, and the bloom pass is left for the things
+       that are meant to have it: the destination boxes, the headlights, the
+       signals and the billboards up the street. The first pass at this ran at
+       0.62, which made a saloon nobody could look at. */
+    const tramIntM = emissive(0xffffff, 0xffffff, 0.40, {
+        map: interiorAtlas, emissiveMap: interiorAtlas, roughness: 0.76,
+    });
+    const tramLeafM = stdMat(0xffffff, { map: doorLeafTex, roughness: 0.28, metalness: 0.08 });
+
+    /* ---- the fleet ------------------------------------------------------
+       Eight running and one standing. The one standing is at Stop 13 with its
+       doors open, and it is standing for a reason that is not scenery: see
+       section 20, where the walk's floor is worked out.
+
+       A car stabled across a road closes that road, so the service runs on the
+       other one. The northbound track through Stop 13 belongs to 272 and to
+       nothing else; the eight in traffic share the southbound track up
+       Swanston and the two tracks along Flinders. */
+    const TRAM_DEFS = [
+        { ax: 'z', dir: -1, s: 96, fleet: 2071, route: '3', dest: 'MELB UNI', via: 'SWANSTON ST' },
+        { ax: 'z', dir: -1, s: 8, fleet: 2118, route: '67', dest: 'CARNEGIE', via: 'SWANSTON ST' },
+        { ax: 'x', dir: 1, s: -46, fleet: 261, route: '75', dest: 'VERMONT S', via: 'via Flinders St' },
+        { ax: 'x', dir: -1, s: 74, fleet: 221, route: '70', dest: 'WATTLE PK', via: 'via Flinders St' },
+        { ax: 'z', dir: -1, s: -80, fleet: 2094, route: '1', dest: 'STH MELB', via: 'SWANSTON ST' },
+        { ax: 'z', dir: -1, s: -168, fleet: 2135, route: '64', dest: 'BRIGHTON', via: 'SWANSTON ST' },
+        { ax: 'z', dir: -1, s: -256, fleet: 2168, route: '72', dest: 'CAMBERWELL', via: 'SWANSTON ST' },
+        { ax: 'z', dir: -1, s: -344, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
+        { ax: 'z', dir: 1, s: 64, fleet: 272, route: '109', dest: 'BOX HILL', via: 'via Collins St', park: true },
+    ];
+
+    const TRAMS = [];
+    let tramWhiteIM, tramDarkIM, tramLampIM, tramFitIM, tramFloorIM, tramLeafIM;
+    {
+        const shell = tramShell(), saloon = tramSaloon();
+        const N = TRAM_DEFS.length, MOV = N - 1;
+        const im = (geo, mat, n) => {
+            const m = new THREE.InstancedMesh(geo, mat, n);
+            // An InstancedMesh takes its bounding sphere from the geometry it
+            // was built out of, which here sits at the origin. Left culled, the
+            // whole fleet blinks out the moment the camera turns away from
+            // Flinders Street, wherever the trams themselves happen to be.
+            m.frustumCulled = false;
+            scene.add(m); world.ghost(m);
+            return m;
+        };
+        tramWhiteIM = im(merge(shell.white), tramWhiteM, N);
+        tramDarkIM = im(merge(shell.dark), tramDarkM, N);
+        tramLampIM = im(merge(shell.lamps), tramLampM, N);
+        tramFitIM = im(merge(saloon.fit), tramIntM, N);
+        // The parked car is not in this one. Its floor is a mesh of its own,
+        // because a floor somebody stands on has to be in the collision grid
+        // and an instance never is.
+        tramFloorIM = im(merge(saloon.floor), tramIntM, MOV);
+        tramLeafIM = im(boxG(0.055, 1.90, LEAF_W), tramLeafM, N * 12);
+
+        TRAM_DEFS.forEach((d, i) => {
+            const G = new THREE.Group();
+            const sideR = stdMat(0xffffff, { map: tramSideTex(d.fleet, false), roughness: 0.24, metalness: 0.10, alphaTest: 0.5 });
+            const sideL = stdMat(0xffffff, { map: tramSideTex(d.fleet, true), roughness: 0.24, metalness: 0.10, alphaTest: 0.5 });
+            const endM = stdMat(0xffffff, { map: tramEndTex(d.fleet), roughness: 0.30 });
+            const body = mesh(boxG(TRAM_W, TRAM_BH, TRAM_L),
+                [sideR, sideL, stdMat(0xdcdeda, { roughness: 0.58 }),
+                 stdMat(0x22272b, { roughness: 0.60 }), endM, endM],
+                0, TRAM_FLOOR + TRAM_BH / 2, 0);
+            G.add(body);
+
+            const dtex = destTex(d.route, d.dest, d.via);
+            const dg = [];
+            for (const e of [1, -1]) {
+                const p = new THREE.PlaneGeometry(TRAM_W - 0.44, 0.24);
+                put(p, 0, 3.06, e * (TRAM_L / 2 + 0.10), 0, e > 0 ? 0 : Math.PI, 0);
+                dg.push(p);
+            }
+            G.add(mesh(merge(dg), emissive(0xffffff, 0xffffff, 1.45, {
+                map: dtex, emissiveMap: dtex, roughness: 0.4,
+            })));
+            G.traverse((o) => { if (o.isMesh) world.ghost(o); });
+
+            /* The standing car's floor, and the only mesh in any tram in this
+               world that the walk can feel. Everything else about a tram is
+               ghosted, as it has always been: the grid is rasterised once from
+               where things stand at build time, so a moving tram left solid
+               would leave a sixteen-metre wall across Swanston Street with
+               nothing visible in it. */
+            if (d.park) G.add(mesh(merge(saloon.floor), tramIntM));
+
+            const off = (d.ax === 'z') ? d.dir * TRS : -d.dir * TRF;
+            G.rotation.y = (d.ax === 'z') ? (d.dir > 0 ? 0 : Math.PI) : (d.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+            if (d.ax === 'z') G.position.set(off, 0.05, d.s); else G.position.set(d.s, 0.05, off);
+            scene.add(G);
+            world.part('tram_0' + i, G);
+            TRAMS.push({
+                mesh: G, ax: d.ax, dir: d.dir, off, s: d.s, v: 0,
+                vmax: d.park ? 0 : rr(9, 12), len: TRAM_L, dwell: 0,
+                doors: d.park ? 1 : 0, parked: !!d.park, served: -1,
+                ry: G.rotation.y, wl: (!d.park && i < 3) ? HEAD_WL[i] : -1,
+            });
+        });
     }
 
-    /* ------------------------------------------------------------
-       The service. Four cars: two down Swanston past Stop 13, and two
-       along Flinders. Each one runs its own lane, brakes for the
-       signal at the stop line, dwells where there is a platform, and
-       keeps its distance from whatever is in front of it.
-       ------------------------------------------------------------ */
-    const TRAMS = [];
-    {
-        const defs = [
-            { ax: 'z', dir: 1, s: -70, fleet: 2071, route: '3', dest: 'MELB UNI', via: 'SWANSTON ST' },
-            { ax: 'z', dir: -1, s: 66, fleet: 2118, route: '67', dest: 'CARNEGIE', via: 'SWANSTON ST' },
-            { ax: 'x', dir: 1, s: -46, fleet: 272, route: '109', dest: 'BOX HILL', via: 'via Collins St' },
-            { ax: 'x', dir: -1, s: 74, fleet: 221, route: '70', dest: 'WATTLE PK', via: 'via Flinders St' },
-            { ax: 'z', dir: 1, s: -232, fleet: 2094, route: '1', dest: 'STH MELB', via: 'SWANSTON ST' },
-            { ax: 'z', dir: 1, s: 108, fleet: 2135, route: '64', dest: 'BRIGHTON', via: 'SWANSTON ST' },
-            { ax: 'z', dir: -1, s: -142, fleet: 2168, route: '72', dest: 'CAMBERWELL', via: 'SWANSTON ST' },
-            { ax: 'z', dir: -1, s: -318, fleet: 2103, route: '16', dest: 'KEW', via: 'SWANSTON ST' },
-            /* Four more on Swanston and no more than that. A tram is about
-               seven meshes — the shell, the glass, the doors, the bogies, the
-               pantograph and two lit destination boxes — so ten of them is
-               seventy draws, and Swanston is the street you are looking down. */
-        ];
-        defs.forEach((d, i) => {
-            const t = makeTram(d.fleet, d.route, d.dest, d.via);
-            const off = (d.ax === 'z') ? d.dir * TRS : -d.dir * TRF;
-            t.rotation.y = (d.ax === 'z') ? (d.dir > 0 ? 0 : Math.PI) : (d.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
-            const o = {
-                mesh: t, ax: d.ax, dir: d.dir, off, s: d.s, v: 0,
-                vmax: rr(9, 12), len: TRAM_L, dwell: 0, wl: i < 3 ? HEAD_WL[i] : -1,
-            };
-            if (d.ax === 'z') t.position.set(off, 0.05, d.s); else t.position.set(d.s, 0.05, off);
-            scene.add(t);
-            world.part('tram_0' + i, t);
-            TRAMS.push(o);
-        });
+    /* Twelve leaves to a car: three doorways, two flanks, two leaves that part
+       in the middle of each. Where a leaf is at any moment is its own little
+       matrix multiplied through its tram's, which is the whole of the door
+       animation — a hundred and eight of them a frame, and not one allocation
+       between them, because everything it composes into was made right here
+       and is never made again.
+
+       1.368 in x, which is thirty millimetres proud of the bodyside. An
+       A-class door is a plug door: it swings out that far and then slides
+       along the outside of the car, so a leaf that opened flush would
+       disappear into the body and the whole animation with it. */
+    const TRAM_LEAF = [];
+    for (const dz of DOOR_Z) for (const sx of [-1, 1]) for (const sz of [-1, 1]) TRAM_LEAF.push({ sx, dz, sz });
+
+    const _trM = new THREE.Matrix4(), _trLM = new THREE.Matrix4();
+    const _trP = new THREE.Vector3(), _trLP = new THREE.Vector3();
+    const _trQ = new THREE.Quaternion(), _trI = new THREE.Quaternion();
+    const _trS = new THREE.Vector3(1, 1, 1), _trUp = new THREE.Vector3(0, 1, 0);
+
+    const tramPlace = (i, o) => {
+        _trP.set(o.ax === 'z' ? o.off : o.s, 0.05, o.ax === 'z' ? o.s : o.off);
+        _trQ.setFromAxisAngle(_trUp, o.ry);
+        _trM.compose(_trP, _trQ, _trS);
+        tramWhiteIM.setMatrixAt(i, _trM);
+        tramDarkIM.setMatrixAt(i, _trM);
+        tramLampIM.setMatrixAt(i, _trM);
+        tramFitIM.setMatrixAt(i, _trM);
+        if (!o.parked) tramFloorIM.setMatrixAt(i, _trM);
+        for (let k = 0; k < 12; k++) {
+            const lf = TRAM_LEAF[k];
+            _trLP.set(lf.sx * 1.368, 1.90,
+                      lf.dz + lf.sz * (DOOR_W / 4 + o.doors * (LEAF_W + 0.06)));
+            _trLM.compose(_trLP, _trI, _trS);
+            _trLM.premultiply(_trM);
+            tramLeafIM.setMatrixAt(i * 12 + k, _trLM);
+        }
+    };
+    // Once at build, so the first frame drawn has nine trams up the street
+    // rather than nine trams stacked on the origin.
+    TRAMS.forEach((o, i) => tramPlace(i, o));
+    for (const m of [tramWhiteIM, tramDarkIM, tramLampIM, tramFitIM, tramFloorIM, tramLeafIM]) {
+        m.instanceMatrix.needsUpdate = true;
     }
 
     /* ============================================================
@@ -7809,46 +8210,82 @@ export default function build(world) {
         /* ---- trams --------------------------------------------------- */
         for (let i = 0; i < TRAMS.length; i++) {
             const o = TRAMS[i];
-            // every lantern between here and the end of the street, not just
-            // the one at Flinders — a tram up Swanston passes four of them
-            let target = vehTarget(o.ax, o.dir, o.s, o.off, o.vmax);
+            /* The car at Stop 13 is skipped entirely, and that is load-bearing
+               rather than tidy. Its floor is in the walk's collision grid,
+               which was rasterised once from where it stood when the world
+               landed; the moment anything here moved it, the floor somebody is
+               standing on would stay behind at Swanston and 64 and they would
+               be walking on nothing. Nothing in this loop may touch it. */
+            if (!o.parked) {
+                let target = vehTarget(o.ax, o.dir, o.s, o.off, o.vmax);
 
-            // and the platform stops, where a tram stands with its doors open
-            const stops = o.ax === 'z' ? TRAM_STOPS_Z : TRAM_STOPS_X;
-            let best = 1e9;
-            for (let q = 0; q < stops.length; q++) {
-                const dq = o.dir * (stops[q] - o.s);
-                if (dq > -22 && dq < best) best = dq;
-            }
-            if (best > -14 && best < 16) {
-                if (o.dwell === 0 && best < 1.5 && best > -1.5) o.dwell = rr(4.0, 8.0);
-                if (o.dwell > 0) target = Math.min(target, Math.max(0, best * 0.5));
-            } else if (best < -20) o.dwell = 0;
-            if (o.dwell > 0) { o.dwell -= dt; if (o.dwell < 0) o.dwell = 0; }
+                // and the platform stops, where a tram stands with its doors open
+                const stops = o.ax === 'z' ? TRAM_STOPS_Z : TRAM_STOPS_X;
+                let best = 1e9, bestQ = -1;
+                for (let q = 0; q < stops.length; q++) {
+                    const dq = o.dir * (stops[q] - o.s);
+                    if (dq > -22 && dq < best) { best = dq; bestQ = q; }
+                }
+                /* Which platform this car has already worked, so that it
+                   leaves one. Without it a tram that runs its dwell down to
+                   zero is still sitting within a metre and a half of the stop
+                   line, which is the same test that started the dwell — so it
+                   starts another one, and another, and the 3 to Melbourne Uni
+                   stands at Stop 13 for the rest of the afternoon. Cleared six
+                   metres past the platform, where it cannot be triggered again
+                   by the stop behind it. */
+                if (best < -6) o.served = -1;
+                if (best > -14 && best < 16) {
+                    if (o.dwell === 0 && o.served !== bestQ && best < 1.5 && best > -1.5) {
+                        o.dwell = rr(4.0, 8.0); o.served = bestQ;
+                    }
+                    if (o.dwell > 0) target = Math.min(target, Math.max(0, best * 0.5));
+                } else if (best < -20) o.dwell = 0;
+                if (o.dwell > 0) { o.dwell -= dt; if (o.dwell < 0) o.dwell = 0; }
 
-            // whatever is in front, on the same track
-            for (let j = 0; j < TRAMS.length; j++) {
-                if (j === i) continue;
-                const b = TRAMS[j];
-                if (b.ax !== o.ax || Math.abs(b.off - o.off) > 0.5) continue;
-                const gap = (b.s - o.s) * o.dir - o.len - 2.0;
-                if (gap > -o.len && gap < 40) target = Math.min(target, Math.max(0, gap * 0.6));
-            }
+                /* The doors, and the interlock that belongs with them. They
+                   open once the car has actually come to a stand at a
+                   platform, they stay open through the dwell, and they start
+                   closing a second before it runs out — and nothing moves
+                   until they are shut, which is what makes the end of a dwell
+                   read as a tram waiting for its own doors rather than as a
+                   tram idling for no reason. */
+                const want = (o.dwell > 1.0 && o.v < 0.25) ? 1 : 0;
+                o.doors += clamp(want - o.doors, -dt * 1.15, dt * 1.15);
+                if (o.doors > 0.02) target = 0;
 
-            o.v = lerp(o.v, target, 1 - Math.exp(-dt * (target < o.v ? 2.6 : 1.0)));
-            o.s += o.dir * o.v * dt;
-            wrapS(o);
-            if (o.ax === 'z') o.mesh.position.set(o.off, 0.05, o.s);
-            else o.mesh.position.set(o.s, 0.05, o.off);
-            // the headlight is one of the ten mirrors the wet road keeps, so
-            // the white smear on the asphalt travels with the car
-            if (o.wl >= 0) {
-                const nose = o.dir * (o.len / 2 + 0.4);
-                if (o.ax === 'z') WL[o.wl].p.set(o.off, 1.25, o.s + nose);
-                else WL[o.wl].p.set(o.s + nose, 1.25, o.off);
-                U.uLStr.value[o.wl] = 0.55 + 0.45 * clamp(o.v / o.vmax, 0, 1);
+                // whatever is in front, on the same track
+                for (let j = 0; j < TRAMS.length; j++) {
+                    if (j === i) continue;
+                    const b = TRAMS[j];
+                    if (b.ax !== o.ax || Math.abs(b.off - o.off) > 0.5) continue;
+                    const gap = (b.s - o.s) * o.dir - o.len - 2.0;
+                    if (gap > -o.len && gap < 40) target = Math.min(target, Math.max(0, gap * 0.6));
+                }
+
+                o.v = lerp(o.v, target, 1 - Math.exp(-dt * (target < o.v ? 2.6 : 1.0)));
+                o.s += o.dir * o.v * dt;
+                wrapS(o);
+                if (o.ax === 'z') o.mesh.position.set(o.off, 0.05, o.s);
+                else o.mesh.position.set(o.s, 0.05, o.off);
+                // the headlight is one of the ten mirrors the wet road keeps, so
+                // the white smear on the asphalt travels with the car
+                if (o.wl >= 0) {
+                    const nose = o.dir * (o.len / 2 + 0.4);
+                    if (o.ax === 'z') WL[o.wl].p.set(o.off, 1.25, o.s + nose);
+                    else WL[o.wl].p.set(o.s + nose, 1.25, o.off);
+                    U.uLStr.value[o.wl] = 0.55 + 0.45 * clamp(o.v / o.vmax, 0, 1);
+                }
             }
+            // and out into the six meshes the whole fleet is drawn from
+            tramPlace(i, o);
         }
+        tramWhiteIM.instanceMatrix.needsUpdate = true;
+        tramDarkIM.instanceMatrix.needsUpdate = true;
+        tramLampIM.instanceMatrix.needsUpdate = true;
+        tramFitIM.instanceMatrix.needsUpdate = true;
+        tramFloorIM.instanceMatrix.needsUpdate = true;
+        tramLeafIM.instanceMatrix.needsUpdate = true;
 
         /* ---- cars, lane by lane -------------------------------------- */
         for (const arr of LANES.values()) {
