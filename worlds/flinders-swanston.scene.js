@@ -859,22 +859,131 @@ export default function build(world) {
         });
     });
 
-    /* ---- bluestone flagging for the raised footpaths ---- */
-    const paveTex = tex(512, 512, (g, S) => {
-        g.fillStyle = '#8f8d89'; g.fillRect(0, 0, S, S);
-        const n = 8, w = S / n;
-        for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-            const off = (j % 2) * w / 2;
-            g.fillStyle = 'rgba(' + irr(0, 30) + ',' + irr(0, 30) + ',' + irr(0, 30) + ',' + (rnd() * 0.08) + ')';
-            g.fillRect(i * w + off, j * w, w - 2, w - 2);
-            g.strokeStyle = 'rgba(0,0,0,.16)'; g.lineWidth = 2;
-            g.strokeRect(i * w + off, j * w, w - 2, w - 2);
+    /* ---- one plane leaf, at the origin, tip up ----
+
+            Five lobes, deep sinuses between them, broader than it is long, and
+            a notch where the stalk goes in. Everything leafy in this world is
+            drawn from this one outline: the canopy texture puts two hundred of
+            them on a transparent ground, the paving puts down the ones that
+            came off in March, and the tree pit collects what fell last week.
+            A plane tree is the one street tree anybody can name at fifty
+            metres, and this shape is how they name it. */
+    const leafPath = (g, r) => {
+        g.beginPath();
+        for (let i = 0; i <= 44; i++) {
+            const a = -2.78 + 5.56 * i / 44;
+            const k = Math.pow(Math.abs(Math.cos(2.5 * a)), 0.55);
+            const rad = r * (0.30 + 0.70 * k);
+            const x = Math.sin(a) * rad * 1.08, y = -Math.cos(a) * rad * 0.90;
+            i ? g.lineTo(x, y) : g.moveTo(x, y);
         }
-        for (let i = 0; i < 3000; i++) {
-            g.fillStyle = 'rgba(255,255,255,' + (rnd() * 0.05) + ')';
+        g.closePath();
+    };
+
+    /* ---- bluestone flagging for the raised footpaths ----
+
+            The footpath was a flat grey ribbon, and it was flat for two
+            reasons. One was the drawing: eight anonymous squares with a black
+            line round each. The other was the mapping — the paths that run
+            north up Swanston are box geometry, whose UVs go nought to one
+            across a ninety-six metre strip, so whatever was drawn here was
+            stretched to a fifth of one slab and the near footpath had no
+            texture on it at all. Both are fixed; this is the drawing.
+
+            A Melbourne footpath is bluestone, and bluestone is not grey. It is
+            a dark blue-grey that goes warm where a low sun catches the sawn
+            face and stays cold in the joint, laid six hundred by nine hundred
+            in courses with the long dimension along the kerb, and no two slabs
+            in a course are the same value — which is the single thing that
+            makes a paved surface read as stone rather than as concrete.
+
+            One tile is 5.4 m square: nine six-hundreds across it and six
+            nine-hundreds along, so a slab comes out the size of a slab
+            whichever way the path runs. Over that, in the same tile because a
+            tile is all the texture there is — the wear that collects along a
+            joint, a few stains, and the plane leaves that have been coming
+            down all autumn. The leaves are drawn nine times each, wrapped, so
+            none of them is cut in half at the tile edge. */
+    const PAVE_M = 5.4;
+    const paveTex = tex(1024, 1024, (g, S) => {
+        const u = S / PAVE_M;
+        g.fillStyle = '#3f434a'; g.fillRect(0, 0, S, S);        // the joint, under everything
+        const CW = 0.6 * u, CH = 0.9 * u;
+        for (let j = -1; j * CH < S; j++) {
+            const lap = (j & 1) * CW * 0.5;
+            for (let i = -1; i * CW < S; i++) {
+                const x = i * CW + lap, y = j * CH, v = rr(-17, 15);
+                g.fillStyle = 'rgb(' + Math.round(116 + v) + ',' + Math.round(120 + v * 0.94)
+                            + ',' + Math.round(127 + v * 0.86) + ')';
+                g.fillRect(x + 1.5, y + 1.5, CW - 3, CH - 3);
+                // the sawn face is never one value across a whole slab
+                for (let k = 0; k < 3; k++) {
+                    g.fillStyle = 'rgba(' + (rnd() < 0.5 ? '255,255,255,' : '20,26,34,') + rr(0.02, 0.07).toFixed(3) + ')';
+                    g.beginPath();
+                    g.ellipse(x + rr(0.1, 0.9) * CW, y + rr(0.1, 0.9) * CH,
+                              rr(0.15, 0.5) * CW, rr(0.10, 0.4) * CH, rnd() * 3, 0, 6.2832);
+                    g.fill();
+                }
+                // and the darker margin where forty years of feet have worn
+                // the arris off and the dirt has gone into it
+                g.strokeStyle = 'rgba(28,32,38,.22)'; g.lineWidth = 3;
+                g.strokeRect(x + 3, y + 3, CW - 6, CH - 6);
+            }
+        }
+        // the pale flecks that are half of what bluestone actually looks like
+        for (let i = 0; i < 5200; i++) {
+            g.fillStyle = 'rgba(226,232,238,' + (rnd() * 0.13).toFixed(3) + ')';
             g.fillRect(rnd() * S, rnd() * S, 2, 2);
         }
-    }, 30, 30);
+        // stains: a spilt coffee, the shadow of a bin that stood there
+        for (let i = 0; i < 7; i++) {
+            g.fillStyle = 'rgba(24,20,14,' + rr(0.05, 0.13).toFixed(3) + ')';
+            g.beginPath();
+            g.ellipse(rnd() * S, rnd() * S, rr(0.10, 0.34) * u, rr(0.08, 0.26) * u, rnd() * 3, 0, 6.2832);
+            g.fill();
+        }
+        // and the litter. Wrapped, so a leaf that runs off one edge of the
+        // tile arrives at the other one whole rather than cut in half.
+        const LITTER = ['#9c6a30', '#b07c3d', '#7c5628', '#c08e48', '#8b6f34', '#a45f27'];
+        for (let i = 0; i < 22; i++) {
+            const x = rnd() * S, y = rnd() * S, r = rr(0.075, 0.135) * u;
+            const rot = rnd() * 6.2832, col = pickOf(LITTER), curl = rr(0.55, 1.0);
+            for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+                g.save();
+                g.translate(x + ox * S, y + oy * S); g.rotate(rot); g.scale(1, curl);
+                g.fillStyle = 'rgba(0,0,0,.20)'; leafPath(g, r * 1.04); g.translate(2, 3); g.fill();
+                g.restore();
+                g.save();
+                g.translate(x + ox * S, y + oy * S); g.rotate(rot); g.scale(1, curl);
+                g.fillStyle = col; leafPath(g, r); g.fill();
+                g.restore();
+            }
+        }
+    }, 1, 1);
+
+    /* ---- and the band along the kerb ----
+
+            The photograph shows it and this world did not have it: the last
+            half-metre before the kerb is not the same paving as the rest of
+            the footpath. It is a lighter, smaller unit laid as a margin — the
+            line a person's eye follows down the street, and the thing that
+            tells the footpath from the road at a distance where neither has
+            any other detail left. Three hundred millimetre setts, pale, one
+            metre two to a tile. */
+    const kerbBandTex = tex(256, 256, (g, S) => {
+        g.fillStyle = '#5c5f63'; g.fillRect(0, 0, S, S);
+        const n = 4, w = S / n;
+        for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+            const v = rr(-14, 12);
+            g.fillStyle = 'rgb(' + Math.round(142 + v) + ',' + Math.round(141 + v)
+                        + ',' + Math.round(138 + v * 0.9) + ')';
+            g.fillRect(i * w + 2, j * w + 2, w - 4, w - 4);
+        }
+        for (let i = 0; i < 1400; i++) {
+            g.fillStyle = 'rgba(' + (rnd() < 0.55 ? '255,252,244,' : '40,40,38,') + (rnd() * 0.14).toFixed(3) + ')';
+            g.fillRect(rnd() * S, rnd() * S, 2, 2);
+        }
+    }, 1, 1);
 
     /* ---- office curtain wall: one sheet of windows, plus the emissive map
             that decides which of them have somebody still at a desk ---- */
@@ -1548,13 +1657,25 @@ export default function build(world) {
           // this as GLSL ES 3.00 on any WebGL2 context, and there "layout" is a
           // reserved qualifier keyword — so the whole road program failed to
           // compile on the iPad and the ground drew with whatever was bound last.
-          void streetBands(vec2 p, out float road, out float path){
+          //
+          // A third and a fourth number come back now. The channel: every kerb
+          // in this city has half a metre of dressed bluestone laid along it to
+          // take the water, and it is a colder and lighter thing than the
+          // asphalt beside it, which is most of why a Melbourne road does not
+          // read as one flat brown sheet. And the cross term, which is how
+          // much of this point belongs to a cross street rather than to
+          // Swanston, so the line marking laid on further down knows which
+          // street's lines it is drawing and stops both of them at the
+          // junction, the way paint actually stops at a junction.
+          void streetBands(vec2 p, out float road, out float path, out float chan, out float cross){
             float ax = abs(p.x);
             // Swanston Street, carried north past three cross streets and south
             // over the bridge
             road = smoothstep(${(SW + 0.35).toFixed(2)}, ${(SW - 0.35).toFixed(2)}, ax);
             path = smoothstep(${(SW - 0.2).toFixed(2)}, ${(SW + 0.3).toFixed(2)}, ax)
                  * smoothstep(${(BX + 0.4).toFixed(2)}, ${(BX - 0.2).toFixed(2)}, ax);
+            chan = smoothstep(${(SW - 0.86).toFixed(2)}, ${(SW - 0.40).toFixed(2)}, ax) * road;
+            cross = 0.0;
             for (int i = 0; i < 3; i++) {
               float cz = i == 0 ? ${NST[0].z.toFixed(1)} : (i == 1 ? ${NST[1].z.toFixed(1)} : ${NST[2].z.toFixed(1)});
               float h  = i == 0 ? ${NST[0].h.toFixed(1)} : (i == 1 ? ${NST[1].h.toFixed(1)} : ${NST[2].h.toFixed(1)});
@@ -1563,11 +1684,15 @@ export default function build(world) {
               // vec3 and is the second reason the program never compiled.
               float dz = abs(p.y - cz);
               float within = smoothstep(${(NX + 2.0).toFixed(1)}, ${(NX - 2.0).toFixed(1)}, ax);
-              road = max(road, smoothstep(h + 0.35, h - 0.35, dz) * within);
+              float band = smoothstep(h + 0.35, h - 0.35, dz) * within;
+              road = max(road, band);
+              cross = max(cross, band);
+              chan = max(chan, smoothstep(h - 0.86, h - 0.40, dz) * band);
               path = max(path, smoothstep(h - 0.2, h + 0.3, dz)
                              * smoothstep(h + ${(FP + 0.4).toFixed(1)}, h + ${(FP - 0.2).toFixed(1)}, dz) * within);
             }
             path = clamp(path - road, 0.0, 1.0);
+            chan = clamp(chan - path, 0.0, 1.0);
           }
 
           void main(){
@@ -1578,19 +1703,61 @@ export default function build(world) {
             float n1 = fbm(wp.xz * 2.2);
             float n2 = fbm(wp.xz * 0.34 + 11.0);
 
-            float road, path;
-            streetBands(wp.xz, road, path);
+            float road, path, chan, cross;
+            streetBands(wp.xz, road, path, chan, cross);
 
-            vec3 cRoad = vec3(0.0175, 0.0185, 0.0205) * (0.72 + 0.70 * n1);
-            vec3 cPath = vec3(0.114, 0.110, 0.101) * (0.78 + 0.44 * n1);
+            /* Asphalt, and it is not brown. Warm ambient plus a low orange sun
+               on a colourless surface gives brown every time, so the albedo is
+               taken the other way — a little lighter and a little blue, which
+               is what bitumen with bluestone chip in it actually is. And close
+               up it gets its aggregate back: at two metres a road is not a
+               colour at all, it is chips of stone in black binder, and that
+               grain is the difference between standing on a road and standing
+               on a painted floor. */
+            vec3 cRoad = vec3(0.0452, 0.0470, 0.0512) * (0.76 + 0.54 * n1);
+            cRoad *= 1.0 + det * (h21(floor(wp.xz * 42.0)) - 0.46) * 0.62;
+            vec3 cPath = vec3(0.160, 0.170, 0.192) * (0.78 + 0.44 * n1);
             vec3 cBack = mix(vec3(0.048, 0.046, 0.041), vec3(0.086, 0.082, 0.070), n2);
             vec3 albedo = cRoad * road + cPath * path + cBack * clamp(1.0 - road - path, 0.0, 1.0);
+
+            /* The line marking, outside the baked square.
+
+               The 240 m canvas carries the intersection and nothing else, so
+               from Flinders Lane north Swanston Street was four hundred metres
+               of bare asphalt with tram rails lying on it — and the eye reads
+               an unmarked road as a car park. These are only the things that
+               run the whole length: the green kerbside bike lane, the two lane
+               divisions and the centre line, the tram grooves, and a centre
+               line down each cross street with Collins keeping its rails.
+               Everything is laid before the baked mix below, so wherever the
+               canvas has its own answer the canvas still wins.  */
+            float ax0 = abs(wp.x);
+            float sw = smoothstep(${(SW + 0.35).toFixed(2)}, ${(SW - 0.35).toFixed(2)}, ax0) * (1.0 - cross);
+            float dashZ = step(0.5, fract(wp.z / 6.0));
+            float dashX = step(0.5, fract(wp.x / 6.0));
+            float mark = sw * dashZ * (smoothstep(0.13, 0.06, abs(wp.x))
+                                     + smoothstep(0.13, 0.06, abs(ax0 - 7.6)));
+            float bike = sw * smoothstep(${(SW - 2.22).toFixed(2)}, ${(SW - 2.04).toFixed(2)}, ax0)
+                            * smoothstep(${(SW - 0.14).toFixed(2)}, ${(SW - 0.30).toFixed(2)}, ax0);
+            float grv  = sw * smoothstep(0.075, 0.032, abs(abs(ax0 - ${TRS.toFixed(2)}) - ${RAIL.toFixed(3)}));
+            ${NST.map((st, i) => `
+            {
+              float dz${i} = abs(wp.z - ${st.z.toFixed(1)});
+              float in${i} = smoothstep(${(st.h + 0.35).toFixed(2)}, ${(st.h - 0.35).toFixed(2)}, dz${i})
+                           * smoothstep(${(NX + 2.0).toFixed(1)}, ${(NX - 2.0).toFixed(1)}, ax0);
+              mark = max(mark, in${i} * dashX * smoothstep(0.13, 0.06, dz${i}));${st.tram ? `
+              grv  = max(grv, in${i} * smoothstep(0.075, 0.032, abs(abs(dz${i} - ${TRF.toFixed(2)}) - ${RAIL.toFixed(3)})));` : ''}
+            }`).join('')}
+            albedo = mix(albedo, vec3(0.0082, 0.0138, 0.0080), clamp(bike, 0.0, 1.0) * 0.55);
+            albedo = mix(albedo, vec3(0.0358, 0.0372, 0.0412), chan * 0.82);
+            albedo = mix(albedo, albedo * 0.40, clamp(grv, 0.0, 1.0) * 0.85);
+            albedo = mix(albedo, vec3(0.262, 0.256, 0.234), clamp(mark, 0.0, 1.0) * 0.80);
 
             // and over the middle of all that, the hand-drawn intersection
             vec2 ruv = vec2(wp.x / ${XLEN.toFixed(1)} + 0.5, 0.5 - wp.z / ${XLEN.toFixed(1)});
             float inSq = smoothstep(0.008, 0.055, ruv.x) * smoothstep(0.992, 0.945, ruv.x)
                        * smoothstep(0.008, 0.055, ruv.y) * smoothstep(0.992, 0.945, ruv.y);
-            vec3 baked = texture2D(uRoad, ruv).rgb * 0.42;
+            vec3 baked = texture2D(uRoad, ruv).rgb * 0.50;
             albedo = mix(albedo, baked, inSq);
 
             // Where it stands. The camber holds water against the kerb and in
@@ -1626,7 +1793,27 @@ export default function build(world) {
             // with the Fresnel weight in wetLight they also keep the road under
             // the 0.80 bloom threshold, so the street stops feeding the bloom
             // pass that is meant for the signals and the destination boxes.
-            vec3 col = albedo * (uSkyLo * 0.55 + diff);
+            /* What is actually falling on the ground, which is not what this
+               was using and is most of why the roadway read as flat brown.
+
+               uSkyLo is the warm band along the western horizon. At twenty to
+               six that colour is seven to one red over blue, and taking the
+               whole of a road's diffuse from it means a colourless surface can
+               only come out orange, whatever it is painted. Meanwhile the
+               footpath running alongside — an ordinary standard material — is
+               lit by the three lights section 4 hangs over the street, and the
+               brightest of those by a distance is a blue hemisphere. So the
+               road and the footpath were being lit by two different afternoons
+               and the seam between them was the whole width of the kerb.
+
+               This is those three lights, said as one number. It can be one
+               number because the ground's normal is always straight up, so
+               every one of them collapses to a constant: 1.45 of the
+               hemisphere's sky colour, 0.40 of the warm ambient, and the sun
+               at the 0.132 of itself that a level surface gets from a sun this
+               low — all of it over pi, which is what a Lambert surface keeps.
+               Change a light in section 4 and this wants changing with it. */
+            vec3 col = albedo * (vec3(0.477, 0.450, 0.491) + diff);
             col += skyMirror(wp, uCamPos, rip) * gloss * (0.15 + 0.07 * n1);
             col += spec * (0.09 + 0.04 * n1);
 
@@ -1717,8 +1904,20 @@ export default function build(world) {
     }
 
     /* ---- footpaths, raised by the kerb, and the bluestone edging ---- */
-    paveTex.repeat.set(1 / 4.8, 1 / 4.8);
-    const paveMat = stdMat(0xffffff, { map: paveTex, roughness: 0.34, metalness: 0.18, side: THREE.DoubleSide });
+    /* The repeat is what turns UVs into metres, and every piece of paving in
+       this section is written to agree with it: the extruded quadrants carry
+       shape coordinates, which are already world metres, and the box strips
+       are scaled to metres by `uvScale` before they are merged. One tile is
+       PAVE_M across in both, so a slab is a slab everywhere.
+
+       Metalness came down from 0.18 to nothing. There is no environment map in
+       this world, so metalness on a matte material is not sheen — it is
+       diffuse taken away and given to a specular lobe with nothing to
+       reflect, which is why the footpath was reading as a pale flat sheet
+       whichever way the sun fell on it. Bluestone is a rough stone and this is
+       now a rough stone. */
+    paveTex.repeat.set(1 / PAVE_M, 1 / PAVE_M);
+    const paveMat = stdMat(0xffffff, { map: paveTex, roughness: 0.80, metalness: 0.0, side: THREE.DoubleSide });
     {
         // One corner's footpath, rounded where it meets the kerb radius.
         const quad = (sX, sZ, R, Lz) => {
@@ -1761,18 +1960,28 @@ export default function build(world) {
             g.translate(0, -0.07, 0);
             slabs.push(g);
         }
-        // the footpaths of the three cross streets carried north
+        /* the footpaths of the three cross streets carried north, and
+           Swanston's own between them.
+
+           `uvScale` on every one of these, in metres, is the whole reason the
+           near footpath now has paving on it. A box's UVs run nought to one
+           across whatever the box is, so a ninety-six metre strip was showing
+           a fifth of one tile: eight slabs stretched over the length of a city
+           block, which at eye height is a flat grey ribbon and nothing else.
+           Scaled to metres and divided by the repeat above, the same texture
+           lays a six-hundred course on it the whole way north. */
         for (const st of NST) {
             for (const s of [-1, 1]) {
                 for (const r of [[-NX, -BX], [BX, NX]]) {
                     const g = boxG(r[1] - r[0], KERB_H + 0.02, FP);
+                    uvScale(g, r[1] - r[0], FP);
                     put(g, (r[0] + r[1]) / 2, (KERB_H + 0.02) / 2 - 0.01, st.z + s * (st.h + FP / 2));
                     slabs.push(g);
                 }
             }
-            // and Swanston's own, between the cross streets
             for (const s of [-1, 1]) {
                 const g = boxG(FP, KERB_H + 0.02, 96);
+                uvScale(g, FP, 96);
                 put(g, s * (SW + FP / 2), (KERB_H + 0.02) / 2 - 0.01, st.z + 58);
                 slabs.push(g);
             }
@@ -1811,6 +2020,55 @@ export default function build(world) {
             }
         }
         scene.add(merged(parts, kerbMat));
+
+        /* ---- and the pale margin laid inside every one of those kerbs ----
+
+                Sixty-two centimetres of smaller, lighter unit between the kerb
+                and the flagging, which is what the photograph shows and what a
+                Melbourne footpath does: the flagging is laid to the building
+                and the margin takes up whatever is left over against a kerb
+                that was set by a surveyor a century earlier. It earns its own
+                draw because it is the only line in the whole view that runs
+                unbroken from the camera to the fog — at two hundred metres
+                there is no slab left, no leaf left and no kerb left, and this
+                band is still telling you where the footpath stops.
+
+                Fifteen millimetres proud of the flagging. Far enough not to
+                fight it in the depth buffer at the far end of the street, near
+                enough that nobody's foot finds it: `ground.js` merges any two
+                surfaces within 1.4 m into one span, so the footpath under this
+                stays one continuous walkable thing. */
+        const bandParts = [];
+        const BW = 0.62, BY = KERB_H + 0.025, BT = 0.05;
+        const bandZ = (x, z0, z1) => {
+            const g = boxG(BW, BT, Math.abs(z1 - z0));
+            uvScale(g, BW / 1.2, Math.abs(z1 - z0) / 1.2);
+            put(g, x, BY - BT / 2, (z0 + z1) / 2);
+            bandParts.push(g);
+        };
+        const bandX = (z, x0, x1) => {
+            const g = boxG(Math.abs(x1 - x0), BT, BW);
+            uvScale(g, Math.abs(x1 - x0) / 1.2, BW / 1.2);
+            put(g, (x0 + x1) / 2, BY - BT / 2, z);
+            bandParts.push(g);
+        };
+        for (const s of [[1, -1], [-1, -1], [1, 1], [-1, 1]]) {
+            const Lz = s[1] < 0 ? 102.8 : L;
+            bandZ(s[0] * (SW + 0.34 + BW / 2), s[1] * (FL + 7.0), s[1] * Lz);
+            bandX(s[1] * (FL + 0.34 + BW / 2), s[0] * (SW + 7.0), s[0] * L);
+            // the fillet, as a flat quarter-annulus rather than a bent box
+            const g = new THREE.RingGeometry(7.0 - 0.34 - BW, 7.0 - 0.34, 10, 1, 0, Math.PI / 2);
+            put(g, s[0] * (SW + 7.0), BY, s[1] * (FL + 7.0),
+                -Math.PI / 2, 0, (s[0] > 0 ? (s[1] > 0 ? Math.PI * 1.5 : 0) : (s[1] > 0 ? Math.PI : Math.PI * 0.5)));
+            bandParts.push(g);
+        }
+        for (const st of NST) {
+            for (const s of [-1, 1]) for (const r of [[-NX, -BX], [BX, NX]]) {
+                bandX(st.z + s * (st.h + 0.34 + BW / 2), r[0], r[1]);
+            }
+            for (const s of [-1, 1]) bandZ(s * (SW + 0.34 + BW / 2), st.z + 12, st.z + 104);
+        }
+        scene.add(merged(bandParts, stdMat(0xffffff, { map: kerbBandTex, roughness: 0.78 })));
     }
 
     /* ---- running rails. The grooves and their stain are in the road texture;
@@ -7566,63 +7824,396 @@ export default function build(world) {
        that change during the cycle, so each one is a part in its own right.
        ============================================================ */
 
-    // ---- plane trees. Pruned into knuckled limbs every winter, which is why a
-    // Melbourne plane tree is a fat trunk, three elbows and a cloud.
-    {
-        const spots = [];
-        for (let i = 0; i < 9; i++) spots.push([-14.9, -48 - i * 10]);
-        for (let i = 0; i < 10; i++) spots.push([14.9, -30 - i * 10]);
-        for (let i = 0; i < 9; i++) spots.push([14.9, 30 + i * 10]);
-        for (const xx of [28, 58, 68, 78, 88, 98, 108]) spots.push([xx, -16.6]);
-        for (let i = 0; i < 7; i++) spots.push([-34 - i * 10, -16.6]);
-        for (let i = 0; i < 6; i++) spots.push([48 + i * 11, 18.4]);
-        for (let i = 0; i < 8; i++) spots.push([64 + rr(0, 44), -32 - rr(0, 56)]);   // the cathedral's grounds
-        for (let i = 0; i < 4; i++) spots.push([23.5 + i * 6.4, -136.5 + rr(-1.2, 1.2)]);  // City Square, the
-        for (let i = 0; i < 4; i++) spots.push([23.5 + i * 6.4, -199.0 + rr(-1.2, 1.2)]);  // two ends of it
-        for (let i = 0; i < 3; i++) spots.push([46.8, -132.0 - i * 4.6]);                   // and along the hotel
-        for (let i = 0; i < 5; i++) spots.push([78 + i * 9, 122 + rr(-3, 3)]);       // Fed Square's terrace
-        for (let i = 0; i < 12; i++) spots.push([-190 + i * 34, RIV_S + 11.5]);      // Southbank, in the grass
-        for (let i = 0; i < 9; i++) spots.push([-176 + i * 40, RIV_N - 1.5]);        // and the north bank wall
+    /* ---- plane trees.
 
-        // The trunk and its three limbs, built once and stood up sixty times.
-        const trunk = [];
-        let g = cylG(0.26, 0.42, 4.4, 8); put(g, 0, 2.2, 0); trunk.push(g);
-        for (let i = 0; i < 3; i++) {
-            const a = i / 3 * Math.PI * 2 + 0.4;
-            g = cylG(0.10, 0.20, 3.5, 6);
-            put(g, Math.cos(a) * 0.9, 5.2, Math.sin(a) * 0.9, Math.sin(a) * 0.55, 0, -Math.cos(a) * 0.55);
-            trunk.push(g);
+       This world had sixty of them, all in the middle distance, and not one on
+       the footpath a person actually walks down. That was the largest single
+       thing wrong with it. Swanston Street is a London plane avenue: a tree
+       every seven or eight metres hard against the kerb, the whole way from
+       the station to Little Collins and out along all three cross streets,
+       with the crowns closing overhead into a green tunnel and the sun coming
+       through it in patches. Take the trees out and what is left is a road
+       with shops on it, which is precisely how the world was reading.
+
+       So: about three hundred of them, in three instanced meshes and no more.
+
+         · the trunk. Pruned back to its knuckles every winter, which is why a
+           Melbourne plane is a heavy trunk running clear to four and a half
+           metres — above every verandah on the street, which is the reason
+           this is the tree the city plants — and then four knuckled limbs with
+           a second order off each. It is the branching that reads against a
+           bright sky, not the mass.
+         · the crown, as eleven clumps of leaves on the surface of a squashed
+           sphere. Each clump is three cards standing in a star with a fourth
+           lying across the top of them, drawn against an alpha-cut texture of
+           two hundred five-lobed leaves — so the crown has a leafy edge, and
+           holes in it, and something to look at from underneath. Eleven
+           clumps cover about two thirds of the shell they sit on: the third
+           that is missing is the sky you see through the tree.
+         · the pit. Every street tree stands in one and the photograph is full
+           of them — an opening in the paving with a cast grate over it and a
+           dressed stone edge round that. One flat card each, because at eye
+           height a grate is a pattern seen at fifteen degrees and its edge is
+           twenty millimetres proud, and neither is worth geometry.
+
+       All three are instanced, so `ground.js` leaves all three out of the walk
+       — which is right. You walk past a plane tree; you do not walk into one,
+       and a tree pit is not a step. */
+    {
+        /* The bark, and it is the bark that names the tree at fifty metres.
+           The outer plate flakes off a plane in scales and leaves a pale
+           cream-green underneath, so the trunk is piebald rather than brown —
+           and no colour in a paint chip does mottling, which is why this is
+           painted rather than tinted.
+
+           Seamless in both directions, and the vertical one is the one that
+           mattered. A trunk four metres long carries three tiles of this, so
+           anything the drawing does differently at the top of the canvas from
+           the bottom comes out as a band painted round the tree every metre
+           and a half — which is exactly what the first cut of this did: it had
+           a gradient of dirt at the foot, and every plane tree in the world
+           wore three of them like rings on a sock. So there is no gradient,
+           and every mark is drawn nine times, once for each way it can leave
+           the tile. */
+        const barkTex = tex(256, 512, (g, W, H) => {
+            g.fillStyle = '#87897a'; g.fillRect(0, 0, W, H);
+            const FLAKE = ['#b6b6a0', '#c4c2ac', '#9ba290', '#7a7e6e', '#6a6e60', '#a7ab94',
+                           '#8b9179', '#5d6153', '#adae97'];
+            const around = (draw) => {
+                for (const ox of [-W, 0, W]) for (const oy of [-H, 0, H]) draw(ox, oy);
+            };
+            /* Two passes at two sizes. One pass of anything is a pattern; the
+               plate that has just come off is a hand's width across and the
+               weathering inside it is a thumbnail, and it is having both at
+               once that stops this reading as camouflage. */
+            for (const pass of [[150, 9, 26, 0.78], [300, 3, 9, 0.46]]) {
+                for (let i = 0; i < pass[0]; i++) {
+                    const x = rr(0, W), y = rr(0, H), r = rr(pass[1], pass[2]);
+                    const col = pickOf(FLAKE), al = rr(0.22, pass[3]);
+                    const shape = [];
+                    for (let k = 0; k <= 9; k++) {
+                        const a = k / 9 * 6.2832, q = r * rr(0.52, 1.0);
+                        shape.push([Math.cos(a) * q, Math.sin(a) * q * 1.55]);
+                    }
+                    around((ox, oy) => {
+                        g.globalAlpha = al; g.fillStyle = col;
+                        g.beginPath();
+                        shape.forEach((p, k) => (k ? g.lineTo(x + ox + p[0], y + oy + p[1])
+                                                   : g.moveTo(x + ox + p[0], y + oy + p[1])));
+                        g.closePath(); g.fill();
+                    });
+                }
+            }
+            g.globalAlpha = 1;
+            // and the vertical grain the flakes sit in
+            for (let i = 0; i < 220; i++) {
+                const x = rr(0, W), y = rr(0, H), w2 = rr(1, 2), h2 = rr(24, 150);
+                g.fillStyle = 'rgba(44,46,38,' + rr(0.03, 0.10).toFixed(3) + ')';
+                around((ox, oy) => g.fillRect(x + ox, y + oy, w2, h2));
+            }
+        }, 1, 1);
+
+        /* One clump of leaves, on nothing. Solid in the middle and thrown away
+           towards the edge, so the alpha cut leaves a ragged leafy outline
+           rather than a square one — which is the entire difference between
+           this and the four spheres it replaces. */
+        const leafTex = tex(768, 768, (g, S) => {
+            g.clearRect(0, 0, S, S);
+            const GREEN = ['#4e6d2c', '#5a7b32', '#688a3a', '#3d5a24', '#78924a', '#87a04d',
+                           '#33501f', '#617d31', '#9aa953', '#446127', '#8d9c46'];
+            /* Sixteen hundred of them, and the count is not decoration. One
+               clump is four and a bit metres across when it is stood up, so a
+               leaf drawn at a fortieth of this canvas is a leaf two thirds of
+               a metre wide — which is what the first cut of this did, and from
+               underneath it read as a cartoon. Twenty pixels of seven hundred
+               and sixty-eight is eleven centimetres, which is a plane leaf. */
+            for (let i = 0; i < 1600; i++) {
+                const x = rr(0.02, 0.98) * S, y = rr(0.02, 0.98) * S;
+                const d = Math.max(Math.abs(x / S - 0.5), Math.abs(y / S - 0.5)) * 2;
+                if (rnd() < smoothstep(0.46, 1.00, d)) continue;
+                g.save();
+                g.translate(x, y); g.rotate(rnd() * 6.2832); g.scale(1, rr(0.72, 1.0));
+                g.fillStyle = pickOf(GREEN);
+                leafPath(g, rr(13, 24));
+                g.fill();
+                g.restore();
+            }
+        });
+
+        /* The pit: stone edge, cast grate, an opening in the middle of it for
+           the trunk, and the week's worth of leaves that have blown into the
+           slots. */
+        const pitTex = tex(256, 256, (g, S) => {
+            const m = S * 0.085, c = S / 2, R = S * 0.40;
+            g.fillStyle = '#9a978f'; g.fillRect(0, 0, S, S);            // the dressed edge
+            for (let i = 0; i < 900; i++) {
+                g.fillStyle = 'rgba(' + (rnd() < 0.55 ? '255,252,246,' : '38,38,36,') + (rnd() * 0.13).toFixed(3) + ')';
+                g.fillRect(rnd() * S, rnd() * S, 2, 2);
+            }
+            g.fillStyle = 'rgba(0,0,0,.30)'; g.fillRect(m * 0.72, m * 0.72, S - m * 1.44, S - m * 1.44);
+            g.save();
+            g.beginPath(); g.rect(m, m, S - m * 2, S - m * 2); g.clip();
+            g.fillStyle = '#6e716b'; g.fillRect(m, m, S - m * 2, S - m * 2);   // the casting
+            g.strokeStyle = '#241f18'; g.lineCap = 'butt';
+            g.lineWidth = S * 0.026;
+            for (let k = 0; k < 30; k++) {                                     // and the slots in it
+                const a = k / 30 * 6.2832;
+                g.beginPath();
+                g.moveTo(c + Math.cos(a) * R * 0.34, c + Math.sin(a) * R * 0.34);
+                g.lineTo(c + Math.cos(a) * R * 1.9, c + Math.sin(a) * R * 1.9);
+                g.stroke();
+            }
+            g.lineWidth = S * 0.024;
+            for (const q of [0.55, 0.80, 1.06, 1.34]) { g.beginPath(); g.arc(c, c, R * q, 0, 6.2832); g.stroke(); }
+            g.fillStyle = '#2b241b'; g.beginPath(); g.arc(c, c, S * 0.115, 0, 6.2832); g.fill();
+            for (let i = 0; i < 9; i++) {                                      // what blew into it
+                g.save();
+                g.translate(rr(m, S - m), rr(m, S - m)); g.rotate(rnd() * 6.2832);
+                g.fillStyle = pickOf(['#9c6a30', '#a8752f', '#7c5628', '#b8853f']);
+                leafPath(g, rr(9, 16)); g.fill();
+                g.restore();
+            }
+            g.restore();
+            g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = S * 0.014;
+            g.strokeRect(m, m, S - m * 2, S - m * 2);
+        });
+
+        /* ---- where they stand ----
+
+           Two kinds. A street tree gets a pit, stands two and a bit metres in
+           from the kerb face and takes its place in a row; the rest — the
+           cathedral's grounds, City Square, the Fed Square terrace, the grass
+           on both banks of the river — are trees in ground and get none.
+
+           The rows stop short of every intersection, because paint, kerb
+           radius and four signal poles are what is on a corner, and they step
+           over anything already standing on the kerb line. */
+        const STREET = 1, GROUND = 0;
+        const spots = [];
+
+        // what is already bolted to the kerb: the tram poles up Swanston and
+        // the ones along Flinders, from the block below
+        const TAKEN = [];
+        for (let i = 0; i < 6; i++) {
+            const z = 20 + i * 26;
+            TAKEN.push([-(SW + 1.4), z], [SW + 1.4, z], [-(SW + 1.4), -z], [SW + 1.4, -z]);
         }
-        // The tree pit goes into the trunk's own geometry rather than into a
-        // second instanced mesh of its own. It is a one-point-eight-metre
-        // square of wet soil seen at a grazing angle from the far side of a
-        // road, and the difference between 0x4a4238 and the trunk's brown at
-        // that angle is nothing; a whole mesh for it, out of a hundred and
-        // fifty, is not nothing.
-        g = boxG(1.8, 0.06, 1.8); put(g, 0, 0.03, 0); trunk.push(g);
-        const trunkIM = new THREE.InstancedMesh(merge(trunk), stdMat(C.trunk, { roughness: 0.80 }), spots.length);
-        const leafIM = new THREE.InstancedMesh(sphG(1, 9, 6), stdMat(C.leaf, { roughness: 0.78 }), spots.length * 4);
+        for (let i = 0; i < 5; i++) {
+            const x = 22 + i * 26;
+            TAKEN.push([x, -(FL + 1.4)], [x, FL + 1.4], [-x, -(FL + 1.4)], [-x, FL + 1.4]);
+        }
+        const clear = (x, z) => {
+            for (const t of TAKEN) if (Math.abs(t[0] - x) < 2.6 && Math.abs(t[1] - z) < 3.4) return false;
+            return true;
+        };
+
+        /* An avenue. The step is jittered rather than the position: a plane
+           avenue read down a footpath is dead straight and near enough evenly
+           spaced, and what varies from one tree to the next is the height, the
+           crown and which way the trunk happens to face — not the line. */
+        const avenue = (axis, at, from, to, gap) => {
+            const dir = to > from ? 1 : -1;
+            for (let s = from; (to - s) * dir > 0.5; s += dir * gap * rr(0.90, 1.10)) {
+                const x = axis === 'z' ? at : s, z = axis === 'z' ? s : at;
+                if (!clear(x, z)) continue;
+                spots.push([x + rr(-0.20, 0.20), z + rr(-0.20, 0.20), STREET]);
+            }
+        };
+
+        const TL = SW + 2.35;             // Swanston's tree line, off the street axis
+        for (const s of [-1, 1]) {
+            // north of Flinders, in three runs — one to each cross street
+            avenue('z', s * TL, -26, -104, 7.8);
+            avenue('z', s * TL, -126, -213, 7.8);
+            avenue('z', s * TL, -246, -336, 7.8);
+            // and south of it, as far as the bridge takes the footpath
+            avenue('z', s * TL, 28, 116, 7.8);
+        }
+        // Flinders Street's own north footpath, east and west of the corner
+        for (const s of [-1, 1]) avenue('x', -(FL + 2.1), s * 26, s * 148, 8.0);
+        // and its south one east of the station entrance, clear of the opening
+        // in the paving that the escalators go down through
+        avenue('x', FL + 2.1, 40, 148, 8.0);
+
+        // the three cross streets, out to where the frontages give up
+        for (const st of NST) {
+            const gap = st.tram ? 8.2 : 9.6, out = st.tram ? 132 : 104;
+            for (const s of [-1, 1]) for (const d of [-1, 1]) {
+                avenue('x', st.z + d * (st.h + 2.1), s * 24, s * out, gap);
+            }
+        }
+
+        // and the ones that are not on a footpath at all
+        const inGround = [];
+        for (let i = 0; i < 8; i++) inGround.push([64 + rr(0, 44), -32 - rr(0, 56)]);   // the cathedral's grounds
+        for (let i = 0; i < 4; i++) inGround.push([23.5 + i * 6.4, -136.5 + rr(-1.2, 1.2)]);  // City Square, the
+        for (let i = 0; i < 4; i++) inGround.push([23.5 + i * 6.4, -199.0 + rr(-1.2, 1.2)]);  // two ends of it
+        for (let i = 0; i < 3; i++) inGround.push([46.8, -132.0 - i * 4.6]);                  // and along the hotel
+        for (let i = 0; i < 5; i++) inGround.push([78 + i * 9, 122 + rr(-3, 3)]);       // Fed Square's terrace
+        for (let i = 0; i < 12; i++) inGround.push([-190 + i * 34, RIV_S + 11.5]);      // Southbank, in the grass
+        for (let i = 0; i < 9; i++) inGround.push([-176 + i * 40, RIV_N - 1.5]);        // and the north bank wall
+        for (const p of inGround) spots.push([p[0], p[1], GROUND]);
+
+        /* ---- one tree, built once at thirteen and a half metres ---- */
+        const TREE_H = 13.5;
+        const bark = [];
+        const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+        const UP = V3(0, 1, 0);
+        /* A limb, from one point to another. Open-ended, because both ends of
+           every one of these is inside something else and a cylinder's two
+           caps are a third of its triangles. */
+        const limb = (a, b, r0, r1, seg) => {
+            const dir = new THREE.Vector3().subVectors(b, a);
+            const len = dir.length();
+            const g = new THREE.CylinderGeometry(r1, r0, len, seg, 1, true);
+            g.translate(0, len / 2, 0);
+            g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()));
+            g.translate(a.x, a.y, a.z);
+            // in metres, so a flake on a limb is the size of a flake on the
+            // trunk. The bark tile is a metre round and 1.4 m up.
+            uvScale(g, 6.2832 * (r0 + r1) / 2, len / 1.4);
+            bark.push(g);
+        };
+        {
+            // The flare at the foot, and it is one piece with the trunk above
+            // it: two cylinders of different lengths carry the same texture at
+            // two different rates, and the join between them reads as a ring
+            // painted round the tree at chest height.
+            const g = cylG(0.30, 0.45, 0.62, 9); put(g, 0, 0.28, 0);
+            uvScale(g, 2.36, 0.44); bark.push(g);
+        }
+        limb(V3(0, 0.52, 0), V3(0.04, 4.66, 0.03), 0.30, 0.20, 9);
+        {
+            const g = sphG(0.25, 7, 5); put(g, 0.04, 4.70, 0.03);
+            uvScale(g, 1.6, 1.0); bark.push(g);                      // the knuckle it breaks at
+        }
+        for (let i = 0; i < 4; i++) {
+            const a = i / 4 * 6.2832 + 0.55;
+            const out = rr(0.52, 0.80), L = rr(3.0, 3.9);
+            const tip = V3(Math.cos(a) * L * out, 4.66 + L * 0.86, Math.sin(a) * L * out);
+            limb(V3(0.03, 4.55, 0.03), tip, 0.175, 0.085, 6);
+            for (let k = 0; k < 2; k++) {                            // and the second order off it
+                const b2 = a + rr(-1.0, 1.0), L2 = rr(1.9, 2.9);
+                limb(tip, V3(tip.x + Math.cos(b2) * L2 * 0.70, tip.y + L2 * 0.82,
+                             tip.z + Math.sin(b2) * L2 * 0.70), 0.08, 0.032, 5);
+            }
+        }
+
+        /* One clump: three cards in a star and one lying across them. The
+           normals are the whole trick — every vertex is given the normal it
+           would have on a sphere of the same size rather than the flat normal
+           of the card it belongs to, so a clump shades like a ball of leaves
+           instead of like four pieces of cardboard, and a crown full of them
+           has no facets in it anywhere. */
+        const card = (rx, ry) => {
+            const g = new THREE.PlaneGeometry(2, 2, 1, 1);
+            g.applyMatrix4(MX(0, 0, 0, rx, ry, 0));
+            const pos = g.attributes.position, nrm = g.attributes.normal;
+            const q = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+                q.set(pos.getX(i), pos.getY(i), pos.getZ(i)).multiplyScalar(0.60)
+                 .addScaledVector(V3(nrm.getX(i), nrm.getY(i), nrm.getZ(i)), 0.92).normalize();
+                nrm.setXYZ(i, q.x, q.y, q.z);
+            }
+            return g;
+        };
+        const clump = merge([card(0, 0), card(0, 1.0472), card(0, 2.0944), card(-Math.PI / 2, 0)]);
+
+        const CLUMPS = 11;
+        const street = spots.filter((p) => p[2] === STREET).length;
+        const SHRUBS = Math.ceil(street * 0.36) * 3;
+
+        const trunkIM = new THREE.InstancedMesh(
+            merge(bark), stdMat(0xffffff, { map: barkTex, roughness: 0.88 }), spots.length);
+        /* The emissive is not a light and is not a mistake. A leaf is thin
+           enough to be lit through, so the underside of a canopy in the
+           afternoon glows rather than going black — and a matte double-sided
+           card cannot know that: the sun is behind every leaf you are standing
+           under, so every one of them shades to nothing and the tunnel comes
+           out as a hole. A little green added back is the cheapest honest
+           answer, and it is well under the 0.80 the bloom pass watches for.
+
+           The alpha cut is at a half rather than at the third it started on,
+           and that is an artefact rather than a taste. A card seen edge-on is
+           a sliver a pixel or two wide, and the filter fills that sliver by
+           averaging half a metre of texture into it — so a third of a leaf's
+           alpha survives the test all the way down the card and every tree in
+           the avenue had two or three pale streaks hanging out of it. Cut at a
+           half, the smear does not clear the bar and the crown does not lose
+           anything it was keeping. */
+        const leafIM = new THREE.InstancedMesh(clump, stdMat(0xffffff, {
+            map: leafTex, alphaTest: 0.50, side: THREE.DoubleSide, roughness: 0.86,
+            emissive: 0x4e6b2e, emissiveIntensity: 2.4,
+        }), spots.length * CLUMPS + SHRUBS);
+        const pitG = new THREE.PlaneGeometry(1.92, 1.92); pitG.rotateX(-Math.PI / 2);
+        const pitIM = new THREE.InstancedMesh(
+            pitG, stdMat(0xffffff, { map: pitTex, roughness: 0.82 }), street);
+
         const tint = new THREE.Color();
-        let k = 0;
-        spots.forEach((p, i) => {
-            const h = rr(10.5, 14), s = h / 11.6;
-            const x = p[0] + rr(-0.5, 0.5), z = p[1] + rr(-0.5, 0.5);
-            trunkIM.setMatrixAt(i, MX(x, KERB_H, z, 0, rr(0, 6.28), 0, s, s, s));
-            for (let b = 0; b < 4; b++) {
-                const r = rr(2.6, 4.3) * s;
-                leafIM.setMatrixAt(k, MX(x + rr(-2.6, 2.6), KERB_H + h * 0.42 + rr(1.0, h * 0.34), z + rr(-2.6, 2.6),
-                                         0, rr(0, 3), 0, r, r * 0.78, r));
-                const v = rr(0.72, 1.22);
-                tint.setRGB(v * 0.94, v, v * 0.78);
+        let k = 0, np = 0;
+        for (let i = 0; i < spots.length; i++) {
+            const p = spots[i], onPath = p[2] === STREET;
+            const x = p[0], z = p[1];
+            const h = onPath ? rr(12.2, 17.4) : rr(9.5, 14.0);
+            const s = h / TREE_H, y = onPath ? KERB_H + 0.01 : KERB_H;
+            trunkIM.setMatrixAt(i, MX(x, y, z, 0, rr(0, 6.2832), 0, s, s, s));
+
+            if (onPath) {
+                pitIM.setMatrixAt(np++, MX(x, KERB_H + 0.030, z, 0, irr(0, 3) * 1.5708, 0));
+            }
+
+            /* The crown. Eleven clumps up the shell of a squashed sphere, the
+               elevation stepped rather than drawn so no tree ever comes out
+               with all eleven on one side of itself, and every one pulled in
+               off the shell by its own amount so the outline is lumpy. */
+            const cy = y + 9.0 * s, RH = 4.3 * s, RV = 3.3 * s;
+            const spin = rr(0, 6.2832);
+            const v0 = rr(0.72, 1.10), sat = rr(0.80, 1.0);
+            for (let j = 0; j < CLUMPS; j++) {
+                const a = spin + j * 2.39996 + rr(-0.24, 0.24);
+                const el = clamp(-0.56 + 1.52 * (j + 0.5) / CLUMPS + rr(-0.10, 0.10), -0.72, 0.96);
+                const w = Math.sqrt(Math.max(0, 1 - el * el)), f = rr(0.68, 0.96);
+                const r = RH * rr(0.35, 0.50);
+                leafIM.setMatrixAt(k, MX(x + Math.cos(a) * w * RH * f, cy + el * RV * f, z + Math.sin(a) * w * RH * f,
+                                         0, rr(0, 6.2832), 0, r, r * 0.88, r));
+                // a shade paler and yellower at the top, where the sun is
+                const v = v0 * (1.0 + el * 0.14) * rr(0.94, 1.06);
+                tint.setRGB(v * (1.02 + (1 - sat) * 0.3), v, v * sat * 0.86);
                 leafIM.setColorAt(k, tint);
                 k++;
             }
-        });
+        }
+
+        /* And a third of the street pits get a bed in them instead of bare
+           grate — three low masses of the same leaf, which is what the
+           photograph shows under about that many of the trees and what stops
+           three hundred identical grates reading as three hundred stamps. */
+        let sh = 0;
+        for (let i = 0; i < spots.length && sh < SHRUBS; i++) {
+            const p = spots[i];
+            if (p[2] !== STREET || rnd() > 0.36) continue;
+            for (let j = 0; j < 3 && sh < SHRUBS; j++) {
+                const a = j / 3 * 6.2832 + rr(0, 2), d = rr(0.42, 0.66), r = rr(0.34, 0.50);
+                leafIM.setMatrixAt(k, MX(p[0] + Math.cos(a) * d, KERB_H + 0.05 + r * 0.62, p[1] + Math.sin(a) * d,
+                                         0, rr(0, 6.2832), 0, r, r * 0.80, r));
+                const v = rr(0.62, 0.88);
+                tint.setRGB(v * 0.92, v, v * 0.72);
+                leafIM.setColorAt(k, tint);
+                k++; sh++;
+            }
+        }
+        // whatever is left over is parked inside the ground, where nothing sees
+        // it — an InstancedMesh draws its whole count whether it is set or not,
+        // and an unset matrix is the identity, which is a clump of leaves lying
+        // in the middle of the crossing.
+        for (; k < leafIM.count; k++) leafIM.setMatrixAt(k, MX(0, -60, 0, 0, 0, 0, 0.01, 0.01, 0.01));
+
         trunkIM.instanceMatrix.needsUpdate = true;
         leafIM.instanceMatrix.needsUpdate = true;
+        pitIM.instanceMatrix.needsUpdate = true;
         if (leafIM.instanceColor) leafIM.instanceColor.needsUpdate = true;
-        scene.add(trunkIM, leafIM);
-        world.ghost(leafIM);       // a canopy is not something to walk into
+        scene.add(trunkIM, leafIM, pitIM);
+        world.ghost(trunkIM); world.ghost(leafIM); world.ghost(pitIM);
     }
 
     // ---- tram poles, their mast-arm lamps and the overhead
