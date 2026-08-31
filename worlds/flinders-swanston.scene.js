@@ -65,6 +65,17 @@
 //      random widths and heights, a shop you can walk into under every
 //      building near the intersection and a merged backdrop past it.
 //      Invention, and said to be. Section 26.
+//    · the verandah, and the five kinds of sign hung off it. Melbourne's
+//      footpath is roofed by one continuous cantilever — a deep fascia beam
+//      with the shop's name on the face of it, a lined soffit with a row of
+//      recessed downlights, ties back into the wall — and under it a shop
+//      signs itself four or five times over at four or five different depths:
+//      a board on the fascia, a lightbox slung under the soffit facing the
+//      way you are walking, blades bracketed out at right angles, a menu case
+//      beside the door, a number on the pier. Their own atlas, their own
+//      brightnesses, and no two the same size, because a street where every
+//      sign is the same size is a street nobody has ever stood in. Two
+//      meshes for all of it. Sections 22, 23 and 26.
 //    · nothing on either frontage is painted. Every window is an opening with
 //      a pane at the back of it, every cornice is courses and brackets, and
 //      the colour is on the vertices — so a whole building is one draw and
@@ -2979,13 +2990,17 @@ export default function build(world) {
             const u0 = k / 4 + 0.004, u1 = (k + 1) / 4 - 0.004;
             parts.push(uvRect(put(boxG(w, h, d), cx, h / 2, cz), u0, 0, u1, 1));
             parts.push(flat(put(boxG(w + 0.7, 0.6, d + 0.7), cx, h + 0.3, cz)));
-            if (!awn) continue;
-            // the awning: three metres of cantilever at four and a bit, with
-            // the fascia hanging off its edge. No posts — a Melbourne verandah
-            // has not been propped on the footpath since about 1920.
-            const fx = cx + awn * w / 2;
-            parts.push(flat(put(boxG(3.0, 0.22, d * 0.97), fx + awn * 1.5, 4.35, cz)));
-            parts.push(flat(put(boxG(0.16, 0.9, d * 0.97), fx + awn * 2.96, 3.95, cz)));
+            /* The awning that used to hang here — three metres of flat slab
+               at four thirty-five with a plain fascia off its edge, pointed at
+               a patch of grey on this sheet — is gone. These three blocks
+               front the west side of Swanston between Flinders Street and
+               Flinders Lane, which is sixty metres of footpath somebody
+               actually walks, and they now get the same verandah as the rest
+               of the street: a lined soffit, downlights and signage, built in
+               section 23c where that verandah lives. It could not be built
+               here because the frame it is written in wants the vertex-colour
+               helpers and the sign atlas, and neither exists yet this far up
+               the file. */
         }
         // a little roof plant, so the parapet line is not a run of clean edges
         for (const p of [[-33.5, -138.6, 46]]) {
@@ -4064,8 +4079,293 @@ export default function build(world) {
             }
         });
 
+        /* And a third sheet, for the signs that are not flat on a wall.
+
+           The shop atlas above is one plate per tenant and it is always the
+           same plate — same height, same size, same white on the same dark —
+           which is most of why this street reads as a prototype. A real
+           frontage signs itself four or five times over and at four or five
+           different depths: a board on the face of the verandah, a lightbox
+           slung under the soffit facing the way you are walking, blades
+           bracketed out at right angles to the wall, a menu case beside the
+           door, a number on the pier. No two of them are the size of the
+           neighbour's, and half of them are only legible from underneath,
+           which is where the person actually is.
+
+           Its own sheet rather than more room on SHOP, because SHOP is being
+           worked on elsewhere tonight and two hands on one canvas is one
+           corrupted atlas.
+
+           Drawn once rather than twice: the emissive pass is the same artwork
+           under a global alpha. A black ground stays black and emits nothing
+           however bright the sign is, white type on it carries the whole glow,
+           and the alpha is how alight this particular sign is — a new neon one
+           at 1.0, a tired one nobody has re-lamped at a third of that. Which
+           is the variation the street is short of, got for free.
+
+           Every rect is laid out at the aspect of the plate it lands on, and
+           the placement code sizes each plate from its key rather than the
+           other way round. Not tidiness: a 12:1 label stretched onto a 3:1 box
+           is how this world got letters five metres long this morning. */
+        const AWN = {
+            // boards for the face of the verandah fascia — 11.7 : 1
+            fNel: [0.005, 0.004, 0.965, 0.086],
+            fSus: [0.005, 0.094, 0.965, 0.176],
+            fVic: [0.005, 0.184, 0.965, 0.266],
+            fDen: [0.005, 0.274, 0.965, 0.356],
+            fGld: [0.005, 0.364, 0.965, 0.446],
+            fPrl: [0.005, 0.454, 0.965, 0.536],
+            // lightboxes slung under the soffit — 3.2 : 1, then 2.2 : 1
+            hgA: [0.005, 0.548, 0.318, 0.646],
+            hgB: [0.335, 0.548, 0.648, 0.646],
+            hgC: [0.665, 0.548, 0.978, 0.646],
+            hgD: [0.005, 0.652, 0.221, 0.750],
+            hgE: [0.253, 0.652, 0.469, 0.750],
+            hgF: [0.501, 0.652, 0.717, 0.750],
+            hgG: [0.749, 0.652, 0.965, 0.750],
+            // menu and poster cases, flat on the wall — 0.44 : 1
+            mnA: [0.005, 0.756, 0.1115, 0.998],
+            mnB: [0.115, 0.756, 0.2215, 0.998],
+            mnC: [0.225, 0.756, 0.3315, 0.998],
+            mnD: [0.335, 0.756, 0.4415, 0.998],
+            // round blades, square because a disc's uv fills its own square
+            rbA: [0.452, 0.756, 0.572, 0.876],
+            rbB: [0.578, 0.756, 0.698, 0.876],
+            rbC: [0.704, 0.756, 0.824, 0.876],
+            rbD: [0.830, 0.756, 0.950, 0.876],
+            // and rectangular ones — 2.5 : 1
+            xbA: [0.452, 0.882, 0.592, 0.938],
+            xbB: [0.598, 0.882, 0.738, 0.938],
+            xbC: [0.744, 0.882, 0.884, 0.938],
+            // street numbers, and the one downlight the whole soffit repeats
+            nbA: [0.452, 0.944, 0.511, 0.998],
+            nbB: [0.518, 0.944, 0.577, 0.998],
+            nbC: [0.584, 0.944, 0.643, 0.998],
+            nbD: [0.650, 0.944, 0.709, 0.998],
+            dl:  [0.760, 0.944, 0.814, 0.998],
+        };
+        const awnSheet = (emis) => tex(2048, 2048, (g, W, H) => {
+            const R = (k) => [AWN[k][0] * W, AWN[k][1] * H,
+                              (AWN[k][2] - AWN[k][0]) * W, (AWN[k][3] - AWN[k][1]) * H];
+            g.fillStyle = emis ? '#000' : '#15171a'; g.fillRect(0, 0, W, H);
+
+            const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+            const SER = 'Georgia, "Times New Roman", serif';
+            // Clipped and moved to the patch's own origin, so every drawing
+            // below is written in its own rectangle and cannot spill into the
+            // neighbour's — which is the other way this system breaks.
+            const patch = (k, lit, draw) => {
+                const [x, y, w, h] = R(k);
+                g.save();
+                g.beginPath(); g.rect(x, y, w, h); g.clip();
+                g.translate(x, y);
+                if (emis) g.globalAlpha = lit;
+                draw(w, h);
+                g.restore();
+            };
+            const T = (t, px, x, y, col, weight, face, align) => {
+                g.fillStyle = col;
+                g.textAlign = align || 'center'; g.textBaseline = 'middle';
+                g.font = `${weight || 700} ${px}px ${face || SANS}`;
+                g.fillText(t, x, y);
+            };
+            // grime, which is what tells a sign put up last year from one put
+            // up in 1994 and never washed since
+            const worn = (w, h, amount) => {
+                g.fillStyle = `rgba(20,16,10,${amount})`;
+                for (let i = 0; i < 26; i++) {
+                    const u = ((i * 61) % 100) / 100, v = ((i * 37) % 100) / 100;
+                    g.fillRect(u * w, v * h, w * 0.05, h * (0.10 + v * 0.5));
+                }
+            };
+
+            /* ---- the boards on the face of the verandah ---- */
+            const board = (k, o) => patch(k, o.lit, (w, h) => {
+                g.fillStyle = o.field; g.fillRect(0, 0, w, h);
+                if (o.rule) { g.fillStyle = o.rule; g.fillRect(w * 0.03, h * 0.86, w * 0.94, h * 0.05); }
+                const cx = o.mark ? w * 0.58 : w * 0.50;
+                T(o.name, h * (o.sub ? 0.50 : 0.62), cx, h * (o.sub ? 0.38 : 0.48),
+                  o.ink, o.weight, o.face);
+                if (o.sub) T(o.sub, h * 0.19, cx, h * 0.72, o.subInk || o.ink, 400);
+                if (o.mark) o.mark(w, h);
+                if (o.grime) worn(w, h, o.grime);
+            });
+            // the fish beside the restaurant's name, which is the one thing on
+            // that board that is not a word and the thing you recognise first
+            /* Beside the name and not at the far end of the board. On a plate
+               eleven times as wide as it is high, "at the left" is four metres
+               away from the word it belongs to, and the two stop reading as
+               one sign. */
+            const fish = (col) => (w, h) => {
+                const cx = w * 0.36, cy = h * 0.48, r = h * 0.30;
+                g.fillStyle = col;
+                g.beginPath(); g.ellipse(cx, cy, r * 1.5, r * 0.66, -0.10, 0, 7); g.fill();
+                g.beginPath();
+                g.moveTo(cx + r * 1.30, cy); g.lineTo(cx + r * 2.35, cy - r * 0.72);
+                g.lineTo(cx + r * 2.35, cy + r * 0.72); g.closePath(); g.fill();
+                g.fillStyle = '#0b0b0c';
+                g.beginPath(); g.arc(cx - r * 0.80, cy - r * 0.14, r * 0.11, 0, 7); g.fill();
+            };
+            board('fNel', { lit: 0.92, field: '#0d0d0f', ink: '#f6f1e4', face: SER,
+                            name: 'NELAYAN', sub: 'RESTAURANT  ·  SEAFOOD  ·  DINE IN',
+                            subInk: '#d8cdb4', mark: fish('#d8352a') });
+            board('fSus', { lit: 1.00, field: '#a8161a', ink: '#fff6ea',
+                            name: 'sushi train', sub: 'hand roll bar  ·  open till late',
+                            subInk: '#ffd9c0', weight: 600 });
+            board('fVic', { lit: 0.62, field: '#efe7d3', ink: '#23402f', face: SER,
+                            name: 'VICTORIA & CO', sub: 'womenswear  ·  since 1946',
+                            subInk: '#5b6f5c', rule: '#23402f' });
+            board('fDen', { lit: 0.30, field: '#3b4046', ink: '#c9c3b4',
+                            name: 'DENIM BAR', sub: 'jeans · repairs · alterations',
+                            subInk: '#8f8b80', grime: 0.16 });
+            board('fGld', { lit: 0.78, field: '#101014', ink: '#e5bb63', face: SER,
+                            name: 'GOLD & CO', sub: 'WATCHES  ·  REPAIRS  ·  VALUATIONS',
+                            subInk: '#a58c50', rule: '#8a6d34' });
+            board('fPrl', { lit: 0.55, field: '#17203a', ink: '#dfe4ee', face: SER,
+                            name: 'PEARL & SON', sub: 'fine jewellery', subInk: '#9fabc4' });
+
+            /* ---- the lightboxes under the soffit. These are the ones that
+                    have to work read end-on from thirty metres up the
+                    footpath, so they are a name and a strapline and nothing
+                    else, and the name takes two thirds of the box. ---- */
+            const hang = (k, o) => patch(k, o.lit, (w, h) => {
+                g.fillStyle = o.field; g.fillRect(0, 0, w, h);
+                g.fillStyle = o.edge || o.field; g.fillRect(0, 0, w, h * 0.06);
+                g.fillRect(0, h * 0.94, w, h * 0.06);
+                T(o.name, h * 0.40, w / 2, h * (o.sub ? 0.36 : 0.50), o.ink, o.weight, o.face);
+                if (o.sub) T(o.sub, h * 0.16, w / 2, h * 0.72, o.subInk || o.ink, 400);
+                if (o.grime) worn(w, h, o.grime);
+            });
+            hang('hgA', { lit: 0.95, field: '#0c0c0e', edge: '#d8352a', ink: '#e8442f',
+                          name: 'NELAYAN', sub: 'seafood  ·  malaysian  ·  level 1',
+                          subInk: '#f0a04a', face: SER });
+            hang('hgB', { lit: 1.00, field: '#f7f2e8', edge: '#a8161a', ink: '#b41d1d',
+                          name: 'sushi train', sub: 'hand roll bar', subInk: '#7b1414', weight: 600 });
+            hang('hgC', { lit: 0.70, field: '#12321f', edge: '#c8a45a', ink: '#f2e7cd',
+                          name: 'ESPRESSO BAR', sub: 'sandwiches  ·  cakes', subInk: '#c8a45a' });
+            hang('hgD', { lit: 1.00, field: '#f2c114', edge: '#1b1a16', ink: '#1b1a16',
+                          name: 'BANH MI  $9', sub: 'rolls · coffee', subInk: '#3c3a30' });
+            hang('hgE', { lit: 0.58, field: '#132a4e', ink: '#eaf1fb',
+                          name: 'OPTOMETRIST', sub: 'eye tests  ·  walk in', subInk: '#a8bcd8' });
+            hang('hgF', { lit: 0.26, field: '#4a1f22', ink: '#d6c3ae',
+                          name: 'TAILOR', sub: 'alterations while you wait',
+                          subInk: '#9c8a78', grime: 0.20 });
+            hang('hgG', { lit: 1.00, field: '#1a0d22', ink: '#ff5fc8',
+                          name: 'KARAOKE', sub: 'level 1  ·  open 6pm', subInk: '#6fe6ff' });
+
+            /* ---- the menu and poster cases, flat on the wall beside a door.
+                    A grid of photographed dishes is the one sign on this
+                    street that is a picture rather than a word, and at this
+                    hour it is also the brightest thing at eye level. ---- */
+            patch('mnA', 1.00, (w, h) => {                 // the photo menu
+                g.fillStyle = '#f7f3ea'; g.fillRect(0, 0, w, h);
+                g.fillStyle = '#b41d1d'; g.fillRect(0, 0, w, h * 0.10);
+                T('MENU', h * 0.055, w / 2, h * 0.052, '#fff6ea');
+                const DISH = ['#c4652a', '#e2b24a', '#8d3f2c', '#d9d3c0', '#6f8a4a',
+                              '#b8452f', '#e8c98a', '#7d4a2c', '#cf8b3a', '#94a86a'];
+                for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {
+                    const x = w * (0.05 + c * 0.48), y = h * (0.135 + r * 0.172);
+                    g.fillStyle = DISH[(r * 2 + c) % DISH.length];
+                    g.fillRect(x, y, w * 0.42, h * 0.115);
+                    g.fillStyle = 'rgba(255,255,255,0.20)';
+                    g.fillRect(x, y, w * 0.42, h * 0.030);
+                    g.fillStyle = '#3a3630';
+                    g.fillRect(x, y + h * 0.122, w * 0.30, h * 0.014);
+                }
+            });
+            patch('mnB', 0.72, (w, h) => {                 // a printed menu card
+                g.fillStyle = '#f4ecd8'; g.fillRect(0, 0, w, h);
+                g.fillStyle = '#2b2620'; g.fillRect(w * 0.08, h * 0.05, w * 0.84, h * 0.012);
+                T('TODAY', h * 0.048, w / 2, h * 0.105, '#2b2620', 700, SER);
+                for (let i = 0; i < 14; i++) {
+                    g.fillStyle = i % 4 === 0 ? '#8a2f22' : '#4a443a';
+                    g.fillRect(w * 0.10, h * (0.17 + i * 0.056), w * (i % 4 === 0 ? 0.52 : 0.66), h * 0.013);
+                    g.fillRect(w * 0.80, h * (0.17 + i * 0.056), w * 0.10, h * 0.013);
+                }
+            });
+            patch('mnC', 0.85, (w, h) => {                 // a poster case
+                g.fillStyle = '#14161c'; g.fillRect(0, 0, w, h);
+                g.fillStyle = '#e04b1f'; g.fillRect(w * 0.06, h * 0.06, w * 0.88, h * 0.52);
+                g.fillStyle = '#14161c';
+                g.beginPath(); g.arc(w * 0.50, h * 0.32, h * 0.16, 0, 7); g.fill();
+                T('NOW', h * 0.075, w / 2, h * 0.68, '#f4efe4');
+                T('SHOWING', h * 0.048, w / 2, h * 0.76, '#f0a04a');
+                g.fillStyle = '#6d6a62'; g.fillRect(w * 0.16, h * 0.84, w * 0.68, h * 0.012);
+            });
+            patch('mnD', 0.22, (w, h) => {                 // and one nobody has changed
+                g.fillStyle = '#cdc6b4'; g.fillRect(0, 0, w, h);
+                g.fillStyle = '#7a736a';
+                for (let i = 0; i < 11; i++) g.fillRect(w * 0.12, h * (0.10 + i * 0.078), w * 0.70, h * 0.016);
+                worn(w, h, 0.26);
+            });
+
+            /* ---- the blades, which are the only signs on the street that
+                    are square-on to somebody walking toward them ---- */
+            const disc = (k, o) => patch(k, o.lit, (w, h) => {
+                g.fillStyle = o.field;
+                g.beginPath(); g.arc(w / 2, h / 2, w * 0.49, 0, 7); g.fill();
+                if (o.ring) {
+                    g.strokeStyle = o.ring; g.lineWidth = w * 0.045;
+                    g.beginPath(); g.arc(w / 2, h / 2, w * 0.42, 0, 7); g.stroke();
+                }
+                if (o.cross) {
+                    g.fillStyle = o.ink;
+                    g.fillRect(w * 0.20, h * 0.42, w * 0.60, h * 0.16);
+                    g.fillRect(w * 0.42, h * 0.20, w * 0.16, h * 0.60);
+                    return;
+                }
+                T(o.name, w * (o.name.length > 9 ? 0.115 : 0.155), w / 2,
+                  h * (o.sub ? 0.42 : 0.50), o.ink, o.weight, o.face);
+                if (o.sub) T(o.sub, w * 0.085, w / 2, h * 0.62, o.subInk || o.ink, 400);
+            });
+            disc('rbA', { lit: 1.00, field: '#f8f4ec', ink: '#b41d1d', name: 'sushi',
+                          sub: 'train', weight: 600 });
+            disc('rbB', { lit: 0.95, field: '#f8f4ec', ink: '#b41d1d', name: 'hand roll',
+                          sub: 'bar', weight: 600 });
+            disc('rbC', { lit: 0.66, field: '#101014', ink: '#e5bb63', ring: '#8a6d34',
+                          name: '1888', sub: 'PUBLIC BAR', face: SER });
+            disc('rbD', { lit: 0.88, field: '#1c7a4a', ink: '#f2fbf5', cross: true });
+            const blade = (k, o) => patch(k, o.lit, (w, h) => {
+                g.fillStyle = o.field; g.fillRect(0, 0, w, h);
+                if (o.edge) { g.fillStyle = o.edge; g.fillRect(0, 0, w * 0.05, h); }
+                T(o.name, h * 0.44, w * 0.54, h * 0.50, o.ink, o.weight);
+                if (o.grime) worn(w, h, o.grime);
+            });
+            blade('xbA', { lit: 0.80, field: '#101216', edge: '#3f7fd8', ink: '#eaf1fb',
+                           name: 'ATM  24 HRS' });
+            blade('xbB', { lit: 1.00, field: '#c21f16', ink: '#fff3d8', name: 'HOT FOOD' });
+            blade('xbC', { lit: 0.34, field: '#2a3550', ink: '#c3ccdd',
+                           name: 'MASSAGE  L1', grime: 0.18 });
+
+            /* ---- the number on the wall, which is the smallest sign on the
+                    street and the only one anybody has ever needed ---- */
+            const numb = (k, n, field, ink, lit) => patch(k, lit, (w, h) => {
+                g.fillStyle = field; g.fillRect(0, 0, w, h);
+                T(n, h * 0.58, w / 2, h * 0.54, ink);
+            });
+            numb('nbA', '163', '#1a1c20', '#e8e2d4', 0.30);
+            numb('nbB', '169', '#e6dfcd', '#25231e', 0.14);
+            numb('nbC', '175', '#1a1c20', '#e8e2d4', 0.30);
+            numb('nbD', '181', '#7d1f18', '#f4e7cf', 0.42);
+
+            /* ---- and the downlight, one patch stamped a few hundred times
+                    down the soffit. Warm, small and hot in the middle: at this
+                    hour it is the only reason the underside of a verandah is
+                    not a black lid over the footpath. ---- */
+            patch('dl', 1.00, (w, h) => {
+                g.fillStyle = '#2a2724'; g.fillRect(0, 0, w, h);
+                g.fillStyle = '#6a6259';
+                g.beginPath(); g.arc(w / 2, h / 2, w * 0.40, 0, 7); g.fill();
+                g.fillStyle = '#ffdda6';
+                g.beginPath(); g.arc(w / 2, h / 2, w * 0.32, 0, 7); g.fill();
+                g.fillStyle = '#fff6e4';
+                g.beginPath(); g.arc(w / 2, h / 2, w * 0.19, 0, 7); g.fill();
+            });
+        });
+
         const signMap = signSheet(false), signEmis = signSheet(true);
         const shopMap = shopSheet(false), shopEmis = shopSheet(true);
+        const awnMap = awnSheet(false), awnEmis = awnSheet(true);
 
         /* ------------------------------------------------------------
            21b · materials — nine, and every one of them wet
@@ -4167,6 +4467,33 @@ export default function build(world) {
                         map: signMap, emissive: 0xffffff, emissiveMap: signEmis,
                         emissiveIntensity: 1.35, roughness: 0.32,
                     }),
+            /* The verandah signage — every board, lightbox, blade, menu case
+               and downlight on the four streets, one material and one draw.
+               Metalness stays at nothing and it never goes through `wet`: a
+               metallic sign face in a world with no environment map is a black
+               rectangle, and these are the things the whole street is for.
+
+               Brighter than `lit`, because these are the signs read from
+               underneath — a soffit is the one place in this world that no
+               light of any kind reaches, so what a sign under there looks like
+               is entirely what its own emissive says it looks like. How bright
+               each individual sign is comes off the sheet, not off here. */
+            awn:    stdMat(0xffffff, {
+                        map: awnMap, emissive: 0xffffff, emissiveMap: awnEmis,
+                        emissiveIntensity: 1.60, roughness: 0.38, metalness: 0.0,
+                    }),
+            /* And the lining under the verandah, which is its own material for
+               exactly the reason the canopy in the square is: it is a downward
+               face, everything that lights this world comes from above, and a
+               plaster soffit painted the pale grey it really is came out
+               black. Half a stop of emissive is the bounce off a lit shopfront
+               that a forward renderer will not give it, and it stays well
+               under the bloom threshold so the ceiling does not glow — the
+               downlights punched into it are what glow. */
+            vsoff:  stdMat(0xd6d0c4, {
+                        emissive: 0x8c8175, emissiveIntensity: 0.52,
+                        roughness: 0.62, metalness: 0.0,
+                    }),
             /* Two more for the tower in section 25, because `body` is a wall
                and Eureka has no walls. Its curtain wall wants to be glossy and
                nearly black and the gold wants to be the brightest thing south
@@ -4204,6 +4531,15 @@ export default function build(world) {
                                         SIGN[k][2] - 0.002, 1 - SIGN[k][1] - 0.004);
         const shp = (g, k) => uvRect(g, SHOP[k][0] + 0.001, 1 - SHOP[k][3] + 0.002,
                                         SHOP[k][2] - 0.001, 1 - SHOP[k][1] - 0.002);
+        const awn = (g, k) => uvRect(g, AWN[k][0] + 0.0008, 1 - AWN[k][3] + 0.0008,
+                                        AWN[k][2] - 0.0008, 1 - AWN[k][1] - 0.0008);
+        /* How wide a patch is drawn against how tall, on a sheet that is
+           square so the two fractions are directly comparable. Every plate on
+           the street is sized `AR(k) * height` rather than to the tenancy, and
+           that one line is the whole defence against the trap that has bitten
+           this system twice today: artwork drawn at one proportion and mapped
+           onto a box at another does not crop, it stretches. */
+        const AR = (k) => (AWN[k][2] - AWN[k][0]) / (AWN[k][3] - AWN[k][1]);
 
         /* Every surface in the precinct accumulates into one of these and is
            merged once at the end of the section, so eighty metres of frontage,
@@ -4330,6 +4666,11 @@ export default function build(world) {
             w1: [], w2: [],
             // the shops under them, and the light inside the shops
             shop: [], shopGlass: [], shopLit: [],
+            // the verandahs over the footpath: the lining under them, which is
+            // the one surface on the street that faces away from every source
+            // of light there is, and everything hung off them or bolted
+            // through them that is alight. Two arrays, two draws, four streets
+            awnSoff: [], awnLit: [],
             // the square: the canopy, the entrance box, the paving furniture
             qSteel: [], qRoof: [], qClad: [], qGlass: [], qTrim: [], qSign: [],
             // the way down: the escalator banks, the stairs, and the concrete
@@ -5778,6 +6119,262 @@ export default function build(world) {
             return [cz - DZ - DW, cz - DZ + DW];
         };
 
+        /* ---- the verandah, and everything a shop hangs off it ----
+
+           Melbourne's footpath is roofed, and not by an awning per tenancy.
+           It is one continuous cantilevered structure running the whole
+           block: a deep fascia beam along its edge with the shop's name on
+           the face of it, a lined soffit with a regular row of downlights
+           punched down the middle, the flashing where it is bolted back to
+           the wall, and the ties that hold three and a bit metres of it out
+           over the paving with nothing standing on the footpath. The signs
+           change from tenancy to tenancy. The verandah does not.
+
+           What was here instead was a slab: a hundred and seventy millimetres
+           of flat dark box two and a quarter metres deep, per tenancy, with a
+           red edge. From underneath — which is where the person is — it read
+           as a black lid, because a downward face in a world lit entirely
+           from above has nothing at all falling on it.
+
+           Written once, in a frame of its own — `d` out from the building
+           line over the footpath, `u` along the frontage, y up — and carried
+           onto whichever street by two lambdas rather than by four copies.
+           Swanston runs north and south with its frontages facing east and
+           west; the cross streets run east and west with theirs facing north
+           and south; and the last set of signs built twice, once per axis,
+           came out mirrored on one of them. */
+        const FR = (axis, face, o) => ({
+            axis, o,
+            // where a point (d out over the footpath, u along the frontage) is
+            wx: axis === 'z' ? (d, u) => face + o * d : (d, u) => u,
+            wz: axis === 'z' ? (d, u) => u : (d, u) => face + o * d,
+            // the turn that faces a plane out over the footpath — for a board
+            // on a fascia and a case on a wall
+            out: axis === 'z' ? (o > 0 ? Math.PI / 2 : -Math.PI / 2) : (o > 0 ? 0 : Math.PI),
+            /* and the turn that faces one along the frontage, in the +u
+               direction, which is the whole reason this pass exists: a sign
+               flat on the wall is a sign nobody walking toward it can read,
+               and the hanging boxes and the blades all face this way. It does
+               not depend on which side of the street the frontage is, only on
+               which way the street runs — the other reading of it put every
+               blade on the east side of Swanston back to front. */
+            along: axis === 'z' ? 0 : Math.PI / 2,
+        });
+        // a box in that frame, between two opposite corners
+        const FBX = (fr, d0, y0, u0, d1, y1, u1) => {
+            const x0 = fr.wx(d0, u0), z0 = fr.wz(d0, u0);
+            const x1 = fr.wx(d1, u1), z1 = fr.wz(d1, u1);
+            return put(boxG(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)),
+                       (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        };
+        // a lit plate in it, sized off its own artwork rather than off the
+        // hole it is going into — see `AR` in 21b
+        const FPL = (fr, k, h, d, y, u, yaw) => {
+            const g = new THREE.PlaneGeometry(AR(k) * h, h);
+            put(g, fr.wx(d, u), y, fr.wz(d, u), 0, yaw, 0);
+            P.awnLit.push(awn(g, k));
+            return g;
+        };
+        // the same, round — a disc's uv already fills its own square, which is
+        // why every round key on the sheet is drawn in one
+        const FDS = (fr, k, r, d, y, u, yaw) => {
+            const g = new THREE.CircleGeometry(r, 20);
+            put(g, fr.wx(d, u), y, fr.wz(d, u), 0, yaw, 0);
+            P.awnLit.push(awn(g, k));
+            return g;
+        };
+
+        const VER = { deep: 3.20, soff: 3.52, lin: 3.62, deck: 3.94, flash: 4.30 };
+        const verandah = (arr, fr, t0, t1, o) => {
+            const opt = o || {};
+            const D = opt.deep || VER.deep;
+            const lo = Math.min(t0, t1), hi = Math.max(t0, t1);
+            const beam = opt.beam === undefined ? 0x2f2e2b : opt.beam;
+
+            // the fascia beam. Deep on purpose: it is what carries the board,
+            // and from a hundred metres up the street the line of it is the
+            // only thing that says this is a Melbourne block and not a mall
+            FG(arr, beam, FBX(fr, D - 0.22, 3.16, lo, D + 0.02, 3.98, hi));
+            // the deck over the lining, and the flashing back into the wall
+            FG(arr, opt.deck || 0x3b3a36, FBX(fr, -0.02, VER.lin, lo, D - 0.20, VER.deck, hi));
+            FG(arr, beam, FBX(fr, -0.04, VER.deck, lo, 0.30, VER.flash, hi));
+
+            if (opt.plain) return;               // a backdrop gets the shape and no more
+
+            // the lining, in its own material for its own reason — see 21b
+            P.awnSoff.push(FBX(fr, 0.02, VER.soff, lo, D - 0.20, VER.lin, hi));
+
+            /* the ties. Nothing stands on the footpath — a Melbourne verandah
+               has not been propped since about 1920 — so all of this hangs off
+               a rod every three and a half metres, and those rods are most of
+               what says the thing is structure rather than a shelf. Built by
+               angle rather than by two endpoints, because the frame's two
+               lambdas carry points and cannot carry a rotation: the lean is a
+               turn about z on a street that runs north, and about x on one
+               that runs east. */
+            const dH = 0.20, yH = 5.00, dL = D - 0.26, yL = VER.deck;
+            const ang = Math.atan2(dL - dH, yH - yL), len = Math.hypot(dL - dH, yH - yL);
+            const nt = Math.max(2, Math.round((hi - lo) / 3.6));
+            for (let i = 0; i <= nt; i++) {
+                const u = lo + (hi - lo) * (i / nt);
+                const g = cylG(0.05, 0.05, len, 6);
+                put(g, fr.wx((dH + dL) / 2, u), (yH + yL) / 2, fr.wz((dH + dL) / 2, u),
+                    fr.axis === 'z' ? 0 : -fr.o * ang, 0, fr.axis === 'z' ? fr.o * ang : 0);
+                FG(arr, beam, g);
+            }
+
+            /* and the downlights, in the one regular row every verandah in
+               this city has and this world had none of. Emissive plates rather
+               than lights: there are four real ones in this world, all of them
+               spent, and there is no fifth coming. */
+            for (let u = lo + 1.05; u < hi - 0.5; u += 1.62) {
+                const g = new THREE.PlaneGeometry(0.30, 0.30);
+                put(g, fr.wx(D * 0.46, u), VER.soff - 0.008, fr.wz(D * 0.46, u), Math.PI / 2, 0, 0);
+                P.awnLit.push(awn(g, 'dl'));
+            }
+        };
+
+        /* What one tenancy signs itself with.
+
+           Not a kit every shop gets. A handful of coin tosses, so that the
+           shop next door has done it differently, two in a row are never the
+           same height, and some of them have barely bothered — which is the
+           whole of what was missing. A street where every sign is the same
+           size is the thing this pass is for, and replacing one uniform system
+           with a second uniform system would be no fix at all.
+
+           Its own seeded stream and not the world's, deliberately. The world's
+           `rnd` is what decides how wide the buildings on Collins Street are
+           and how many floors they have; drawing four hundred signs out of it
+           would move every building on four streets, and a signwriter should
+           not be able to move a building. */
+        let _sgs = 20250831;
+        const srn = () => { _sgs = (_sgs * 1664525 + 1013904223) % 4294967296; return _sgs / 4294967296; };
+        const srr = (a, b) => a + (b - a) * srn();
+        const spick = (a) => a[Math.floor(srn() * a.length)];
+        const FASCIA = { restaurant: ['fNel', 'fSus'], clothes: ['fVic', 'fDen'],
+                         jewel: ['fGld', 'fPrl'] };
+        const HANGER = { restaurant: ['hgA', 'hgB', 'hgD', 'hgC'],
+                         clothes: ['hgF', 'hgE', 'hgG'],
+                         jewel: ['hgE', 'hgC', 'hgG'] };
+
+        /* `dc` is where this tenancy's door falls, in u — the cases go on the
+           other side of the shopfront from it, because a lightbox across a
+           doorway is a lightbox in the way. Answers whether it put a board on
+           the fascia, so that the caller can leave the plate off the wall band
+           above and no shop ends up wearing two different names. */
+        const shopSigns = (arr, fr, t0, t1, kind, dc, o) => {
+            const opt = o || {};
+            const lo = Math.min(t0, t1), hi = Math.max(t0, t1), span = hi - lo;
+            const mid = (lo + hi) / 2, D = opt.deep || VER.deep;
+            /* Where the underside is, because not every roof over this
+               footpath is the standard verandah — the stainless canopy round
+               the cream tower's corner is at four ninety, and a lightbox hung
+               off the height a verandah would have been floats under it. */
+            const SF = opt.soff || VER.soff;
+            const K = FASCIA[kind] ? kind : 'clothes';
+            let board = false;
+
+            // 1 · the board on the face of the fascia, which is the sign the
+            //     whole street is read by from up at the crossing
+            if (opt.board !== false && srn() < 0.62) {
+                const k = spick(FASCIA[K]);
+                let h = srr(0.50, 0.70);
+                if (AR(k) * h > span - 0.5) h = (span - 0.5) / AR(k);
+                if (h > 0.26) { FPL(fr, k, h, D + 0.05, SF + 0.05, mid, fr.out); board = true; }
+            }
+
+            // 2 · the lightbox slung under the soffit, square-on to somebody
+            //     walking toward it. Two faces back to back on one case: the
+            //     footpath has people coming both ways down it
+            if (srn() < 0.72) {
+                const k = spick(HANGER[K]);
+                const h = srr(0.44, 0.62), w = AR(k) * h;
+                const cd = Math.min(D - 0.50, Math.max(w / 2 + 0.30, srr(1.15, 1.95)));
+                const top = SF - srr(0.34, 0.50), bot = top - h - 0.10;
+                const u = mid + srr(-0.20, 0.20) * span;
+                FG(arr, 0x24231f, FBX(fr, cd - w / 2 - 0.05, bot, u - 0.055,
+                                          cd + w / 2 + 0.05, top, u + 0.055));
+                for (const s of [-1, 1]) {
+                    FG(arr, 0x3a382f, FBX(fr, cd + s * w * 0.32 - 0.025, top, u - 0.025,
+                                              cd + s * w * 0.32 + 0.025, SF, u + 0.025));
+                }
+                for (const s of [-1, 1]) {
+                    FPL(fr, k, h, cd, top - (h + 0.10) / 2, u + s * 0.058,
+                        fr.along + (s > 0 ? 0 : Math.PI));
+                }
+            }
+
+            /* 3 · the blades, bracketed out at right angles. Some go above the
+                   verandah, stacked two high on one post the way they are on
+                   the corner of the real building, where they carry a hundred
+                   metres; the rest go under it at a height that clears a head,
+                   where they carry ten. Both, because the person is sometimes
+                   under the verandah and sometimes out at the kerb. */
+            const bl = srn();
+            if (bl < 0.20 && opt.hi !== false) {
+                const r = srr(0.32, 0.42), u = lo + srr(0.10, 0.26) * span;
+                const cd = r + 0.44, y0 = SF + 1.38;
+                FG(arr, 0x2a2926, FBX(fr, 0.02, y0 - 0.54, u - 0.055, cd + 0.06, y0 - 0.42, u + 0.055));
+                FG(arr, 0x2a2926, FBX(fr, cd - 0.055, y0 - 0.46, u - 0.055, cd + 0.055,
+                                          y0 + r * 3 + 0.30, u + 0.055));
+                const ks = [spick(['rbA', 'rbC', 'rbD']), spick(['rbB', 'rbD', 'rbA'])];
+                for (let i = 0; i < 2; i++) {
+                    const y = y0 + i * (r * 2 + 0.18);
+                    for (const s of [-1, 1]) {
+                        FDS(fr, ks[i], r, cd, y, u + s * 0.045,
+                            fr.along + (s > 0 ? 0 : Math.PI));
+                    }
+                }
+            } else if (bl < 0.48) {
+                const u = lo + srr(0.12, 0.32) * span;
+                if (srn() < 0.5) {
+                    const k = spick(['rbA', 'rbB', 'rbC', 'rbD']), r = srr(0.30, 0.38);
+                    const cd = r + 0.40, y = SF - srr(0.46, 0.56);
+                    FG(arr, 0x2a2926, FBX(fr, 0.02, y - 0.05, u - 0.05, cd, y + 0.05, u + 0.05));
+                    for (const s of [-1, 1]) {
+                        FDS(fr, k, r, cd, y, u + s * 0.045, fr.along + (s > 0 ? 0 : Math.PI));
+                    }
+                } else {
+                    const k = spick(['xbA', 'xbB', 'xbC']);
+                    const h = srr(0.28, 0.38), w = AR(k) * h, cd = w / 2 + 0.26;
+                    const y = SF - srr(0.48, 0.60);
+                    FG(arr, 0x2a2926, FBX(fr, 0.02, y - h / 2 - 0.05, u - 0.05,
+                                              cd + w / 2, y + h / 2 + 0.05, u + 0.05));
+                    for (const s of [-1, 1]) {
+                        FPL(fr, k, h, cd, y, u + s * 0.055, fr.along + (s > 0 ? 0 : Math.PI));
+                    }
+                }
+            }
+
+            /* 4 · the menu case flat on the wall beside the door — the only
+                   sign on the street read from an arm's length, and once the
+                   sun is off the road the brightest thing at eye level. It
+                   starts at one metre seventy-five rather than at the waist,
+                   which is not how a menu case is hung: under one metre four
+                   the walk merges it into the paving and a case beside a door
+                   becomes a wall across the footpath. */
+            if (srn() < 0.52 && span > 4.6) {
+                const k = spick(['mnA', 'mnB', 'mnC', 'mnD']);
+                const h = srr(1.10, 1.55), w = AR(k) * h;
+                const u = dc > mid ? lo + w / 2 + 0.40 : hi - w / 2 - 0.40;
+                const y = 1.80 + h / 2;
+                FG(arr, 0x1e1d1a, FBX(fr, 0.02, y - h / 2 - 0.06, u - w / 2 - 0.06,
+                                          0.15, y + h / 2 + 0.06, u + w / 2 + 0.06));
+                FPL(fr, k, h, 0.165, y, u, fr.out);
+            }
+
+            // 5 · and the number, which is the smallest sign on the street and
+            //     the only one anybody has ever actually needed
+            if (srn() < 0.36) {
+                const h = srr(0.24, 0.32);
+                const u = srn() < 0.5 ? lo + 0.34 : hi - 0.34;
+                FPL(fr, spick(['nbA', 'nbB', 'nbC', 'nbD']), h, 0.15,
+                    SF - srr(0.24, 0.46), u, fr.out);
+            }
+            return board;
+        };
+
         /* ============================================================
            22 · the west side of Swanston Street, opposite the Town Hall
 
@@ -5874,12 +6471,24 @@ export default function build(world) {
             /* ---- the shopfronts, and the stainless canopy that runs round
                     the corner over them — the one detail of this building
                     everybody has stood under ---- */
+            /* The signage under the canopy. This corner keeps its stainless
+               sweep — that curve is the one thing about the building anybody
+               remembers — so it gets no verandah of its own, only the things
+               that hang under one: the soffit here is at four ninety rather
+               than at three fifty, so `soff` is passed and every drop, blade
+               and board hangs off that instead. No board on the fascia and no
+               blade above it, because both of those belong to a painted
+               timber fascia and this one is a rolled stainless edge. */
+            const FRZ = FR('z', XF, 1), FRX = FR('x', ZF, -1);
             for (let i = 0; i < 2; i++) {
                 const z0 = ZF + R + 0.5 + i * 7.4, z1 = z0 + 6.8;
                 F(A, C.deep, XF + 0.02, 0, z0 - 0.25, XC, Y_SHOP, z0);
                 // the trade rotates so no two neighbours are the same room
                 const T = [['bergen', 'jewel'], ['dior', 'clothes']][i % 2];
                 P.shopLit.push(shp(put(boxG(0.06, 0.52, z1 - z0 - 0.3), XF + 0.10, 4.24, (z0 + z1) / 2), T[0]));
+                const dz = shopDoor(z0, z1);
+                shopSigns(A, FRZ, z0, z1, T[1], (dz[0] + dz[1]) / 2,
+                          { soff: Y_SHOP - 0.26, deep: 1.70, board: false, hi: false });
                 shopUnit(XC, z0, z1, 'z', T[1], T[0]);
             }
             for (let i = 0; i < 2; i++) {
@@ -5890,13 +6499,22 @@ export default function build(world) {
                 const T = [['pho', 'restaurant'], ['wool', 'clothes'], ['sbux', 'restaurant']][i % 3];
                 P.shopLit.push(shp(put(boxG(Math.abs(x1 - x0) - 0.3, 0.52, 0.06),
                                    (x0 + x1) / 2, 4.24, ZF + 0.10), T[0]));
+                shopSigns(A, FRX, x0, x1, T[1], (x0 + x1) / 2 + 2.0,
+                          { soff: Y_SHOP - 0.26, deep: 1.70, board: false, hi: false });
                 shopUnit(ZC, x0, x1, 'x', T[1], T[0]);
             }
-            // the canopy: straight along both streets, and eight facets round
+            /* the canopy: straight along both streets, and eight facets round.
+               The Little Collins leg was set out with the sign of its depth
+               taken off the Swanston leg's, and the two frontages face at
+               right angles: it was drawn a metre and a quarter *into* the
+               stone core, so the whole of that side of the corner had a
+               shopfront with nothing over it while the quadrant swept out
+               correctly beside it. Subtracted here, which is the way that
+               facade's own normal points. */
             F(A, 0xb9bec0, XF + 1.65, Y_SHOP, ZF + R, XC, Y_SHOP + 0.34, ZS);
-            F(A, 0xb9bec0, XF - R, Y_SHOP, ZF + 1.65, X0, Y_SHOP + 0.34, ZC);
+            F(A, 0xb9bec0, XF - R, Y_SHOP, ZF - 1.65, X0, Y_SHOP + 0.34, ZC);
             F(A, 0x8e9397, XF + 1.70, Y_SHOP - 0.26, ZF + R, XF + 1.58, Y_SHOP + 0.34, ZS);
-            F(A, 0x8e9397, XF - R, Y_SHOP - 0.26, ZF + 1.70, X0, Y_SHOP + 0.34, ZF + 1.58);
+            F(A, 0x8e9397, XF - R, Y_SHOP - 0.26, ZF - 1.70, X0, Y_SHOP + 0.34, ZF - 1.58);
             for (let i = 0; i < 8; i++) {
                 const a0 = (Math.PI / 2) * (i / 8), a1 = (Math.PI / 2) * ((i + 1) / 8);
                 const am = (a0 + a1) / 2, rr2 = R + 1.65;
@@ -5944,7 +6562,18 @@ export default function build(world) {
         {
             const A = P.m3;
             const XF = -BX, X0 = -44.0, D = 0.42, XC = XF - D;
+            /* what a verandah fascia gets painted, which on this street is
+               whatever the tenant painted it last time and never the same as
+               next door's */
+            const VBEAM = [0x2f2e2b, 0x1d2a24, 0x3a2420, 0x24303c, 0x2b2b2f, 0x4a3a24];
             const shopRun = (z0, z1, n, faces) => {
+                /* One verandah for the whole frontage rather than one per
+                   tenancy. The real thing breaks where the buildings meet, not
+                   where the leases do, and a run of eight separate slabs with
+                   eight separate edges is most of why the old one read as
+                   scenery rather than as structure. */
+                const fr = FR('z', XF, 1);
+                verandah(A, fr, z0 + 0.4, z1 - 0.4, { beam: spick(VBEAM) });
                 for (let i = 0; i < n; i++) {
                     const a = z0 - (z0 - z1) * (i / n) - 0.35, b = z0 - (z0 - z1) * ((i + 1) / n) + 0.35;
                     const [d0, d1] = shopDoor(a, b);
@@ -5953,17 +6582,19 @@ export default function build(world) {
                     F(A, 0x232326, XF + 0.02, 0, d0, XC, 0.14, d1);
                     F(A, 0x2c2a26, XF + 0.04, 0, a + 0.35, XC, 4.10, a + 0.50);
                     const T = faces[i % faces.length];
-                    P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4), XF + 0.10, 4.42, (a + b) / 2), T[0]));
-                    shopUnit(XC, a, b, 'z', T[1], T[0]);
-                    // the awning, on two rods, which is most of what a
-                    // Melbourne footpath is made of
-                    F(A, 0x33322e, XF + 2.30, 3.55, a - 0.1, XF + 0.06, 3.72, b + 0.1);
-                    F(A, 0x8a2f26, XF + 2.38, 3.10, a - 0.1, XF + 2.24, 3.72, b + 0.1);
-                    for (const zz of [a - 0.05, b + 0.05]) {
-                        const g = cylG(0.04, 0.04, 1.9, 5);
-                        put(g, XF + 1.25, 4.30, zz, 0, 0, Math.PI / 2.9);
-                        FG(A, 0x33322e, g);
+                    /* and the plate on the wall band above the verandah, but
+                       only where the fascia has not already taken the name.
+                       It is up at 4.66 rather than 4.42 now because the
+                       flashing comes to 4.30, and it is a sign for the far
+                       footpath rather than for this one — from under the
+                       verandah you cannot see it at all, which is the whole
+                       reason the other four kinds exist. */
+                    const board = shopSigns(A, fr, a, b, T[1], (d0 + d1) / 2);
+                    if (!board) {
+                        P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4),
+                                           XF + 0.10, 4.66, (a + b) / 2), T[0]));
                     }
+                    shopUnit(XC, a, b, 'z', T[1], T[0]);
                 }
             };
 
@@ -6220,7 +6851,10 @@ export default function build(world) {
                             F(A, 0xc6ae88, XF - 0.24, y + 0.46, B.z0 - 0.7, XC, y + 0.72, B.z1 + 0.7);
                         }
                         F(A, 0xb39b76, XF - 0.34, B.top, B.z0, XC, B.top + 1.0, B.z1);
-                        P.shopLit.push(shp(put(boxG(0.06, 0.95, 5.0), XF + 0.12, 4.55,
+                        // lifted clear of the verandah flashing, which now
+                        // comes to 4.30 — at four fifty-five the two were in
+                        // each other
+                        P.shopLit.push(shp(put(boxG(0.06, 0.90, 5.0), XF + 0.12, 4.80,
                                            (B.z0 + B.z1) / 2), 'maccas'));
 
                     } else if (B.kind === 'render') {
@@ -6293,6 +6927,13 @@ export default function build(world) {
                        inside the tower on the Collins corner. */
                     const n = Math.max(1, Math.round(span / 9.0));
                     const step = (B.z1 - B.z0) / n;
+                    // one verandah for the whole bay, and each of the three
+                    // buildings paints its fascia its own colour — which is
+                    // what a Melbourne block looks like from the far kerb
+                    const fr = FR('z', XF, 1);
+                    verandah(A, fr, B.z0 + 0.2, B.z1 - 0.2,
+                             { beam: B.kind === 'bronze' ? 0x4a3a24
+                                   : B.kind === 'fin' ? 0x24303c : 0x3a2420 });
                     for (let i = 0; i < n; i++) {
                         const a = B.z0 + step * i + 0.35, b = B.z0 + step * (i + 1) - 0.35;
                         const [d0, d1] = shopDoor(a, b);
@@ -6306,11 +6947,12 @@ export default function build(world) {
                         const T = B.kind === 'bronze' ? [['maccas', 'restaurant'], ['wool', 'clothes']][i % 2]
                                 : B.kind === 'fin'    ? [['bar', 'restaurant'], ['bergen', 'jewel']][i % 2]
                                 :                       [['coco', 'restaurant'], ['facet', 'jewel']][i % 2];
-                        P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4),
-                                           XF + 0.10, 4.42, (a + b) / 2), T[0]));
+                        const board = shopSigns(A, fr, a, b, T[1], (d0 + d1) / 2);
+                        if (!board) {
+                            P.shopLit.push(shp(put(boxG(0.06, 0.55, Math.abs(b - a) - 0.4),
+                                               XF + 0.10, 4.66, (a + b) / 2), T[0]));
+                        }
                         shopUnit(XC, a, b, 'z', T[1], T[0]);
-                        F(A, 0x33322e, XF + 2.30, 3.55, a - 0.1, XF + 0.06, 3.72, b + 0.1);
-                        F(A, 0x7a2a22, XF + 2.38, 3.10, a - 0.1, XF + 2.24, 3.72, b + 0.1);
                     }
                 }
 
@@ -6333,6 +6975,55 @@ export default function build(world) {
                     }
                     F(A, 0xa88a68, X0 - 0.2, 5.0 + 8 * 3.05, ZS, X1 + 0.2, 5.0 + 8 * 3.05 + 1.1, ZF - 0.2);
                     P.shopLit.push(shp(put(boxG(1.9, 4.6, 0.06), X1 - 2.6, 12.0, ZF - 0.10), 'parking'));
+                }
+            }
+        }
+
+        /* ------------------------------------------------------------
+           23c · the verandah over the three blocks south of Flinders Lane
+
+           The west side of Swanston between Flinders Street and Flinders Lane
+           is not built as itself: it is three boxes off the street sheet in
+           section 11, with a whole facade — windows, shopfront, lit ground
+           floor and all — drawn onto each of them. That is the right answer
+           for a backdrop and the wrong one for sixty metres of footpath
+           somebody walks up from the station, because a painted shopfront
+           cannot have anything hanging in front of it.
+
+           So the verandah and its signage are built here, in real geometry,
+           against the same building line those boxes stand on. Their own flat
+           awning has been taken out of section 11 rather than left underneath
+           this one; the note there says where it went.
+
+           No fascia boards, because these blocks have no tenancies — the shop
+           divisions are painted on and a board would land halfway across one.
+           What they get is the roof, the light under it, and the signs that
+           hang from it, which between them are the whole of what the walk up
+           from Flinders Street is missing.
+           ------------------------------------------------------------ */
+        {
+            const A = P.shop;
+            // cx and w of the three section 11 blocks that front Swanston,
+            // said again here because that table is local to its own section
+            for (const [fx, z0, z1] of [[-18.6, -64.0, -42.0],
+                                        [-18.5, -85.0, -66.0],
+                                        [-18.5, -102.8, -85.0]]) {
+                const fr = FR('z', fx, 1);
+                /* Two ninety rather than the three twenty the rest of the
+                   street gets, and the one place on it where the depth is not
+                   a preference. The plane trees down this block stand at
+                   x = −14.9 give or take half a metre, and a trunk pruned to
+                   four hundred millimetres puts bark as far in as −15.8: at
+                   full depth the verandah grows through six of them. The slab
+                   that was here reached −15.5 and did exactly that. */
+                verandah(A, fr, z0 + 0.3, z1 - 0.3,
+                         { deep: 2.90, beam: spick([0x2f2e2b, 0x3a2420, 0x24303c]) });
+                const n = Math.max(2, Math.round((z1 - z0) / 8.5));
+                for (let i = 0; i < n; i++) {
+                    const a = z0 + (z1 - z0) * (i / n) + 0.3;
+                    const b = z0 + (z1 - z0) * ((i + 1) / n) - 0.3;
+                    shopSigns(A, fr, a, b, ['restaurant', 'clothes', 'jewel'][i % 3],
+                              (a + b) / 2 - 1.6, { board: false, deep: 2.90 });
                 }
             }
         }
@@ -6498,11 +7189,18 @@ export default function build(world) {
                        fitout you cannot reach is geometry spent on nothing. */
                     F(A, 0x232326, x0, 0, zf + o * 0.02, x1, 0.45, zg);
                     W(A, x0 + 0.6, 0.60, zg, x1 - 0.6, 3.72, zg - o * 0.06);
-                    F(A, 0x33322e, x0, 3.55, zf + o * 2.00, x1, 3.72, zf + o * 0.06);
+                    // the verandah's shape and no more: no lining, no
+                    // downlights, no ties. Nobody is walking under this one
+                    verandah(A, FR('x', zf, o), x0, x1, { plain: true, deep: 2.60 });
                     F(A, body, x0, 3.72, zf, x1, HG, zc);
                     return;
                 }
                 F(A, body, x0, 3.90, zf, x1, HG, zc);        // the band the signs go on
+                const fr = FR('x', zf, o);
+                // and the verandah, once for the building rather than once per
+                // lease — see the note on it above section 22
+                verandah(A, fr, x0, x1, { beam: spick([0x2f2e2b, 0x1d2a24, 0x3a2420,
+                                                       0x24303c, 0x2b2b2f, 0x4a3a24]) });
                 const n = Math.max(1, Math.round((w - 0.9) / 9.5));
                 const step = (w - 0.9) / n;
                 const fitted = irr(0, n - 1);                // one room you can walk into per building
@@ -6522,18 +7220,20 @@ export default function build(world) {
                     F(A, 0x2c2a26, a - 0.34, 0, zf + o * 0.04, a - 0.16, 4.05, zg);
                     if (i === n - 1) F(A, 0x2c2a26, b + 0.16, 0, zf + o * 0.04, b + 0.34, 4.05, zg);
 
-                    /* The verandah, and the banner hanging off its edge —
-                       which is the thing you actually read from across the
-                       street, because a sign flat on a wall under an awning
-                       is a sign nobody standing under the awning can see. */
-                    F(A, 0x33322e, a - 0.12, 3.55, zf + o * 2.30, b + 0.12, 3.72, zf + o * 0.06);
-                    F(A, 0x7a2a22, a - 0.12, 3.10, zf + o * 2.38, b + 0.12, 3.72, zf + o * 2.24);
-                    const bn = new THREE.PlaneGeometry(Math.abs(b - a) - 0.30, 0.46);
-                    put(bn, (a + b) / 2, 3.40, zf + o * 2.405, 0, o > 0 ? 0 : Math.PI, 0);
-                    P.shopLit.push(shp(bn, T[0]));
-                    const sg = new THREE.PlaneGeometry(Math.abs(b - a) - 0.40, 0.52);
-                    put(sg, (a + b) / 2, 4.50, zf + o * 0.06, 0, o > 0 ? 0 : Math.PI, 0);
-                    P.shopLit.push(shp(sg, T[0]));
+                    /* What this tenancy signs itself with — a board on the
+                       fascia, a lightbox slung under the soffit facing along
+                       the walk, blades at right angles to the wall, a case
+                       beside the door. What was here was one banner the width
+                       of the lease on the edge of the awning and one plate the
+                       width of the lease on the wall band, every shop the
+                       same, which is what this pass exists to undo. */
+                    const dcx = (a + b) / 2 + o * (Math.abs(b - a) / 2 - 2.30);
+                    const board = shopSigns(A, fr, a, b, T[1], dcx);
+                    if (!board) {
+                        const sg = new THREE.PlaneGeometry(Math.abs(b - a) - 0.40, 0.52);
+                        put(sg, (a + b) / 2, 4.66, zf + o * 0.06, 0, o > 0 ? 0 : Math.PI, 0);
+                        P.shopLit.push(shp(sg, T[0]));
+                    }
 
                     if (i === fitted) {
                         shopUnit(zg, a, b, o > 0 ? 'X' : 'x', T[1], T[0]);
@@ -7110,6 +7810,14 @@ export default function build(world) {
                 ['westin_00', [[P.b2, M21.body], [P.b2g, M21.glass], [P.b2l, M21.lit]], []],
                 ['swanstonwestshops_00', [[P.shop, M21.body], [P.shopGlass, M21.glass],
                                       [P.shopLit, M21.lit]], []],
+                /* Every verandah on the four streets in two draws: the lining
+                   under all of them, and every board, lightbox, blade, case,
+                   number and downlight hung off them. One object rather than
+                   one per block because it is one system — the fascia beams,
+                   the ties and the flashings are colour on the vertices and
+                   travel with the building they are bolted to, and only these
+                   two, which are a map and a lit map, cannot. */
+                ['verandahsigns_00', [[P.awnSoff, M21.vsoff], [P.awnLit, M21.awn]], []],
                 ['citysquare_00', [
                     [P.qSteel, M21.steel], [P.qClad, M21.batten], [P.qGlass, M21.glass],
                     [P.qTrim, M21.bronze], [P.qSign, M21.sign],
