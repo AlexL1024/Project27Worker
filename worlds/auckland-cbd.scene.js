@@ -107,7 +107,6 @@ residential|Emily Place|1|503,-384 502,-370 567,-347 574,-342 578,-326 573,-311
 motorway_link||1|452,864 453,830 450,820 444,816 428,818
 residential|Scotia Place|2|-268,821 -225,836
 secondary|Hopetoun Street|4|-570,739 -519,683
-residential|Beresford Street Central||-825,719 -817,723
 living_street|Federal Street||-242,124 -238,113
 tertiary|Daldy Street||-797,-809 -821,-735
 tertiary|Daldy Street|2|-758,-927 -797,-809
@@ -118,7 +117,7 @@ living_street|Gore Street Lane||383,-364 479,-333
 pedestrian|Swanson Street||134,-291 83,-309
 residential|Mills Lane||57,-248 79,-312
 residential|Mills Lane||110,-407 103,-413 46,-431
-pedestrian|Exchange Lane||107,-368 150,-352
+pedestrian|Exchange Lane||99,-370 107,-368 150,-352
 living_street|O'Connell Street|1|231,-149 249,-241
 residential|Wyndham Street|4|-189,-288 -151,-274
 residential|Federal Street|1|-54,-408 -42,-442
@@ -127,7 +126,7 @@ residential|Durham Street West||-4,-120 -26,-128
 residential|Lorne Street|1|129,61 75,214 72,225 74,233
 living_street|Lorne Street||33,339 64,247
 residential|Durham Lane||-28,-82 -2,-73
-residential|Durham Lane||-11,-171 54,-147
+residential|Durham Lane||-34,-179 -11,-171 54,-147
 residential|Bowen Lane||368,41 399,-40
 trunk_link|Stanley Street|1|778,461 754,495 703,539 692,553
 pedestrian|Bledisloe Lane||-88,185 -130,307
@@ -158,9 +157,7 @@ secondary|Grafton Road|2|565,637 559,579
 secondary|Grafton Road|2|570,721 523,767
 residential|Rutland Street||112,382 102,346 99,342 91,340
 residential|Rutland Street||91,340 46,347
-pedestrian|Wynyard Street||592,396 569,421 556,422
-pedestrian|||822,-273 787,-285
-pedestrian|Quba Square||845,-354 820,-362 812,-358 795,-363
+pedestrian|Wynyard Street||592,396 569,421 556,422 549,423
 residential|Princes Wharf|2|-15,-748 7,-763 23,-791 104,-1043
 secondary|Customs Street West|3|-118,-531 -71,-553
 secondary|Customs Street West|2|-71,-579 -67,-574 -40,-560
@@ -204,7 +201,7 @@ living_street|Viaduct Bascule Bridge||-228,-792 -247,-799
 residential|Quay Street|2|-80,-729 -45,-719
 unclassified|Princes Street|2|391,169 359,256
 motorway_link||1|466,793 441,807 428,818
-pedestrian|Warspite Street||279,-69 273,-64
+pedestrian|Warspite Street||285,-59 279,-69 273,-64 278,-56
 pedestrian|||307,-127 311,-129
 pedestrian|||304,-126 281,-115
 pedestrian|Chancery Square||273,-95 257,-116
@@ -300,7 +297,7 @@ tertiary|Jellicoe Street||-758,-927 -847,-956
 secondary|Mayoral Drive|6|-238,517 -220,541 -204,552
 secondary|Pitt Street|6|-510,761 -515,721
 primary|Fanshawe Street|5|-825,-371 -718,-336
-unclassified|Greys Avenue|2|-184,461 -171,446
+unclassified|Greys Avenue|2|-184,461 -171,446 -163,455
 secondary|Victoria Street West|4|-671,-96 -467,-136
 secondary|Karangahape Road|4|-809,1046 -785,1037
 residential|Commerce Street|3|327,-488 315,-453
@@ -334,7 +331,7 @@ secondary|Wellesley Street East|1|327,524 352,561
 secondary|Wellesley Street East|2|323,528 285,472
 secondary|Wellesley Street East|3|381,602 408,635
 pedestrian|||-15,-748 -23,-762 -23,-779 44,-984
-pedestrian|||153,-1067 56,-772 57,-753 64,-724 76,-700 83,-696
+pedestrian|||153,-1067 56,-772 57,-753 64,-724 76,-700 83,-696 79,-681
 secondary|Union Street|4|-767,375 -748,404
 motorway_link||2|-785,1000 -796,964 -804,923
 motorway_link||4|-559,574 -575,594
@@ -344,7 +341,7 @@ motorway|Northwestern Motorway|3|632,571 569,618 514,668 475,712 420,788
 motorway_link||1|-757,720 -746,698 -732,653 -729,617 -732,582 -739,549 -748,526 -780,471 -787,452
 motorway_link||1|-641,725 -713,866 -729,888
 motorway_link||2|-575,594 -602,639 -641,725
-pedestrian|Aotea Square||-130,307 -61,331
+pedestrian|Aotea Square||-130,307 -61,331 -44,336
 residential|Churchill Street||788,338 808,341 817,338 821,332
 tertiary|Albert Street|4|-59,-141 -31,-219
 residential|Wyndham Street|4|-27,-228 83,-187
@@ -362,14 +359,14 @@ secondary|Karangahape Road|2|-532,957 -567,954 -602,966
 secondary|Karangahape Road|5|-532,957 -484,966
 residential|Federal Street||-169,-86 -146,-150
 secondary|Wellington Street|2|-828,439 -761,432
-pedestrian|Wynyard Street||634,354 609,380
+pedestrian|Wynyard Street||634,354 609,380 600,388
 tertiary|Wakefield Street|4|66,579 88,627 95,632
 living_street|Queens Wharf||268,-677 299,-771
 living_street|Queens Wharf|1|269,-622 275,-643 262,-661 262,-668 268,-677
 living_street|Queens Wharf||268,-677 268,-665 281,-651 283,-643 277,-620
 secondary_link|Wellesley Street East|1|324,545 239,423
-pedestrian|Governor Fitzroy Place||104,508 89,477
-residential|Lorne Street||65,423 37,362
+pedestrian|Governor Fitzroy Place||115,533 104,508 89,477 74,458
+residential|Lorne Street||83,436 65,423 37,362
 secondary|Customs Street West|3|5,-549 67,-528
 primary|Fanshawe Street|3|-308,-382 -430,-355
 primary|Sturdee Street|4|-174,-499 -125,-526
@@ -382,7 +379,7 @@ pedestrian|Te Ara Tahuhu Walkway||463,-478 456,-476 345,-513 343,-517 337,-519
 residential|Lucy Lane||-408,-430 -352,-441 -337,-490
 secondary_link||1|-43,-688 -41,-672 -58,-622
 residential|Airedale Street||103,797 92,791 89,786
-pedestrian|Durham Street East||98,-75 159,-56
+pedestrian|Durham Street East||89,-77 98,-75 159,-56
 pedestrian|Chancery Square||281,-115 273,-95
 residential|Bankside Street||460,-228 460,-216 438,-160
 living_street|Alfred Street|1|496,307 520,322
@@ -400,7 +397,7 @@ secondary|Lower Hobson Street|3|-55,-656 -82,-582
 secondary|Quay Street|4|19,-700 -32,-715
 residential|Rutland Street||-38,359 -17,359
 residential|Rutland Street||-17,359 -25,365 -26,375
-pedestrian|Aotea Square||-154,447 -82,377
+pedestrian|Aotea Square||-154,447 -82,377 -61,385
 secondary|Symonds Street|2|331,558 330,566 312,584
 secondary|Symonds Street|3|312,584 323,563 331,558
 residential|Saint Martins Lane|2|-9,969 21,999
@@ -429,7 +426,7 @@ secondary|Stanley Street|2|649,635 613,678
 secondary|Wellesley Street East|3|469,735 471,739
 living_street|Waikokota Lane||-629,-794 -641,-758
 secondary|Quay Street|2|818,-438 786,-448
-pedestrian|Tīramarama Way||-818,-734 -796,-732 -622,-675
+pedestrian|Tīramarama Way||-818,-734 -796,-732 -622,-675 -615,-673
 motorway_link||2|-676,692 -684,752 -697,789
 motorway|Northwestern Motorway|3|635,555 710,508 748,475
 trunk_link|Stanley Street|1|671,596 663,612
@@ -443,8 +440,8 @@ tertiary|Victoria Street West|2|-4,-27 70,0
 secondary|Customs Street East|6|390,-413 354,-425
 residential|Gore Street|2|395,-427 401,-445
 secondary|Tangihua Street|3|785,-330 779,-315 770,-304
-pedestrian|||-618,-805 -583,-794
-pedestrian|Fish Lane||-675,-891 -691,-840
+pedestrian|||-618,-805 -583,-794 -576,-792
+pedestrian|Fish Lane||-673,-898 -675,-891 -691,-840
 living_street|Māhuru Lane||-720,-783 -739,-723
 living_street|Māhuru Lane||-744,-706 -767,-632
 residential|Liverpool Street||-132,867 -41,768 -33,756
@@ -707,7 +704,7 @@ primary|Fanshawe Street|4|-705,-316 -716,-320
 secondary|Halsey Street|2|-705,-316 -706,-287
 secondary|Halsey Street|4|-709,-277 -714,-292 -716,-320
 residential|Sale Street||-612,14 -600,11 -590,-2
-residential|Airedale Street||-53,486 -41,510
+residential|Airedale Street||-53,486 -41,510 -30,529
 residential|Airedale Street||-82,446 -71,450 -63,463
 residential|Airedale Street||-63,463 -84,453
 secondary||2|809,-441 816,-448
@@ -724,7 +721,7 @@ secondary|Anzac Avenue|2|803,19 800,-44
 secondary|Anzac Avenue|4|747,93 761,79
 secondary|Anzac Avenue|2|800,-44 807,-32 810,-12 809,7 803,19
 living_street|Alfred Street|1|474,299 496,307
-pedestrian|Market Square||-229,-632 -213,-678
+pedestrian|Market Square||-232,-624 -229,-632 -213,-678
 secondary_link||1|-756,430 -749,421 -748,404
 secondary|Wellington Street|2|-756,431 -732,428
 secondary|Mayoral Drive|5|-204,552 -176,563
@@ -743,7 +740,7 @@ living_street|Galway Street|1|453,-448 406,-462
 pedestrian|Brigham Street||-743,-972 -758,-927
 residential|Emily Place||548,-280 558,-301
 pedestrian|North Wharf Promenade||-469,-875 -446,-867
-residential|Beresford Square|4|-601,849 -590,849 -570,861 -571,870 -576,872 -592,862 -601,849
+residential|Beresford Square||-601,849 -590,849 -570,861 -571,870 -576,872 -592,862 -601,849
 secondary|Anzac Avenue|4|761,79 791,45 803,19
 secondary|Grafton Road|3|548,454 549,469
 tertiary|Albert Street|2|-101,-25 -99,-13 -117,38
@@ -834,7 +831,7 @@ secondary|Fanshawe Street|4|-72,-511 -112,-501
 secondary|Fanshawe Street|4|25,-527 9,-528 -19,-523
 residential|Wolfe Street|1|-54,-464 -37,-458
 residential|Nelson Street||-555,280 -548,262 -532,252
-living_street|||-776,-424 -770,-449
+living_street|||-776,-424 -770,-449 -749,-441
 secondary|Wellesley Street West|2|-723,-95 -724,-84
 tertiary|Shortland Street|2|181,-282 152,-291 140,-291
 unclassified|Greys Avenue|2|-212,490 -196,473
@@ -843,7 +840,7 @@ unclassified|Wakefield Street|1|-38,359 -26,375
 unclassified|Wakefield Street||-26,375 -22,388
 residential|Rutland Street||8,354 -17,359
 motorway_link||2|-762,729 -757,720
-pedestrian|||-274,-647 -281,-647 -361,-674 -461,-585 -472,-588 -525,-424
+pedestrian|||-274,-647 -281,-647 -361,-674 -461,-585 -472,-588 -525,-424 -521,-417
 tertiary|Wakefield Street|3|119,708 117,747 110,773
 tertiary|Wakefield Street|1|131,706 148,744 155,751 169,753
 tertiary|Wakefield Street|1|103,797 110,773
@@ -858,7 +855,7 @@ living_street|Aotea Square||-184,461 -170,461 -154,447
 living_street|Saint Patrick's Square||-68,-296 -58,-315
 tertiary|Albert Street|4|-78,-90 -89,-59
 living_street|Galway Street|2|323,-490 241,-518
-pedestrian|||225,-570 244,-564
+pedestrian|||225,-570 244,-564 250,-581
 pedestrian|||237,-542 217,-548
 secondary|Symonds Street|5|123,804 128,798
 secondary|Symonds Street|6|-85,1055 -81,1047
@@ -877,7 +874,6 @@ pedestrian|Te Ara Tahuhu Walkway||550,-450 545,-451
 residential|Madden Street||-821,-817 -797,-809
 primary|Fanshawe Street|3|-275,-399 -281,-394
 secondary|Customs Street West|3|67,-528 76,-525
-pedestrian|||367,-475 370,-484 368,-489 376,-503
 residential|Saint Paul Street||1,588 56,559 116,533
 secondary_link|Wellesley Street East|1|239,423 228,407
 residential|Lower Albert Street|4|76,-525 79,-535
@@ -892,7 +888,7 @@ residential|Commerce Street|3|315,-453 308,-440
 residential|Commerce Street|3|308,-440 301,-428
 living_street|Fort Lane||257,-444 261,-456
 tertiary|Albert Street|2|-139,102 -153,140 -162,152
-living_street|||-724,-405 -782,-427
+living_street|||-706,-398 -724,-405 -782,-427
 pedestrian|Te Ara Tahuhu Walkway||541,-452 463,-478
 pedestrian|Te Ara Tahuhu Walkway||545,-451 541,-452
 residential|Emily Place||472,-228 481,-238 525,-266
@@ -905,8 +901,8 @@ tertiary|Albert Street|4|70,-505 63,-484
 residential|Madden Street||-641,-758 -592,-742
 living_street|||-625,-807 -618,-805
 living_street|||-618,-805 -619,-804
-pedestrian|Waikokota Lane||-605,-867 -619,-825
-pedestrian|Piripi Lane||-636,-630 -684,-645
+pedestrian|Waikokota Lane||-603,-874 -605,-867 -619,-825
+pedestrian|Piripi Lane||-630,-628 -636,-630 -684,-645
 pedestrian|Waikokota Lane||-665,-689 -671,-682 -696,-608
 secondary|Grafton Road|1|497,772 517,760
 secondary|Symonds Street|4|303,596 312,584
@@ -914,7 +910,6 @@ secondary|Wellesley Street East|2|137,303 124,290
 secondary|Wellesley Street East|2|455,727 433,685
 pedestrian|Autahi Lane||-707,-703 -685,-772
 tertiary|Britomart Place|1|563,-478 559,-449 553,-439 546,-435
-pedestrian|||374,-496 376,-490 370,-484
 living_street|||-798,-493 -816,-438
 residential|Scene Lane|1|587,-446 559,-449
 residential|Scene Lane|1|699,-405 675,-416
@@ -958,7 +953,7 @@ pedestrian|Lorne Street||64,247 66,241
 living_street|Chancery Street|1|243,-141 228,-140
 residential||1|-392,-509 -386,-514 -380,-511 -380,-505
 residential||1|-380,-505 -382,-501 -388,-500 -392,-509
-residential|Pakenham Street East|2|-472,-534 -392,-509
+residential|Pakenham Street East|2|-488,-539 -472,-534 -392,-509
 secondary|Quay Street|3|402,-579 362,-592
 living_street|Waikokota Lane||-622,-827 -619,-825
 living_street|Waikokota Lane||-619,-825 -625,-807
@@ -1162,11 +1157,29 @@ primary|Hobson Street|6|-167,-349 -170,-342
 residential|Bradnor Lane|1|-183,-367 -164,-359
 residential|Marmion Street||-63,631 -50,627
 residential|Gore Street|3|379,-376 386,-401
-residential|Gore Street|2|401,-445 405,-457`;
+residential|Gore Street|2|401,-445 405,-457
+residential|||-299,781 -308,807
+residential|||-28,-82 -2,-73
+residential|||54,-147 29,-156
+pedestrian|||-304,279 -287,294
+pedestrian|||-117,-780 -130,-761
+pedestrian|||-615,-636 -626,-640
+pedestrian|||-743,-972 -745,-967
+pedestrian|||-58,-315 -68,-296
+pedestrian|||237,-542 217,-549
+pedestrian|||-782,-427 -776,-425
+pedestrian|||25,-865 7,-871
+pedestrian|||110,-962 118,-959
+pedestrian|||73,-850 81,-847
+pedestrian|||276,-83 273,-95
+residential|||8,-69 -2,-73
+residential|||67,670 40,683
+pedestrian|||-522,910 -516,899
+pedestrian|||-510,888 -514,900`;
 
 // Harbour surface: outer rings + holes (wharf islands), traced from the
 // coastline and flood-filled offline so the water ends exactly at the quays.
-const WATER = [{"p":[[-639,-1060],[57,-1060],[-40,-769],[-85,-784],[-77,-920],[-95,-928],[-75,-994],[-87,-992],[-107,-932],[-107,-918],[-112,-917],[-175,-942],[-151,-1012],[-152,-1021],[-163,-1020],[-187,-934],[-182,-927],[-170,-929],[-117,-906],[-127,-782],[-134,-779],[-214,-809],[-236,-809],[-247,-766],[-112,-721],[-109,-714],[-127,-664],[-254,-703],[-269,-702],[-284,-661],[-366,-685],[-464,-597],[-481,-596],[-529,-444],[-532,-439],[-558,-433],[-583,-438],[-529,-618],[-607,-644],[-583,-724],[-517,-706],[-469,-862],[-444,-861],[-441,-874],[-354,-969],[-242,-933],[-245,-908],[-240,-905],[-227,-906],[-213,-964],[-354,-1007],[-355,-998],[-350,-995],[-226,-955],[-229,-942],[-348,-981],[-362,-981],[-451,-884],[-451,-876],[-458,-875],[-527,-900],[-421,-1014],[-421,-1022],[-432,-1023],[-531,-914],[-540,-911],[-701,-966],[-682,-987],[-639,-988],[-639,-1060]],"h":[[[-352,-847],[-379,-822],[-374,-799],[-286,-777],[-274,-777],[-268,-783],[-251,-780],[-241,-804],[-244,-815],[-336,-847],[-352,-847]]]},{"p":[[161,-1060],[759,-1060],[759,-1016],[610,-571],[577,-584],[613,-696],[578,-709],[568,-709],[565,-704],[529,-588],[493,-600],[491,-632],[553,-820],[548,-839],[494,-857],[478,-857],[471,-850],[401,-632],[319,-658],[317,-678],[409,-952],[416,-989],[405,-984],[309,-690],[237,-684],[235,-702],[251,-706],[249,-738],[259,-744],[259,-752],[251,-760],[251,-782],[263,-782],[261,-794],[269,-800],[285,-866],[309,-926],[307,-938],[315,-944],[335,-1004],[334,-1015],[231,-1010],[231,-742],[239,-740],[241,-716],[223,-712],[225,-686],[207,-690],[213,-718],[205,-722],[207,-760],[197,-764],[194,-797],[175,-794],[175,-762],[161,-760],[161,-748],[173,-722],[165,-718],[173,-686],[170,-677],[110,-697],[112,-719],[102,-719],[96,-711],[79,-718],[67,-744],[65,-766],[161,-1060]],"h":[]}];
+const WATER = [{"p":[[-639,-1060],[57,-1060],[-40,-769],[-85,-784],[-77,-920],[-95,-928],[-75,-994],[-87,-992],[-107,-932],[-107,-918],[-112,-917],[-175,-942],[-151,-1012],[-152,-1021],[-163,-1020],[-187,-934],[-182,-927],[-170,-929],[-117,-906],[-127,-782],[-134,-779],[-214,-809],[-236,-809],[-247,-766],[-112,-721],[-109,-714],[-127,-664],[-254,-703],[-269,-702],[-284,-661],[-366,-685],[-464,-597],[-481,-596],[-529,-444],[-532,-439],[-558,-433],[-583,-438],[-529,-618],[-607,-644],[-583,-724],[-517,-706],[-469,-862],[-444,-861],[-441,-874],[-354,-969],[-242,-933],[-245,-908],[-240,-905],[-227,-906],[-213,-964],[-354,-1007],[-355,-998],[-350,-995],[-226,-955],[-229,-942],[-348,-981],[-362,-981],[-451,-884],[-451,-876],[-458,-875],[-527,-900],[-421,-1014],[-421,-1022],[-432,-1023],[-531,-914],[-540,-911],[-701,-966],[-682,-987],[-639,-988],[-639,-1060]],"h":[[[-352,-847],[-379,-822],[-374,-799],[-286,-777],[-274,-777],[-268,-783],[-251,-780],[-241,-804],[-244,-815],[-336,-847],[-352,-847]]]},{"p":[[161,-1060],[759,-1060],[759,-1016],[610,-571],[577,-584],[613,-696],[578,-709],[568,-709],[565,-704],[529,-588],[493,-600],[491,-632],[553,-820],[548,-839],[494,-857],[478,-857],[471,-850],[401,-632],[319,-658],[318,-669],[333,-670],[333,-726],[417,-978],[416,-989],[405,-984],[334,-767],[334,-1015],[231,-1010],[231,-742],[237,-740],[237,-716],[223,-712],[225,-686],[207,-690],[213,-718],[205,-722],[207,-760],[197,-764],[194,-797],[175,-794],[175,-762],[161,-760],[161,-748],[173,-722],[165,-718],[173,-686],[170,-677],[110,-697],[112,-719],[102,-719],[96,-711],[79,-718],[67,-744],[65,-766],[161,-1060]],"h":[]}];
 
 // 60 x 74 heights on a 30 m grid from (-885,-1065), row-major by z then x,
 // two base-36 chars per sample: decimetres above (elevation + 5 m).
