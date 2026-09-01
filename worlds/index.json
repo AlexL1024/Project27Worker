@@ -74,7 +74,10 @@
     {
       "slug": "auckland-cbd",
       "name": "Auckland CBD",
-      "scene": "auckland-cbd.scene.js"
+      "scene": "auckland-cbd.scene.js",
+      "files": [
+        "queen-buildings.mod.js"
+      ]
     }
   ]
 }

@@ -14,6 +14,8 @@
 //  x east, z south, y up; sea level is y = 0.
 //
 
+import { buildQueenBuildings } from './queen-buildings.mod.js';
+
 // kind|name|lanes|x,z x,z ...   (one carriageway per line, ints, metres)
 const ROADS = `secondary|Grafton Bridge|2|-81,1047 -69,1052
 residential|Cross Street||-317,1062 -467,1056
@@ -1606,6 +1608,25 @@ export default function build(world) {
         world.ghost(labels);
         scene.add(labels);
     } catch (e) { /* labels are a nicety; the roads are the world */ }
+
+    // ------------------------------------------------------- buildings
+    // Queen Street's buildings, hosted as a module (Flinders & Swanston pattern).
+    // The shim hands the module a groundAt() so each footprint plants on the
+    // real terrain slope; parts are prefixed so edit mode sees each building.
+    try {
+        let bn = 0;
+        const shim = {
+            THREE, scene, renderer: world.renderer, camera: world.camera,
+            groundAt: (x, z) => gY(x, z),
+            part: (name, o) => (o && o.isObject3D ? world.part(name, o) : o),
+            ground: (o) => o,
+            ghost: (o) => world.ghost(o),
+            frame: (cb) => world.frame(cb),
+            canvasTexture: (w, h, d) => world.canvasTexture(w, h, d),
+            ownsSky: () => {}, groundLevel: () => {}, bloom: () => {},
+        };
+        buildQueenBuildings(shim);
+    } catch (e) { /* massing is additive; never take the world down with it */ }
 
     // ------------------------------------------------------------- done
     world.groundLevel(gY(76, -24) + 0.2);   // Queen & Victoria, up in the valley
