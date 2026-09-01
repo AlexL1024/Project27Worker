@@ -15,6 +15,7 @@
 //
 
 import { buildQueenBuildings } from './queen-buildings.mod.js';
+import { buildQueenLandmarks } from './queen-landmarks.mod.js';
 
 // kind|name|lanes|x,z x,z ...   (one carriageway per line, ints, metres)
 const ROADS = `secondary|Grafton Bridge|2|-81,1047 -69,1052
@@ -1626,6 +1627,7 @@ export default function build(world) {
             ownsSky: () => {}, groundLevel: () => {}, bloom: () => {},
         };
         buildQueenBuildings(shim);
+        buildQueenLandmarks(shim);
     } catch (e) { /* massing is additive; never take the world down with it */ }
 
     // ------------------------------------------------------------- done

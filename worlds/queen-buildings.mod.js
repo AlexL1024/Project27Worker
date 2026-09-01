@@ -193,6 +193,8 @@ w894759659||retail|15|-173,780 -165,783 -167,787 -174,784 -173,780
 w894759661||retail|15|-177,791 -169,794 -170,797 -178,795 -177,791
 w894759660||yes|14|-177,791 -176,788 -168,791 -169,794 -177,791`;
 
+import { QUEEN_DETAILED } from './queen-landmarks.mod.js';
+
 function buildQueenBuildings(world) {
     const { THREE, scene } = world;
     const groundAt = world.groundAt || (() => 0);
@@ -248,11 +250,17 @@ function buildQueenBuildings(world) {
             v(ax, y0, az, c); v(bx, y1, bz, c); v(ax, y1, az, c);
         };
 
+        // a shopfront base band, the main wall, and a darker cornice band at the
+        // top — three horizontal courses read as a building, not a plain block.
+        const corniceH = Math.min(1.3, Math.max(0.6, (top - base) * 0.06));
+        const corniceY = Math.max(bandY, top - corniceH);
+        const cCornice = cUp.clone().multiplyScalar(0.7);
         for (let i = 0; i < r.length; i++) {
             const a = r[i], b = r[(i + 1) % r.length];
             const bandTop = Math.min(bandY, top);
             quad(a[0], a[1], b[0], b[1], base, bandTop, cBase);
-            if (top > bandY) quad(a[0], a[1], b[0], b[1], bandY, top, cUp);
+            if (corniceY > bandY) quad(a[0], a[1], b[0], b[1], bandY, corniceY, cUp);
+            if (top > corniceY) quad(a[0], a[1], b[0], b[1], corniceY, top, cCornice);
         }
 
         // flat roof cap — centroid fan, wound so it faces up (+y)
@@ -269,6 +277,7 @@ function buildQueenBuildings(world) {
         if (!line) continue;
         const b1 = line.indexOf('|'), b2 = line.indexOf('|', b1 + 1), b3 = line.indexOf('|', b2 + 1), b4 = line.indexOf('|', b3 + 1);
         const id = line.slice(0, b1);
+        if (QUEEN_DETAILED.has(id)) continue;   // built in detail by queen-landmarks.mod.js
         const use = line.slice(b2 + 1, b3);
         const h = parseFloat(line.slice(b3 + 1, b4)) || 14;
         const ring = line.slice(b4 + 1).split(' ').map((p) => { const c = p.indexOf(','); return [+p.slice(0, c), +p.slice(c + 1)]; });
@@ -288,7 +297,7 @@ function buildQueenBuildings(world) {
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bucket.pos), 3));
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(bucket.col), 3));
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }));
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side: THREE.DoubleSide }));
     mesh.name = 'queen_buildings_massing';
     scene.add(mesh);
     world.part('queen_buildings_00', mesh);

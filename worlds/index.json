@@ -76,7 +76,17 @@
       "name": "Auckland CBD",
       "scene": "auckland-cbd.scene.js",
       "files": [
-        "queen-buildings.mod.js"
+        "queen-buildings.mod.js",
+        "queen-landmarks.mod.js",
+        "queen-kit.mod.js",
+        "queen-lm-cpo.mod.js",
+        "queen-lm-dilworth.mod.js",
+        "queen-lm-civic.mod.js",
+        "queen-lm-townhall.mod.js",
+        "queen-lm-endeans.mod.js",
+        "queen-lm-bnz.mod.js",
+        "queen-lm-sap.mod.js",
+        "queen-street-detail.mod.js"
       ]
     }
   ]
