@@ -1,14 +1,17 @@
 //
 //  auckland-cbd.scene.js
 //
-//  The real street network of central Auckland, laid flat — nothing but the
-//  roads, the harbour they run down to, and the names painted on the tarmac
-//  like a map you can stand on. Queen Street runs up its valley from the
-//  ferry wharves to Karangahape Road; the motorway junction wraps the whole
-//  grid in its knot of ramps at the southern edge.
+//  The real street network of central Auckland — nothing but the roads, the
+//  hills they climb, the harbour they run down to, and the names painted on
+//  the tarmac like a map you can stand on. Queen Street runs up its valley
+//  from the ferry wharves to the Karangahape Road ridge sixty metres up; the
+//  motorway junction wraps the grid in its knot of ramps at the southern edge.
 //
-//  Geometry traced from OpenStreetMap (© OpenStreetMap contributors, ODbL).
-//  Coordinates are metres from a point mid-town: x east, z south, y up.
+//  Streets traced from OpenStreetMap (© OpenStreetMap contributors, ODbL);
+//  road widths follow each street's tagged lane count, and the painted lane
+//  dividers mark the actual lanes. Terrain sampled from the LINZ NZ 8 m DEM
+//  via opentopodata.org. Coordinates are metres from a point mid-town:
+//  x east, z south, y up; sea level is y = 0.
 //
 
 // kind|name|lanes|x,z x,z ...   (one carriageway per line, ints, metres)
@@ -1254,16 +1257,62 @@ residential||3|386,-401 390,-413`;
 // coastline and flood-filled offline so the water ends exactly at the quays.
 const WATER = [{"p":[[-639,-1060],[57,-1060],[-40,-769],[-85,-784],[-77,-920],[-95,-928],[-75,-994],[-87,-992],[-107,-932],[-107,-918],[-112,-917],[-175,-942],[-151,-1012],[-152,-1021],[-163,-1020],[-187,-934],[-182,-927],[-170,-929],[-117,-906],[-127,-782],[-134,-779],[-214,-809],[-236,-809],[-247,-766],[-112,-721],[-109,-714],[-127,-664],[-254,-703],[-269,-702],[-284,-661],[-366,-685],[-464,-597],[-481,-596],[-529,-444],[-532,-439],[-558,-433],[-583,-438],[-529,-618],[-607,-644],[-583,-724],[-517,-706],[-469,-862],[-444,-861],[-441,-874],[-354,-969],[-242,-933],[-245,-908],[-240,-905],[-227,-906],[-213,-964],[-354,-1007],[-355,-998],[-350,-995],[-226,-955],[-229,-942],[-348,-981],[-362,-981],[-451,-884],[-451,-876],[-458,-875],[-527,-900],[-421,-1014],[-421,-1022],[-432,-1023],[-531,-914],[-540,-911],[-701,-966],[-682,-987],[-639,-988],[-639,-1060]],"h":[[[-352,-847],[-379,-822],[-374,-799],[-286,-777],[-274,-777],[-268,-783],[-251,-780],[-241,-804],[-244,-815],[-336,-847],[-352,-847]]]},{"p":[[161,-1060],[759,-1060],[759,-1016],[610,-571],[577,-584],[613,-696],[578,-709],[568,-709],[565,-704],[529,-588],[493,-600],[491,-632],[553,-820],[548,-839],[494,-857],[478,-857],[471,-850],[401,-632],[319,-658],[317,-678],[409,-952],[416,-989],[405,-984],[309,-690],[237,-684],[235,-702],[251,-706],[249,-738],[259,-744],[259,-752],[251,-760],[251,-782],[263,-782],[261,-794],[269,-800],[285,-866],[309,-926],[307,-938],[315,-944],[335,-1004],[334,-1015],[231,-1010],[231,-742],[239,-740],[241,-716],[223,-712],[225,-686],[207,-690],[213,-718],[205,-722],[207,-760],[197,-764],[194,-797],[175,-794],[175,-762],[161,-760],[161,-748],[173,-722],[165,-718],[173,-686],[170,-677],[110,-697],[112,-719],[102,-719],[96,-711],[79,-718],[67,-744],[65,-766],[161,-1060]],"h":[]}];
 
+// 60 x 74 heights on a 30 m grid from (-885,-1065), row-major by z then x,
+// two base-36 chars per sample: decimetres above (elevation + 5 m).
+const ELEV = { cols: 60, rows: 74, x0: -885, z0: -1065, step: 30, data: '1y24292d2f2d28231x1n0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k1o1t1p0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k24292d2h2g2b251y1o0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k1u1y1s0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k292e2i2k2f28201r0k0k0k0k0k0k0k1p1s1n0k0k0k0k0k0k0k0k0k0k0k0k0k0k1z201q0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k0k1l1p0k0k0k2f2k2n2m2g261u0k0k0k0k0k0k0k0k1x1y1u1q1q1p0k0k0k0k0k0k0k0k0k0k1r231z0k0k0k0k0k0k1l1w1u1o0k0k0k0k0k0k0k0k0k0k0k1r1x1x1w1w2m2q2s2p2i281v1n0k0k0k0k0k0k1w1z1u0k0k0k0k1n1j0k0k0k0k0k0k0k0k1w251v0k0k0k0k0k0k1s1z1x0k0k0k0k0k0k0k0k0k0k0k0k1x212324232r2v2w2t2n2f27211w1r1p0k0k1v1z1v0k0k0k0k0k0k0k0k0k0k1o0k0k0k0k23241q0k0k0k0k0k0k1x221v0k0k0k0k0k0k0k0k0k0k0k1o21252728282u2y302y2u2n2g2a2622201y1y211w0k0k0k0k0k0k0k0k0k0k0k1u0k0k0k1s26220k0k0k0k0k0k1m21231r0k0k0k0k0k0k0k0k0k0k0k1t24292b2b2b2v303333302u2o2j2e2a2725231y0k0k0k0k0k0k0k0k0k0k0k0k1v0k0k0k20291x0k0k0k0k0k0k1s24210k0k0k0k0k0k0k0k0k0k0k0k1z282d2e2e2c2x31353634302v2q2l2f2a26211q0k0k0k0k1o1r1m0k0k0k0k0k1w0k0k0k292b1u0k0k0k0k0k0k1z261x0k0k0k0k1v1s0k0k0k0k0k1o232b2g2i2h2d2y33373836332y2t2n2f28231y0k0k0k0k0k1n1o1t1v1u1q0k0k220k0k1w2g2a0k0k0k0k0k0k1p26271s0k0k0k1q1y1r0k0k0k0k0k1u272f2j2l2k2g2z35393937332y2s2k2b231z1u0k0k0k0k0k0k0k0k0k1q1w20242a221z2a2m2a0k0k0k0k0k0k1w2c270k0k0k0k1v201p0k0k1q0k0k202a2i2m2o2o2j3135393937322x2q2h261t1o1o0k0k0k0k0k0k0k0k0k0k0k0k1t242g2k2p2s2d0k0k0k0k1j0k202g220k0k0k0k1z1y0k0k1o1q0k1q242e2l2p2s2r2m3236383937322w2p2f220k0k0k0k0k0k0k0k0k0k0k1n0k0k0k0k0k2f2u312y2k210k0k0k1u0k242h1x0k0k0k1r231u0k0k1u1m0k1v282i2p2t2v2t2n35383a3a38332w2n2c1w0k0k0k0k0k0k0k1q1r0k0k1u211v1s0k1y2k323c392y2m2e292726222j2k0k0k0k0k1y251p0k0k1z0k0k202c2m2u2y2y2v2o3a3c3d3d39342w2n2b1s0k0k0k0k0k0k1p23272622272f2g2c292j2y3e3o3o3g362x2t2r2q2s2y2q231p0k0k26260k0k1m1x0k1q252h2s3033332z2q3h3i3i3f3b352y2o2d231v1o0k0k0k1t252d2j2k2j2m2s2w2w2x353h3t40403v3m3g3c393939382y2j2923232g280k0k210k0k1x2c2q31373a39342w3p3o3l3h3c362z2r2h2a231t0k0k1t272g2o2v2x2z31363b3f3j3q3z474b4b46403v3s3q3p3n3h372w2o2k2o2t2k210k2c0k0k272m313b3f3h3f39333w3t3o3j3d37302s2k2c231n0k0k252j2t31373a3d3g3k3p3u40464d4j4m4l4h4c484543413x3o3f37312z3336302o2m2k25242k303d3k3n3o3k3f39413w3q3j3c36302s2k2b200k0k1o2e2t343d3j3n3q3u3y43484e4k4q4v4x4w4r4m4j4h4f4b443v3m3g3c3c3f3i3f38352y2u2v333g3q3u3v3u3q3l3g453y3q3j3c352y2q2h281v0k0k202m333g3p3v3z43474c4i4n4s4x53575857524x4u4s4p4k4b413s3o3n3o3r3t3t3q3m3j3h3j3p3x434544413w3r3n453x3q3j3c342w2o2f251r0k0k2b2v3e3s42484d4h4l4q4w52575b5g5j5j5i5e5955524x4q4g47403w3y414547484745444245494d4f4e4c47423y3v443w3p3i3b332v2o2f271v0k202o373r464f4m4r4v4z54595f5l5q5u5x5w5t5p5k5f5a534v4l4d4846494e4k4n4o4o4o4n4l4m4p4q4p4m4i4d474443433v3o3h39332x2r2k2h2h2m2w3b3s494m4u4z54585c5h5n5u61666a6b6864605u5n5g59504r4k4h4h4l4s4y5254545554525253524y4t4o4i4d4a4a423v3o3g3a35302w2v2x333e3r454j4w565b5e5h5m5q5v61686g6m6o6n6j6f6b645v5m5d544x4s4r4t4y555c5h5k5l5m5l5k5j5h5d564z4t4n4j4h4i433v3o3i3c383533363d3q474o525d5m5s5u5r5v6166686d6l6t6x6y6x6u6q6l6d625s5i59535153565d5k5r5w6062646462605v5l5c544y4t4q4q4r433w3q3k3g3c3a3c3h3s4a4y5l5z676d6g6b64696i6m6n6o6u70737473706y6t6k685x5m5f5b5b5e5l5t60676c6f6j6n6o6k6f655t5i59534z4y4y50453z3u3p3l3i3i3l3s464s5l6c6q6u6w6w6o6i6o6x7071727476787876736z6u6l6b605r5k5i5k5o5x686h6p6v6z747c7f756r6d605o5f5a5656575848433z3v3s3q3q3u434j57616q717576746z6y747a7d7f7f7f7f7d7a76716x6r6j69615u5p5p5s5x676k717i7r7v8189897p716j655t5l5g5e5e5f5g4d4946423z3y3z444e4u5i696t747a7c7b7b7e7j7n7q7s7r7p7m7h7a746z6u6o6h69635y5u5v5y646c6p7e8c8u8z94999183766m695y5r5m5m5m5n5n4k4g4d4a4847494f4o535o6b6u757c7h7k7o7t7y818484817w7r7j7a736x6r6m6g6a66616062656a6g6q7i8q9qa3a8a99m8e796o6c635w5u5u5v5v5t4r4n4l4i4h4g4i4o4x5a5s6d6u757e7l7s7z868b8e8g8e89827u7l7b726v6q6k6f6b686666696c6g6m6u7l8ya9b2bab4a58n7b6q6h6863616162605x4z4w4u4s4q4q4s4x555h5w6e6t747d7n7y888g8m8p8q8n8g877x7m7b716u6p6j6f6d6c6b6e6g6j6o6w7c859farbrc3btaq8y7c6r6k6f6c6a6968656159575553505052565d5n5z6e6r71797l808e8o8v8z908w8n8c807m7a6z6t6o6j6g6g6g6i6k6o6s717h8694a9bfc7cgcbbh9c7e6t6o6n6m6k6j6f6b665j5i5g5e5c5b5c5f5l5t636f6o6v757j818j8w949999948v8i837o796y6s6o6k6i6i6j6n6q6w777o8c94a3b4c0cfcjcebo9r7y756x6w6x6v6s6n6i6b5u5s5r5p5o5m5m5n5r5x676f6m6t757m878q949e9j9j9d938p897s7b6z6t6p6m6k6k6m6q6x7d808n9ba2axbscccjcjcdbrae8w7v7g7b7a77716t6l6d656462605z5x5v5u5x626b6k6t727g7y8k929g9p9u9t9m9a8u8e7w7f726u6q6n6m6n6p6u7b8b979tadb0boc8cickcjcbbrau9o8q867v7p7i786x6o6f6f6g6f6c6a66626163686g6p717h7x8g8z9g9ta1a5a39t9f8x8e7w7h746w6r6p6p6r6t6z7u9halb2bgbvc8cicmclcic8boaxa49d8t8e817o7b6z6p6i6o6r6r6o6k6e6a686a6f6m6x7c7v8f8y9g9va7aeagab9z9i8y8b7q7c726w6s6r6t6v727j8uasbvc3c9cfckcncocmchc6blaxaa9p968o867p7a6y6q6j6u6z716y6s6m6h6e6h6l6s757o898u9e9wabamarapaha39k8y887k746x6u6s6s6v737q8tabbvcgclcmcocqcqcpcmcgc3bjaxac9s998p857m766w6q6j6y7579756x6s6o6l6n6r6x7b7y8m999uadatb3b5axaka59k8v847f706v6t6s6t6y7e8g9vbbcacmcqcsctctcscqcmcfc0bgauaa9r978n827i726u6p6k707a7h7d736w6s6q6r6u707i888z9pacaxbfbpbmb6ana39h8s817d6z6v6t6t6u707o8xafbrcgcocrcucwcwcucqclccbwbbaqa69m938j7y7e6z6s6o6j747g7p7m7b716v6s6t6v737n8h9ca6awbibzc7c0bfaqa09b8m7w7b6z6v6u6u6w737t94albuchcocscvcycycvcrclc9bsb7ama19h8x8d7t7a6x6r6n6j797m7x7y7n7a706w6y727a7w8s9qalbebzcccgc6biao9t918d7q776y6v6u6v6x767z99ambtcgcocscvcycycwcsclc9brb6aj9x9c8r877n766w6r6m6i7f7t858b837p7b757c7n7v8f99a6b1bscacicgc3bdaf9h8m7y7g736x6v6v6w6y79839bakbncbclcrcvcycycwcscmccbub5ag9t978k7z7g726u6q6m6i7o838g8p8m8a7y7r7z8f8q959vapbhc3cgchcbbvb3a493877j766z6x6w6w6w6z7c859aagbfc3chcpctcxcycxctcncebub3ac9o918d7s796x6s6o6k6h7z8g8v9698938u8n8q979m9zalbbbycdciccbybgaq9s8s7u79706y6x6x6w6x717f8898a9b4bucdcmcrcvcxcwctcncdbub1a89g8s847j736u6q6m6i6g878s9a9n9xa09w9m9h9wafaubcbxccckckcdbvb5ae9i8j7n746y6y6y6y6y6z757m8d98a2avbocaclcqcucxcwcscncebuaza1968f7s7a6y6s6o6k6h6f8d919la3akawaxanabalb5bmc1cdclcocmcebub1a59a8c7i726y6z717374787h7z8m9ba0aqbhc3chcoctcwcwcscncebrau9u8v827g716u6q6m6j6g6e8j989vahb3blbtbkb6bbbtc8cicocrcqclc9bnau9z95887g716z727a7i7n7t838j929la5apb9bucccncscwcvcscmc9bjak9k8k7q766w6r6o6k6h6f6e8n9ba0asbjc3ccc8bzc2cecnctcwcvcqchc1bdam9u93897i74737c7p838e8m8w999na1aiazbebscacmcscvcucqcjc1b5a594867f6z6t6p6m6j6g6f6e8g969zawbscdclcmclcocuczd2d2cxcocbbsb5ag9s948e7q7b7d7r888o949h9sa0aaalaybfbuc3cdcmcrcuctcpcfbsar9n8m7q746v6s6o6l6j6g6g6f838v9oambocecoctcwd1d6dadad6cycoc8bnb1ae9t998o847q7t898r9a9uaeaqavb1b8bhbuc9chcjcmcqcscrcncbbjae97847c6y6t6q6n6l6k6i6h6h7s8j949rauc0chcrd0d7dedhdgdad0coc9bpb3ai9y9h908l8d8g8t9b9xambabpbsbtbyc3cbclcrcqcncocqcpcic0b39y8r7q736v6r6p6m6l6k6j6j6j7k858l909natbschcwd8dhdldkddd1coc9brb8apa79s9e9592949f9xakbbc1chclclcocqcucyd0cycrcncnclc8bdab99887e6y6u6r6p6m6l6l6n6o6o7b7q878s9namawbzcrd6dhdndodhd4crcdbxbhazaia59v9p9o9q9zafb3btchcyd6d8dbdddedddbd5cvcncicabja6938b7m736w6t6r6p6n6n6o6q6s6t737h8b9garbvc4bucld2dfdpdsdmdbczcmc8bsbbavajaca9a9acaiaubfc2cod7dldsdwdydxdsdkd8cwcic2bfa58m7r7d736w6u6s6q6o6o6p6s6u6y73727i8k9xbbcdcfbychcydedrdydudldacycjc2blb7azawawayb1b3b7blc6crdbdue8efegece1dld6cqc4b49w8i7h736y6v6s6r6r6p6p6q6s6u6y787n7d7t8wa9blcjcgc5cgczdidye7e6dxdld5cnc6bsbkbhbhbkbpbrbobkbrc7csdfe3enewewene5dkd1chbmac8w7m736y6w6t6r6q6r6r6s6s6t6w707g88898r9oatc1cycocacld7dvecelekeadrd5cmc7bzbxbyc0c8cjcjc7bxbxc9ctdneif4fdfaese4dgcuc6b99z8k7h726y6w6u6s6r6t6u6v6v6x737a7r8q9b9uamblcnded1ckcvdledevf2f1eodzd7clcac7cbcecjcydgddcrcac4cccydyf1ftg2fretdwd6cibtay9u8n7q786z6w6u6s6t6u6w7071747l818h9aa7anbdc8d6dwdld4dfe7f0flfsfqfaeddccncgclcwd4dadsede8decncccid8eiftgpgwg8eudlcsc4bfam9q8t807d706v6t6t6u6w70797f7d88929ja3awb9bxcqdmecebe3eef3fvghgpgmg3f1drcucsd6dne3eaepf9f5e7d6ckcpdqfbgphkhmgkeudbcdbqb2ab9k8s817e6z6v6u6v6w707b7z827n8s9zamb3bmbtced6e0erf2f4fig4gthehmhih0fwehd9dbdyegezfcfpg6g5fbe6d7ddetgehii0hugpetd2c2beaqa29d8o7z7e706w6x70757e7y8u8y8o9naubmc2cichczdqeif7fpg2gjh3hni3i9i6hsgrfae2e5ewfbfrgbgph3h7gqfwf5f6gdhji3i8hygwezd4c1baaj9v978k7x7d70717b7l7u8a8w9o9za2awbuchcwdodjdyenfaftgagrh9hri6iiimiki8hcg0f0fafzgagjh4hlhwi2hyhmh8h7hoi7iei8hqgpf5dhc6b9ag9r968j7w7b707a808n929h9zalb0bcc3crd8dlf1ezfaftgagjgthahri6ijitixiuiihrgqg6ghh2hbhehti9iiimioiligieihilihi1h6fzeld6byb3ag9x9d8s817c747m8p9radasb6bmbzcdcxdgdve8ghghgngyh5h7hdhqi5iiitj2j7j4isi8hlhchjhwi1i4ieiqizj3j5j5j1iyiviqifhpggf2dpcibkb0auaf9y9h8k7m7d859eambic1cccmcwd5djdyeeethphqhshshrhqhui4igirj1j9jcj9j1ipidi8i8ibifimivj5jejijjjijdj5iwimi4h3fke3cvbzbebhbmb5arai9h8e858ya6bhcfczdbdjdpdue3ehexfeijiiiei7i1i1i5idiniuj0j3j3j2izivipikihigilivj6jhjpjtjujqjgj3iqibhhfue8d2c9bqbqc0c5bpbpbkai9g9ca2b1ccdddwe6edehelerf0fffyj2ixinibi4i4i8ifijilininimililikihieiciciiitj6jijrjwjxjrjgj1ilhwgdebczcdc0c0c9chcccacmcfbiajakbhc9ddegf1fafcfcfefifofyggjgj7itiei5i4i7ibibiaiai9i8i8i8i7i6i5i5i6iaijivj7jjjsjrjmjciyihhjffdbcic8cacjcwczcscydbd6cfbnbsctdsenfngbgigeg9g9gbgeglgzjqjgj1iji7i3i4i5i5i4i4i4i4i3i3i3i3i3i3i3i5iaiiivjajkjhjaj1ini5gxejcwchclcud7dkdndjdodydtd8cpd1dyeyfxgthfhihch4h1h1h3h7hhjtjkj5imi8i3i2i3i3i3i4i4i4i3i3i3i3i3i3i3i3i4iaioj5jdj6iwijhzgxexd8cocydddue6edegefeieneje4dveaf3g0gvhlhxhyhvhphkhihjhkhsjqjhj2iki7i3i2i3i3i3i3i3i3i2i2i3i3i3i4i6i6i7ibioj3j7iyiihrgdefcwcsd8dwelf5fgfhfefcfefjfjfcf7fjgah1hkhxi2i1hwhmhah4h5hehs' };
+
 const TAU = Math.PI * 2;
 
-// half-width by class, metres (lanes can widen the vehicular ones)
-const WIDTHS = {
+// carriageway width by class, metres — used only when OSM gave no lane count
+const CLASS_WIDTHS = {
     motorway: 11, trunk: 11, primary: 13, secondary: 11, tertiary: 9,
     unclassified: 7.5, residential: 7, living_street: 5.5, pedestrian: 4.2,
 };
+const LANE_W = 3.2;      // one marked lane
+const VERGE = 1.6;       // kerbs and parking margin, split across both sides
 
 export default function build(world) {
     const { THREE, scene } = world;
+
+    // ------------------------------------------------------- terrain sampler
+    const EH = new Float32Array(ELEV.cols * ELEV.rows);
+    for (let i = 0; i < EH.length; i++) {
+        EH[i] = parseInt(ELEV.data.slice(i * 2, i * 2 + 2), 36) / 10 - 5;
+    }
+    // Height on the terrain MESH — the same piecewise-linear surface the
+    // terrain triangles draw (each grid cell split on its b–c diagonal), so a
+    // road sampled here lies exactly on the ground it crosses.
+    function rawH(x, z) {
+        const fx = Math.min(ELEV.cols - 1.001, Math.max(0, (x - ELEV.x0) / ELEV.step));
+        const fz = Math.min(ELEV.rows - 1.001, Math.max(0, (z - ELEV.z0) / ELEV.step));
+        const ix = Math.floor(fx), iz = Math.floor(fz);
+        const u = fx - ix, v = fz - iz;
+        const a = EH[iz * ELEV.cols + ix], b = EH[iz * ELEV.cols + ix + 1];
+        const c = EH[(iz + 1) * ELEV.cols + ix], d = EH[(iz + 1) * ELEV.cols + ix + 1];
+        if (u + v <= 1) return a + u * (b - a) + v * (c - a);
+        return b * (1 - v) + c * (1 - u) + d * (u + v - 1);
+    }
+    // what roads and labels stand on: never below wharf-deck height
+    const gY = (x, z) => Math.max(rawH(x, z), 0.35);
+
+    function inRing(x, z, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0], zi = ring[i][1], xj = ring[j][0], zj = ring[j][1];
+            if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+        }
+        return inside;
+    }
+    function inWater(x, z) {
+        for (const w of WATER) {
+            if (inRing(x, z, w.p)) {
+                let inHole = false;
+                for (const h of w.h) if (inRing(x, z, h)) { inHole = true; break; }
+                if (!inHole) return true;
+            }
+        }
+        return false;
+    }
 
     // ------------------------------------------------------------- sky
     world.ownsSky(true);
@@ -1303,14 +1352,14 @@ export default function build(world) {
     sun.position.copy(sunDir).multiplyScalar(600);
     scene.add(sun);
 
-    // ------------------------------------------------------------- land
-    // The whole table the map sits on. x −880..880, z −1060..1120.
+    // ------------------------------------------------------------- terrain
+    // The whole table the map sits on. x −880..880, z −1060..1120, displaced
+    // by the DEM; pushed down to a shallow seabed wherever the harbour lies.
     let landTex = null;
     try {
         landTex = world.canvasTexture(512, 512, (ctx) => {
             ctx.fillStyle = '#b3bda1';
             ctx.fillRect(0, 0, 512, 512);
-            // soft parkland blotches so the flat isn't dead flat
             for (let i = 0; i < 900; i++) {
                 const x = Math.random() * 512, y = Math.random() * 512;
                 const r = 4 + Math.random() * 22;
@@ -1326,13 +1375,40 @@ export default function build(world) {
         landTex.wrapS = landTex.wrapT = THREE.RepeatWrapping;
         landTex.repeat.set(5, 6);
     } catch (e) { /* headless check: plain colour is fine */ }
+    // Built straight on the DEM grid, one vertex per sample, cells split on
+    // the b–c diagonal to match rawH above.
+    const terrainGeo = new THREE.BufferGeometry();
+    {
+        const { cols, rows, x0, z0, step } = ELEV;
+        const tpos = new Float32Array(cols * rows * 3);
+        const tuv = new Float32Array(cols * rows * 2);
+        for (let j = 0; j < rows; j++) {
+            for (let i = 0; i < cols; i++) {
+                const k = j * cols + i;
+                const x = x0 + i * step, z = z0 + j * step;
+                tpos[k * 3] = x;
+                tpos[k * 3 + 1] = inWater(x, z) ? Math.min(EH[k], -1.4) : Math.max(EH[k], 0.25);
+                tpos[k * 3 + 2] = z;
+                tuv[k * 2] = i / (cols - 1);
+                tuv[k * 2 + 1] = j / (rows - 1);
+            }
+        }
+        const idx = [];
+        for (let j = 0; j < rows - 1; j++) {
+            for (let i = 0; i < cols - 1; i++) {
+                const a = j * cols + i, b = a + 1, c = a + cols, d = c + 1;
+                idx.push(a, c, b, b, c, d);
+            }
+        }
+        terrainGeo.setAttribute('position', new THREE.BufferAttribute(tpos, 3));
+        terrainGeo.setAttribute('uv', new THREE.BufferAttribute(tuv, 2));
+        terrainGeo.setIndex(idx);
+        terrainGeo.computeVertexNormals();
+    }
     const land = new THREE.Mesh(
-        new THREE.PlaneGeometry(1760, 2180),
+        terrainGeo,
         new THREE.MeshLambertMaterial({ color: 0xb6c0a5, map: landTex || null })
     );
-    land.rotation.x = -Math.PI / 2;
-    land.position.set(0, 0, 30);
-    land.receiveShadow = true;
     world.ground(land);
     scene.add(land);
 
@@ -1368,7 +1444,6 @@ export default function build(world) {
                 vec3 deep = vec3(0.110, 0.353, 0.459);
                 vec3 lift = vec3(0.204, 0.478, 0.573);
                 vec3 col = mix(deep, lift, w * 0.55);
-                // small moving glints
                 vec2 g = vXZ * 0.9;
                 float sp = n2(floor(g + vec2(t * 2.0, -t * 1.4)));
                 col += vec3(0.75, 0.85, 0.9) * step(0.992, sp) * 0.5;
@@ -1376,7 +1451,7 @@ export default function build(world) {
             }`,
     });
     const water = new THREE.Mesh(waterGeo, waterMat);
-    water.position.y = 0.03;
+    water.position.y = 0.05;    // sea level
     world.ground(water);
     scene.add(water);
 
@@ -1395,39 +1470,71 @@ export default function build(world) {
         ways.push({ kind, name, lanes, pts });
     }
 
+    // The tagged lane count decides the width whenever OSM has one; the class
+    // default only stands in for untagged streets.
     function widthOf(w) {
-        if (w.kind.endsWith('_link')) return Math.max(6.5, w.lanes * 3.4 + 1.2);
-        const base = WIDTHS[w.kind] || 6.5;
-        if (w.kind === 'pedestrian' || w.kind === 'living_street') return base;
-        return Math.min(26, Math.max(base, w.lanes * 3.3 + 1.8));
+        if (w.lanes > 0) return Math.min(26, Math.max(4.6, w.lanes * LANE_W + VERGE));
+        if (w.kind.endsWith('_link')) return 6.5;
+        return CLASS_WIDTHS[w.kind] || 6.5;
+    }
+
+    // split long segments so the ribbon follows the hills
+    function subdivide(pts, maxStep) {
+        const out = [pts[0]];
+        for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i];
+            const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            const n = Math.max(1, Math.ceil(len / maxStep));
+            for (let s = 1; s <= n; s++) {
+                out.push([a[0] + ((b[0] - a[0]) * s) / n, a[1] + ((b[1] - a[1]) * s) / n]);
+            }
+        }
+        return out;
     }
 
     const COS8 = [], SIN8 = [];
     for (let s = 0; s <= 8; s++) { COS8.push(Math.cos((s / 8) * TAU)); SIN8.push(Math.sin((s / 8) * TAU)); }
 
-    function ribbon(arr, pts, half, y) {
+    function ribbon(arr, pts, half, lift) {
         const n = pts.length;
         for (let i = 0; i < n; i++) {
             const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
             let dx = b[0] - a[0], dz = b[1] - a[1];
             const len = Math.hypot(dx, dz) || 1;
             dx /= len; dz /= len;
-            pts[i].nx = -dz * half; pts[i].nz = dx * half;
+            const p = pts[i];
+            p.lx = p[0] - dz * half; p.lz = p[1] + dx * half;
+            p.rx = p[0] + dz * half; p.rz = p[1] - dx * half;
+            // each edge takes the ground under IT, so a road along a hillside
+            // twists with the cross-slope instead of digging in
+            p.ly = gY(p.lx, p.lz) + lift;
+            p.ry = gY(p.rx, p.rz) + lift;
         }
         for (let i = 1; i < n; i++) {
             const p = pts[i - 1], q = pts[i];
-            const l0x = p[0] + p.nx, l0z = p[1] + p.nz, r0x = p[0] - p.nx, r0z = p[1] - p.nz;
-            const l1x = q[0] + q.nx, l1z = q[1] + q.nz, r1x = q[0] - q.nx, r1z = q[1] - q.nz;
-            arr.push(l0x, y, l0z, r0x, y, r0z, r1x, y, r1z,
-                     l0x, y, l0z, r1x, y, r1z, l1x, y, l1z);
+            arr.push(p.lx, p.ly, p.lz, p.rx, p.ry, p.rz, q.rx, q.ry, q.rz,
+                     p.lx, p.ly, p.lz, q.rx, q.ry, q.rz, q.lx, q.ly, q.lz);
         }
     }
-    function disc(arr, x, z, r, y) {
+    function disc(arr, x, z, r, lift) {
+        const cy = gY(x, z) + lift;
         for (let s = 0; s < 8; s++) {
-            arr.push(x, y, z,
-                x + COS8[s] * r, y, z + SIN8[s] * r,
-                x + COS8[s + 1] * r, y, z + SIN8[s + 1] * r);
+            const ax = x + COS8[s] * r, az = z + SIN8[s] * r;
+            const bx = x + COS8[s + 1] * r, bz = z + SIN8[s + 1] * r;
+            arr.push(x, cy, z,
+                ax, gY(ax, az) + lift, az,
+                bx, gY(bx, bz) + lift, bz);
         }
+    }
+    // a painted stripe from (x0,z0) to (x1,z1), draped corner by corner
+    function stripe(arr, x0, z0, x1, z1, halfW, lift) {
+        const len = Math.hypot(x1 - x0, z1 - z0) || 1;
+        const nx = (-(z1 - z0) / len) * halfW, nz = ((x1 - x0) / len) * halfW;
+        const c = [
+            [x0 + nx, z0 + nz], [x0 - nx, z0 - nz],
+            [x1 - nx, z1 - nz], [x1 + nx, z1 + nz],
+        ].map(([x, z]) => [x, gY(x, z) + lift, z]);
+        arr.push(...c[0], ...c[1], ...c[2], ...c[0], ...c[2], ...c[3]);
     }
 
     const asphalt = [];   // vehicular
@@ -1436,46 +1543,56 @@ export default function build(world) {
     for (const w of ways) {
         const walkway = w.kind === 'pedestrian' || w.kind === 'living_street';
         const arr = walkway ? paving : asphalt;
-        const half = widthOf(w) / 2;
-        const y = walkway ? 0.05 : 0.07;
-        ribbon(arr, w.pts, half, y);
-        for (const p of w.pts) disc(arr, p[0], p[1], half, y);
+        const width = widthOf(w);
+        const half = width / 2;
+        const lift = walkway ? 0.1 : 0.12;
+        const sub = subdivide(w.pts, 10);
+        ribbon(arr, sub, half, lift);
+        for (const p of w.pts) disc(arr, p[0], p[1], half, lift);
 
-        // centre dashes on the main streets
-        if (w.kind === 'primary' || w.kind === 'secondary' || w.kind === 'tertiary') {
-            let carry = 4;
-            for (let i = 1; i < w.pts.length; i++) {
-                const p = w.pts[i - 1], q = w.pts[i];
-                const segLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
-                if (segLen < 0.01) continue;
-                const dx = (q[0] - p[0]) / segLen, dz = (q[1] - p[1]) / segLen;
-                const nx = -dz * 0.14, nz = dx * 0.14;
-                let d = carry;
-                while (d + 3.2 < segLen) {
-                    const x0 = p[0] + dx * d, z0 = p[1] + dz * d;
-                    const x1 = p[0] + dx * (d + 3.2), z1 = p[1] + dz * (d + 3.2);
-                    marks.push(x0 + nx, 0.1, z0 + nz, x0 - nx, 0.1, z0 - nz, x1 - nx, 0.1, z1 - nz,
-                               x0 + nx, 0.1, z0 + nz, x1 - nx, 0.1, z1 - nz, x1 + nx, 0.1, z1 + nz);
-                    d += 13;
+        if (walkway) continue;
+
+        // Painted lane dividers: one dashed line between each pair of lanes
+        // when OSM tagged the count; main streets without a count are assumed
+        // two-lane and get the single centre dash.
+        let lanes = w.lanes;
+        if (!lanes && (w.kind === 'primary' || w.kind === 'secondary' || w.kind === 'tertiary')) lanes = 2;
+        if (lanes >= 2) {
+            const usable = width - VERGE, laneW = usable / lanes;
+            for (let j = 1; j < lanes; j++) {
+                const off = -usable / 2 + j * laneW;
+                let carry = 4;
+                for (let i = 1; i < sub.length; i++) {
+                    const p = sub[i - 1], q = sub[i];
+                    const segLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
+                    if (segLen < 0.01) continue;
+                    const dx = (q[0] - p[0]) / segLen, dz = (q[1] - p[1]) / segLen;
+                    const ox = -dz * off, oz = dx * off;
+                    let d = carry;
+                    while (d + 3.2 < segLen) {
+                        stripe(marks,
+                            p[0] + dx * d + ox, p[1] + dz * d + oz,
+                            p[0] + dx * (d + 3.2) + ox, p[1] + dz * (d + 3.2) + oz,
+                            0.14, 0.24);
+                        d += 13;
+                    }
+                    carry = d - segLen;
                 }
-                carry = d - segLen;
             }
         }
         // solid edge lines on the motorways
         if (w.kind === 'motorway' || w.kind === 'trunk') {
-            for (let i = 1; i < w.pts.length; i++) {
-                const p = w.pts[i - 1], q = w.pts[i];
+            for (let i = 1; i < sub.length; i++) {
+                const p = sub[i - 1], q = sub[i];
                 const segLen = Math.hypot(q[0] - p[0], q[1] - p[1]);
-                if (segLen < 4) continue;
+                if (segLen < 2) continue;
                 const dx = (q[0] - p[0]) / segLen, dz = (q[1] - p[1]) / segLen;
                 for (const sgn of [1, -1]) {
                     const off = sgn * (half - 0.55);
-                    const nx = -dz, nz = dx;
-                    const ex = nx * 0.15, ez = nz * 0.15;
-                    const ax = p[0] + nx * off, az = p[1] + nz * off;
-                    const bx = q[0] + nx * off, bz = q[1] + nz * off;
-                    marks.push(ax + ex, 0.1, az + ez, ax - ex, 0.1, az - ez, bx - ex, 0.1, bz - ez,
-                               ax + ex, 0.1, az + ez, bx - ex, 0.1, bz - ez, bx + ex, 0.1, bz + ez);
+                    stripe(marks,
+                        p[0] - dz * off, p[1] + dx * off,
+                        q[0] - dz * off, q[1] + dx * off,
+                        0.15, 0.24);
                 }
             }
         }
@@ -1492,11 +1609,9 @@ export default function build(world) {
     }
 
     const asphaltMesh = flatMesh(asphalt, new THREE.MeshLambertMaterial({ color: 0x3a3d43, side: THREE.DoubleSide }));
-    asphaltMesh.receiveShadow = true;
     scene.add(asphaltMesh);
 
     const pavingMesh = flatMesh(paving, new THREE.MeshLambertMaterial({ color: 0x8a8073, side: THREE.DoubleSide }));
-    pavingMesh.receiveShadow = true;
     scene.add(pavingMesh);
 
     const marksMesh = flatMesh(marks, new THREE.MeshBasicMaterial({ color: 0xf2eedd, side: THREE.DoubleSide }));
@@ -1504,7 +1619,6 @@ export default function build(world) {
     scene.add(marksMesh);
 
     // ------------------------------------------------------------- names
-    // Street names painted flat on the map, the way a map would.
     const LABELS = [
         ['QUEEN STREET', [76, -24], [-37, 313], 13],
         ['KARANGAHAPE ROAD', [-634, 979], [-220, 987], 13],
@@ -1550,12 +1664,12 @@ export default function build(world) {
             if (ang < -Math.PI / 2) ang += Math.PI;
             const ca = Math.cos(ang), sa = Math.sin(ang);
             const hl = (size * e.aspect) / 2, hh = size / 2;
-            // corners in label space (dx along street, dz across), rotated into world
-            const corner = (dx, dz) => [mx + dx * ca + dz * sa, mz - dx * sa + dz * ca];
+            const corner = (dx, dz) => {
+                const x = mx + dx * ca + dz * sa, z = mz - dx * sa + dz * ca;
+                return [x, gY(x, z) + 0.45, z];
+            };
             const c0 = corner(-hl, -hh), c1 = corner(hl, -hh), c2 = corner(hl, hh), c3 = corner(-hl, hh);
-            const y = 0.12;
-            lpos.push(c0[0], y, c0[1], c1[0], y, c1[1], c2[0], y, c2[1],
-                      c0[0], y, c0[1], c2[0], y, c2[1], c3[0], y, c3[1]);
+            lpos.push(...c0, ...c1, ...c2, ...c0, ...c2, ...c3);
             luv.push(e.u0, e.v1, e.u1, e.v1, e.u1, e.v0,
                      e.u0, e.v1, e.u1, e.v0, e.u0, e.v0);
         }
@@ -1570,7 +1684,7 @@ export default function build(world) {
     } catch (e) { /* labels are a nicety; the roads are the world */ }
 
     // ------------------------------------------------------------- done
-    world.groundLevel(0.08);
+    world.groundLevel(gY(76, -24) + 0.2);   // Queen & Victoria, up in the valley
     world.frame((dt, t) => {
         waterMat.uniforms.uTime.value = t;
     });
